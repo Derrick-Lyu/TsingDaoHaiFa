@@ -10,6 +10,15 @@ export async function getFundSafetySummary() {
   return normalizeFundSafetySummary(data);
 }
 
+export async function assignAlertReviewer(alertId, assignedReviewerName) {
+  return requestJson(`/terror-risk/alerts/${alertId}/assign`, {
+    method: "POST",
+    body: {
+      assignedReviewerName,
+    },
+  });
+}
+
 function normalizeOverview(data) {
   if (data?.updatedAt) {
     return data;

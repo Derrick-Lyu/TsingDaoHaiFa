@@ -8,38 +8,43 @@ export function AlertDetailPage({
   embedded = false,
   onBack,
   onSaveReview,
+  onAssignReviewer,
 }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(() => buildReviewDraft(null));
+  const [assignmentDraft, setAssignmentDraft] = useState(() => buildAssignmentDraft(null));
   const [saveState, setSaveState] = useState("idle");
+  const [assignState, setAssignState] = useState("idle");
   const [loadError, setLoadError] = useState("");
+
+  async function loadDetail(isCancelled = () => false) {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const data = await requestJson(`/terror-risk/alerts/${alertId}`);
+
+      if (!isCancelled()) {
+        setDetail(data);
+        setDraft(buildReviewDraft(data.review));
+        setAssignmentDraft(buildAssignmentDraft(data.review));
+        setLoading(false);
+      }
+    } catch {
+      if (!isCancelled()) {
+        setDetail(null);
+        setDraft(buildReviewDraft(null));
+        setAssignmentDraft(buildAssignmentDraft(null));
+        setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
+        setLoading(false);
+      }
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadDetail() {
-      setLoading(true);
-      setLoadError("");
-      try {
-        const data = await requestJson(`/terror-risk/alerts/${alertId}`);
-
-        if (!cancelled) {
-          setDetail(data);
-          setDraft(buildReviewDraft(data.review));
-          setLoading(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setDetail(null);
-          setDraft(buildReviewDraft(null));
-          setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
-          setLoading(false);
-        }
-      }
-    }
-
-    loadDetail();
+    void loadDetail(() => cancelled);
 
     return () => {
       cancelled = true;
@@ -50,9 +55,14 @@ export function AlertDetailPage({
   const relatedTransactions = detail?.related_transactions || [];
 
   const handleSave = async () => {
+    if (detail.review.assignment_status !== "assigned") {
+      setSaveState("error");
+      return;
+    }
     setSaveState("saving");
     try {
       await onSaveReview?.(detail.id, draft);
+      await loadDetail();
       setSaveState("saved");
     } catch {
       setSaveState("error");
@@ -60,6 +70,21 @@ export function AlertDetailPage({
     }
     window.setTimeout(() => {
       setSaveState("idle");
+    }, 1600);
+  };
+
+  const handleAssign = async () => {
+    setAssignState("saving");
+    try {
+      await onAssignReviewer?.(detail.id, assignmentDraft.assignedReviewerName.trim());
+      await loadDetail();
+      setAssignState("saved");
+    } catch {
+      setAssignState("error");
+      return;
+    }
+    window.setTimeout(() => {
+      setAssignState("idle");
     }, 1600);
   };
 
@@ -101,6 +126,9 @@ export function AlertDetailPage({
                 {detail.risk_level === "high" ? "高风险" : "预警关注"}
               </span>
               <span style={heroBadgeStyle.secondary}>{detail.review.review_status === "reviewed" ? "已核查" : "待核查"}</span>
+              <span style={assignmentStatusStyle(detail.review.assignment_status)}>
+                {detail.review.assignment_status === "assigned" ? "已分配" : "待分配"}
+              </span>
             </div>
           </div>
           {onBack && (
@@ -241,6 +269,54 @@ export function AlertDetailPage({
           </section>
 
           <section style={reviewPanelStyle}>
+            <div style={assignmentPanelStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
+                    审核分配
+                  </div>
+                  <div style={{ fontSize: 13, color: "#556070", lineHeight: 1.7 }}>
+                    先将当前风险记录分配给具体审核人员，再进入人工核查。
+                  </div>
+                </div>
+                <span style={assignmentStatusStyle(detail.review.assignment_status)}>
+                  {detail.review.assignment_status === "assigned" ? "已分配" : "待分配"}
+                </span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 14 }}>
+                <label style={fieldLabelStyle}>
+                  <span style={fieldTitleStyle}>审核人员</span>
+                  <input
+                    value={assignmentDraft.assignedReviewerName}
+                    onChange={(event) => setAssignmentDraft({ assignedReviewerName: event.target.value })}
+                    placeholder="例如：风控专员A"
+                    style={inputStyle}
+                  />
+                </label>
+                <div style={assignmentMetaCardStyle}>
+                  <div style={assignmentMetaLabelStyle}>当前审核人</div>
+                  <div style={assignmentMetaValueStyle}>{detail.review.assigned_reviewer_name || "待分配"}</div>
+                  <div style={assignmentMetaHintStyle}>
+                    {detail.review.assigned_at ? `分配时间 ${detail.review.assigned_at}` : "尚未完成分配"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 12, color: assignState === "error" ? "#b42318" : "#64748b" }}>
+                  {assignState === "error"
+                    ? "分配失败，请检查审核人员名称后重试。"
+                    : detail.review.assigned_at
+                      ? `当前记录已分配给 ${detail.review.assigned_reviewer_name || "审核人员"}`
+                      : "当前记录尚未分配审核人员"}
+                </div>
+                <button type="button" onClick={handleAssign} style={secondaryButtonStyle}>
+                  {assignState === "saving" ? "分配中..." : assignState === "saved" ? "已分配" : "分配审核人"}
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
@@ -308,12 +384,19 @@ export function AlertDetailPage({
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
               <div style={{ fontSize: 12, color: saveState === "error" ? "#b42318" : "#64748b" }}>
                 {saveState === "error"
-                  ? "提交失败，核查结果尚未写入数据库。"
+                  ? detail.review.assignment_status !== "assigned"
+                    ? "请先完成审核分配，再提交核查结论。"
+                    : "提交失败，核查结果尚未写入数据库。"
                   : detail.review.reviewed_at
                     ? `已于 ${detail.review.reviewed_at} 保存`
                     : "当前尚未保存核查结果"}
               </div>
-              <button type="button" onClick={handleSave} style={saveButtonStyle}>
+              <button
+                type="button"
+                onClick={handleSave}
+                style={saveButtonStyle(detail.review.assignment_status !== "assigned")}
+                disabled={detail.review.assignment_status !== "assigned" || saveState === "saving"}
+              >
                 {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : saveState === "error" ? "重试提交" : "提交核查结论"}
               </button>
             </div>
@@ -330,6 +413,12 @@ function buildReviewDraft(review) {
     reviewer_name: review?.reviewer_name || "",
     review_result: review?.review_result || "",
     review_comment: review?.review_comment || "",
+  };
+}
+
+function buildAssignmentDraft(review) {
+  return {
+    assignedReviewerName: review?.assigned_reviewer_name || "",
   };
 }
 
@@ -482,16 +571,29 @@ const textareaStyle = {
   resize: "vertical",
 };
 
-const saveButtonStyle = {
+function saveButtonStyle(disabled = false) {
+  return {
+    padding: "10px 16px",
+    borderRadius: 12,
+    border: "none",
+    background: disabled ? "#cbd5e1" : "linear-gradient(135deg, #1a3a8f, #3f73c8)",
+    color: "white",
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: disabled ? "not-allowed" : "pointer",
+    boxShadow: disabled ? "none" : "0 10px 18px rgba(26,58,143,0.18)",
+  };
+}
+
+const secondaryButtonStyle = {
   padding: "10px 16px",
   borderRadius: 12,
-  border: "none",
-  background: "linear-gradient(135deg, #1a3a8f, #3f73c8)",
-  color: "white",
+  border: "1px solid #d7e1f1",
+  background: "#eef4ff",
+  color: "#1a3a8f",
   fontSize: 13,
   fontWeight: 800,
   cursor: "pointer",
-  boxShadow: "0 10px 18px rgba(26,58,143,0.18)",
 };
 
 function smallBadgeStyle(level) {
@@ -513,6 +615,19 @@ function reviewStatusStyle(status) {
     borderRadius: 999,
     background: isReviewed ? "#e8f5ef" : isClosed ? "#eef2f7" : "#fff4e5",
     color: isReviewed ? "#0f7a3e" : isClosed ? "#516072" : "#b45309",
+    fontSize: 12,
+    fontWeight: 800,
+    whiteSpace: "nowrap",
+  };
+}
+
+function assignmentStatusStyle(status) {
+  const assigned = status === "assigned";
+  return {
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: assigned ? "#e8f5ef" : "#fff5f5",
+    color: assigned ? "#0f7a3e" : "#b42318",
     fontSize: 12,
     fontWeight: 800,
     whiteSpace: "nowrap",
@@ -675,6 +790,41 @@ const reviewPanelStyle = {
   display: "flex",
   flexDirection: "column",
   height: "100%",
+};
+
+const assignmentPanelStyle = {
+  padding: 16,
+  borderRadius: 16,
+  border: "1px solid #dbe5f1",
+  background: "#f8fbff",
+  marginBottom: 18,
+};
+
+const assignmentMetaCardStyle = {
+  borderRadius: 14,
+  border: "1px solid #dbe5f1",
+  background: "white",
+  padding: 12,
+};
+
+const assignmentMetaLabelStyle = {
+  fontSize: 12,
+  color: "#64748b",
+  fontWeight: 800,
+};
+
+const assignmentMetaValueStyle = {
+  fontSize: 15,
+  color: "#0f172a",
+  fontWeight: 800,
+  marginTop: 8,
+};
+
+const assignmentMetaHintStyle = {
+  fontSize: 12,
+  color: "#64748b",
+  marginTop: 8,
+  lineHeight: 1.6,
 };
 
 function normalizeEvidenceValue(value) {

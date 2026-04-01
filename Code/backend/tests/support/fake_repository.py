@@ -268,6 +268,37 @@ class FakePostgresRepository:
         )
         self.alerts = alerts
         self.latest_job = latest_job
+        self._apply_default_review_assignments()
+
+    def _apply_default_review_assignments(self) -> None:
+        for index, alert in enumerate(self.alerts):
+            default_review = {
+                "review_status": "pending",
+                "reviewer_name": "",
+                "review_result": "",
+                "review_comment": "",
+                "reviewed_at": None,
+                "assignment_status": "unassigned",
+                "assigned_reviewer_name": "",
+                "assigned_at": None,
+            }
+            review = {**default_review, **alert.get("review", {})}
+            if index == 1:
+                review["assignment_status"] = "assigned"
+                review["assigned_reviewer_name"] = "风控专员A"
+                review["assigned_at"] = f"{SNAPSHOT_DATE}T10:00:00+08:00"
+            elif index == 2:
+                review["assignment_status"] = "assigned"
+                review["assigned_reviewer_name"] = "风控专员B"
+                review["assigned_at"] = f"{SNAPSHOT_DATE}T11:00:00+08:00"
+                review["review_status"] = "reviewed"
+                review["reviewer_name"] = "风控专员B"
+                review["review_result"] = "确认异常"
+                review["review_comment"] = "已进入后续处置"
+                review["reviewed_at"] = f"{SNAPSHOT_DATE}T12:00:00+08:00"
+
+            alert["review"] = review
+            alert["review_status"] = review["review_status"]
 
     def get_overview(self) -> dict[str, object]:
         summary_blocks = self.get_fund_safety_summary()["summary_blocks"]
@@ -460,14 +491,52 @@ class FakePostgresRepository:
                 if member_unit.lower() in str(item["member_unit_name"]).lower()
                 or member_unit.lower() in str(item["member_unit_code"]).lower()
             ]
-        return {"total": len(items), "items": items}
+        serialized_items = []
+        for item in items:
+            review = item.get("review", {})
+            serialized_items.append(
+                {
+                    "id": item["id"],
+                    "alert_no": item["alert_no"],
+                    "rule_code": item["rule_code"],
+                    "rule_name": item["rule_name"],
+                    "risk_level": item["risk_level"],
+                    "member_unit_code": item["member_unit_code"],
+                    "member_unit_name": item["member_unit_name"],
+                    "payer_name": item["payer_name"],
+                    "payee_name": item["payee_name"],
+                    "transaction_date": item["transaction_date"],
+                    "matched_amount": item["matched_amount"],
+                    "review_status": item["review_status"],
+                    "assignment_status": review.get("assignment_status", "unassigned"),
+                    "assigned_reviewer_name": review.get("assigned_reviewer_name", ""),
+                    "assigned_at": review.get("assigned_at"),
+                    "evidence_count": item["evidence_count"],
+                    "alert_summary": item["alert_summary"],
+                }
+            )
+        return {"total": len(serialized_items), "items": serialized_items}
 
     def get_terror_alert(self, alert_id: str) -> dict[str, object] | None:
         return next((deepcopy(alert) for alert in self.alerts if alert["id"] == alert_id), None)
 
+    def assign_alert_reviewer(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        for alert in self.alerts:
+            if alert["id"] == alert_id:
+                alert["review"] = {
+                    **alert["review"],
+                    "assignment_status": "assigned",
+                    "assigned_reviewer_name": str(payload["assignedReviewerName"]),
+                    "assigned_at": f"{SNAPSHOT_DATE}T12:00:00+08:00",
+                }
+                return deepcopy(alert)
+        return None
+
     def save_review(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
         for alert in self.alerts:
             if alert["id"] == alert_id:
+                if alert["review"].get("assignment_status") != "assigned":
+                    raise ValueError("Alert must be assigned before review")
                 alert["review"] = {**alert["review"], **payload, "reviewed_at": f"{SNAPSHOT_DATE}T12:00:00+08:00"}
                 alert["review_status"] = str(payload["review_status"])
                 return deepcopy(alert)
@@ -508,4 +577,3 @@ class FakePostgresRepository:
             ],
             "latest_job": deepcopy(self.latest_job),
         }
-

@@ -51,6 +51,9 @@ class AlertListItem(BaseModel):
     transaction_date: str | None = None
     matched_amount: str
     review_status: str
+    assignment_status: str
+    assigned_reviewer_name: str | None = None
+    assigned_at: str | None = None
     evidence_count: int
     alert_summary: str
 
@@ -72,6 +75,9 @@ class AlertEvidence(BaseModel):
 
 class AlertReview(BaseModel):
     review_status: str
+    assignment_status: str
+    assigned_reviewer_name: str | None = None
+    assigned_at: str | None = None
     reviewer_name: str | None = None
     review_result: str | None = None
     review_comment: str | None = None
@@ -101,4 +107,3 @@ class AlertDetailResponse(BaseModel):
     evidences: list[AlertEvidence] = Field(default_factory=list)
     review: AlertReview
     related_transactions: list[dict[str, object]] = Field(default_factory=list)
-

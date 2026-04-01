@@ -14,6 +14,11 @@ const REVIEW_LABELS = {
   closed: { text: "已关闭", color: "#475569", background: "#f8fafc" },
 };
 
+const ASSIGNMENT_LABELS = {
+  assigned: { text: "已分配", color: "#0f766e", background: "#ecfeff" },
+  unassigned: { text: "待分配", color: "#b42318", background: "#fff5f5" },
+};
+
 export function AlertTable({
   alerts = [],
   ruleOptions = [],
@@ -117,6 +122,7 @@ export function AlertTable({
                 <MetaItem label="成员单位" value={alert.member_unit_name} />
                 <MetaItem label="交易对手" value={alert.payee_name || "-"} />
                 <MetaItem label="金额" value={formatAmountDisplay(alert.matched_amount)} />
+                <MetaItem label="审核人" value={alert.assigned_reviewer_name || "待分配"} />
                 <MetaItem label="核查状态" value={(REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending).text} />
               </div>
 
@@ -131,7 +137,7 @@ export function AlertTable({
           <table style={tableStyle}>
             <thead>
               <tr style={{ background: "#f8fafc" }}>
-                {["预警编号", "规则", "成员单位", "交易对手", "金额", "风险等级", "核查状态", "证据数", "操作"].map((head) => (
+                {["预警编号", "规则", "成员单位", "交易对手", "金额", "风险等级", "审核人", "分配状态", "核查状态", "证据数", "操作"].map((head) => (
                   <th key={head} style={thStyle}>
                     {head}
                   </th>
@@ -142,6 +148,7 @@ export function AlertTable({
               {alerts.map((alert) => {
                 const riskTone = RISK_LABELS[alert.risk_level] || RISK_LABELS.low;
                 const reviewTone = REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending;
+                const assignmentTone = ASSIGNMENT_LABELS[alert.assignment_status] || ASSIGNMENT_LABELS.unassigned;
                 const selected = selectedAlertId === alert.id;
 
                 return (
@@ -169,6 +176,10 @@ export function AlertTable({
                     <td style={cellStyle}>
                       <span style={badgeStyle(riskTone.background, riskTone.color)}>{riskTone.text}</span>
                     </td>
+                    <td style={cellStyle}>{alert.assigned_reviewer_name || "待分配"}</td>
+                    <td style={cellStyle}>
+                      <span style={badgeStyle(assignmentTone.background, assignmentTone.color)}>{assignmentTone.text}</span>
+                    </td>
                     <td style={cellStyle}>
                       <span style={badgeStyle(reviewTone.background, reviewTone.color)}>{reviewTone.text}</span>
                     </td>
@@ -182,7 +193,7 @@ export function AlertTable({
 
               {!alerts.length && (
                 <tr>
-                  <td colSpan={9} style={{ padding: 36, textAlign: "center", color: "#6b7280" }}>
+                  <td colSpan={11} style={{ padding: 36, textAlign: "center", color: "#6b7280" }}>
                     暂无符合条件的预警记录
                   </td>
                 </tr>

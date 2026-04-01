@@ -40,6 +40,61 @@ def test_terror_risk_alert_list_supports_filters_and_detail_lookup():
     assert detail["id"] == alert_id
     assert detail["evidences"]
     assert detail["review"]["review_status"] in {"pending", "reviewed"}
+    assert detail["review"]["assignment_status"] in {"unassigned", "assigned"}
+
+
+def test_terror_risk_alert_list_includes_assignment_fields():
+    client = TestClient(app)
+
+    response = client.get("/api/terror-risk/alerts")
+
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert any(item["review_status"] == "pending" for item in items)
+    assert all("assignment_status" in item for item in items)
+    assert all("assigned_reviewer_name" in item for item in items)
+    assert any(item["assignment_status"] == "unassigned" for item in items)
+    assert any(item["assignment_status"] == "assigned" for item in items)
+
+
+def test_assign_alert_reviewer_updates_assignment_state():
+    client = TestClient(app)
+    alert_list = client.get("/api/terror-risk/alerts")
+    unassigned_alert = next(
+        item for item in alert_list.json()["items"] if item["assignment_status"] == "unassigned"
+    )
+
+    response = client.post(
+        f"/api/terror-risk/alerts/{unassigned_alert['id']}/assign",
+        json={"assignedReviewerName": "风控专员C"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["review"]["assignment_status"] == "assigned"
+    assert payload["review"]["assigned_reviewer_name"] == "风控专员C"
+    assert payload["review"]["assigned_at"] is not None
+
+
+def test_review_submission_requires_assigned_reviewer():
+    client = TestClient(app)
+    alert_list = client.get("/api/terror-risk/alerts")
+    unassigned_alert = next(
+        item for item in alert_list.json()["items"] if item["assignment_status"] == "unassigned"
+    )
+
+    response = client.post(
+        f"/api/terror-risk/alerts/{unassigned_alert['id']}/review",
+        json={
+            "review_status": "reviewed",
+            "reviewer_name": "风控专员A",
+            "review_result": "确认异常",
+            "review_comment": "补充资料后继续核查",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Alert must be assigned before review"
 
 
 def test_terror_risk_mutation_endpoints_update_repository_state():
@@ -122,6 +177,12 @@ def test_terror_risk_mutation_endpoints_update_repository_state():
 
     alert_list = client.get("/api/terror-risk/alerts")
     first_alert = alert_list.json()["items"][0]
+    if first_alert["assignment_status"] != "assigned":
+        assign_response = client.post(
+            f"/api/terror-risk/alerts/{first_alert['id']}/assign",
+            json={"assignedReviewerName": "风控专员A"},
+        )
+        assert assign_response.status_code == 200
     review_response = client.post(
         f"/api/terror-risk/alerts/{first_alert['id']}/review",
         json={

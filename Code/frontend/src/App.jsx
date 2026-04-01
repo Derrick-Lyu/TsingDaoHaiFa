@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState } from "react";
 
 import { requestJson } from "./api/client";
+import { assignAlertReviewer } from "./api/terrorRisk";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
 
 const AlertDetailPage = lazy(() =>
@@ -162,10 +163,14 @@ export default function App() {
   };
 
   const saveAlertReview = async (alertId, payload) => {
-    await requestJson(`/terror-risk/alerts/${alertId}/review`, {
+    return requestJson(`/terror-risk/alerts/${alertId}/review`, {
       method: "POST",
       body: payload,
     });
+  };
+
+  const assignReviewer = async (alertId, reviewerName) => {
+    return assignAlertReviewer(alertId, reviewerName);
   };
 
   let pageContent = null;
@@ -206,6 +211,7 @@ export default function App() {
           <AlertDetailPage
             alertId={selectedAlertId}
             onSaveReview={saveAlertReview}
+            onAssignReviewer={assignReviewer}
             onBack={() => setFundSafetyView("topic")}
           />
         </Suspense>

@@ -6,6 +6,7 @@ from app.schemas.terror_risk import (
     TerrorRiskTopicResponse,
 )
 from app.services.terror_risk_service import (
+    assign_alert_reviewer_data,
     create_blacklist_data,
     create_transaction_data,
     delete_blacklist_data,
@@ -54,6 +55,11 @@ def list_alerts(
 @router.get("/alerts/{alert_id}", response_model=AlertDetailResponse)
 def get_alert_detail(alert_id: str) -> dict[str, object]:
     return get_terror_alert_detail_data(alert_id)
+
+
+@router.post("/alerts/{alert_id}/assign", response_model=AlertDetailResponse)
+def assign_alert_reviewer(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    return assign_alert_reviewer_data(alert_id, payload)
 
 
 @router.get("/blacklist")

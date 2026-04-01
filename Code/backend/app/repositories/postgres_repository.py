@@ -483,13 +483,17 @@ class PostgresRepository:
                 conn.execute(
                     """
                     INSERT INTO terror_alert_reviews (
-                      alert_id, review_status, reviewer_name, review_result, review_comment
+                      alert_id, review_status, assignment_status, assigned_reviewer_name, assigned_at,
+                      reviewer_name, review_result, review_comment
                     )
-                    VALUES (%s::uuid, %s, %s, %s, %s)
+                    VALUES (%s::uuid, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         str(alert_row["id"]),
                         alert["review"]["review_status"],
+                        alert["review"].get("assignment_status", "unassigned"),
+                        alert["review"].get("assigned_reviewer_name") or None,
+                        alert["review"].get("assigned_at"),
                         alert["review"]["reviewer_name"],
                         alert["review"]["review_result"],
                         alert["review"]["review_comment"],
@@ -523,8 +527,10 @@ class PostgresRepository:
                 f"""
                 SELECT a.id, a.alert_no, a.rule_code, a.rule_name, a.risk_level, a.member_unit_code,
                        a.member_unit_name, a.payer_name, a.payee_name, a.transaction_date, a.matched_amount,
-                       a.review_status, a.evidence_count, a.alert_summary
+                       a.review_status, ar.assignment_status, ar.assigned_reviewer_name, ar.assigned_at,
+                       a.evidence_count, a.alert_summary
                 FROM terror_alerts a
+                LEFT JOIN terror_alert_reviews ar ON ar.alert_id = a.id
                 {where_sql}
                 ORDER BY a.created_at DESC, a.alert_no DESC
                 """,
@@ -544,6 +550,9 @@ class PostgresRepository:
                 "transaction_date": str(row["transaction_date"]) if row["transaction_date"] else None,
                 "matched_amount": f"{float(row['matched_amount']) / 10000:.2f}万元",
                 "review_status": row["review_status"],
+                "assignment_status": row["assignment_status"] or "unassigned",
+                "assigned_reviewer_name": row["assigned_reviewer_name"],
+                "assigned_at": row["assigned_at"].isoformat() if row["assigned_at"] else None,
                 "evidence_count": row["evidence_count"],
                 "alert_summary": row["alert_summary"],
             }
@@ -577,7 +586,8 @@ class PostgresRepository:
             ).fetchall()
             review = conn.execute(
                 """
-                SELECT review_status, reviewer_name, review_result, review_comment, reviewed_at
+                SELECT review_status, assignment_status, assigned_reviewer_name, assigned_at,
+                       reviewer_name, review_result, review_comment, reviewed_at
                 FROM terror_alert_reviews
                 WHERE alert_id = %s::uuid
                 """,
@@ -616,6 +626,9 @@ class PostgresRepository:
             ],
             "review": {
                 "review_status": review["review_status"] if review else "pending",
+                "assignment_status": review["assignment_status"] if review else "unassigned",
+                "assigned_reviewer_name": review["assigned_reviewer_name"] if review else "",
+                "assigned_at": review["assigned_at"].isoformat() if review and review["assigned_at"] else None,
                 "reviewer_name": review["reviewer_name"] if review else "",
                 "review_result": review["review_result"] if review else "",
                 "review_comment": review["review_comment"] if review else "",
@@ -623,6 +636,28 @@ class PostgresRepository:
             },
             "related_transactions": extra_payload.get("related_transactions", []),
         }
+
+    def assign_alert_reviewer(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        with self._connection() as conn:
+            result = conn.execute(
+                """
+                UPDATE terror_alert_reviews
+                SET assignment_status = 'assigned',
+                    assigned_reviewer_name = %(assigned_reviewer_name)s,
+                    assigned_at = now(),
+                    updated_by = 'api'
+                WHERE alert_id = %(alert_id)s::uuid
+                RETURNING alert_id
+                """,
+                {
+                    "alert_id": alert_id,
+                    "assigned_reviewer_name": payload["assignedReviewerName"],
+                },
+            ).fetchone()
+            conn.commit()
+        if not result:
+            return None
+        return self.get_terror_alert(alert_id)
 
     def save_review(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
         with self._connection() as conn:
@@ -636,6 +671,7 @@ class PostgresRepository:
                     reviewed_at = now(),
                     updated_by = 'api'
                 WHERE alert_id = %(alert_id)s::uuid
+                  AND assignment_status = 'assigned'
                 RETURNING alert_id
                 """,
                 {**payload, "alert_id": alert_id},

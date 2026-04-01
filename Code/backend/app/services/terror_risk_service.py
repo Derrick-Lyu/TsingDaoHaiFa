@@ -98,7 +98,27 @@ def delete_transaction_data(item_id: str) -> None:
 
 
 def save_alert_review_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
-    alert = get_repository().save_review(alert_id, payload)
+    repository = get_repository()
+    alert = repository.get_terror_alert(alert_id)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    if alert.get("review", {}).get("assignment_status") != "assigned":
+        raise HTTPException(status_code=400, detail="Alert must be assigned before review")
+    alert = repository.save_review(alert_id, payload)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
+
+
+def assign_alert_reviewer_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    assigned_reviewer_name = str(payload.get("assignedReviewerName", "")).strip()
+    if not assigned_reviewer_name:
+        raise HTTPException(status_code=400, detail="assignedReviewerName is required")
+
+    alert = get_repository().assign_alert_reviewer(
+        alert_id,
+        {"assignedReviewerName": assigned_reviewer_name},
+    )
     if alert is None:
         raise HTTPException(status_code=404, detail="Alert not found")
     return alert
