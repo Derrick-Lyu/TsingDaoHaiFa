@@ -1,23 +1,23 @@
 services:
   frontend:
     build:
-      context: ./frontend
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+      - "${FRONTEND_PORT:-5173}:80"
     depends_on:
       backend:
         condition: service_started
 
   backend:
     build:
-      context: ./backend
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      context: ..
+      dockerfile: infra/backend.Dockerfile
     environment:
-      APP_NAME: tsingdao-haifa-api
-      APP_ENV: ${APP_ENV:-development}
+      APP_NAME: ${APP_NAME:-tsingdao-haifa-api}
+      APP_ENV: ${APP_ENV:-production}
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-tsingdao}
@@ -27,16 +27,14 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-tsingdao}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d:ro
-      - ./database:/workspace-database:ro
+      - ../database/init:/docker-entrypoint-initdb.d:ro
+      - ../database:/workspace-database:ro
     healthcheck:
       test:
         [
