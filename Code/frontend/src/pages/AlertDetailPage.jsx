@@ -339,6 +339,8 @@ function pageShellStyle(embedded) {
 }
 
 const heroStyle = {
+  width: "100%",
+  boxSizing: "border-box",
   borderRadius: 22,
   padding: 24,
   marginBottom: 16,
