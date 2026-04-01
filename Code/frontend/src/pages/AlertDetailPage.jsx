@@ -402,6 +402,8 @@ const rightColumnStackStyle = {
   display: "grid",
   gap: 16,
   alignContent: "start",
+  gridTemplateRows: "auto minmax(0, 1fr)",
+  height: "100%",
 };
 
 const panelTitleStyle = {
@@ -659,11 +661,14 @@ const transactionCardsListStyle = {
 };
 
 const reviewPanelStyle = {
-  padding: 18,
+  padding: 20,
   borderRadius: 18,
   background: "linear-gradient(180deg, #ffffff 0%, #f7fbff 100%)",
   border: "1px solid #dbe6f3",
   boxShadow: "0 8px 24px rgba(26,58,143,0.08)",
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
 };
 
 function normalizeEvidenceValue(value) {
