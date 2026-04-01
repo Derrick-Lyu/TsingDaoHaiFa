@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { formatAmountDisplay } from "../../utils/amount";
+
 const RISK_LABELS = {
   high: { text: "高风险", color: "#b91c1c", background: "#fef2f2", border: "#fecaca" },
   warn: { text: "预警关注", color: "#b45309", background: "#fffbeb", border: "#fde68a" },
@@ -114,7 +116,7 @@ export function AlertTable({
               <div style={cardMetaGridStyle}>
                 <MetaItem label="成员单位" value={alert.member_unit_name} />
                 <MetaItem label="交易对手" value={alert.payee_name || "-"} />
-                <MetaItem label="金额" value={alert.matched_amount} />
+                <MetaItem label="金额" value={formatAmountDisplay(alert.matched_amount)} />
                 <MetaItem label="核查状态" value={(REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending).text} />
               </div>
 
@@ -163,7 +165,7 @@ export function AlertTable({
                       <div style={secondaryStyle}>{alert.member_unit_code || "-"}</div>
                     </td>
                     <td style={cellStyle}>{alert.payee_name || "-"}</td>
-                    <td style={cellStyle}>{alert.matched_amount}</td>
+                    <td style={cellStyle}>{formatAmountDisplay(alert.matched_amount)}</td>
                     <td style={cellStyle}>
                       <span style={badgeStyle(riskTone.background, riskTone.color)}>{riskTone.text}</span>
                     </td>

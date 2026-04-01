@@ -1,3 +1,5 @@
+import { formatAmountDisplay } from "../../utils/amount";
+
 const RISK_TONES = {
   high: {
     badgeBackground: "#fdecec",
@@ -93,7 +95,7 @@ export function TopicSummaryCard({ topic, interactive = false, onClick }) {
         {topic.coreMetrics.map((metric) => (
           <span key={metric.label} style={metricPillStyle}>
             <span style={metricLabelStyle}>{metric.label}</span>
-            <strong style={metricValueStyle}>{metric.value}</strong>
+            <strong style={metricValueStyle}>{shouldFormatMetricAmount(metric.label, metric.value) ? formatAmountDisplay(metric.value) : metric.value}</strong>
           </span>
         ))}
       </div>
@@ -121,6 +123,10 @@ function normalizeRiskLevel(level) {
     return "medium";
   }
   return "low";
+}
+
+function shouldFormatMetricAmount(label, value) {
+  return String(label ?? "").includes("金额") || /(元|万元|亿元)\s*$/.test(String(value ?? "").trim());
 }
 
 const topicNameStyle = {

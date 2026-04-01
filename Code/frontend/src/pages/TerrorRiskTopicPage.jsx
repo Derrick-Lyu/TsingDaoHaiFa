@@ -13,6 +13,7 @@ import { requestJson } from "../api/client";
 import { AlertTable } from "../components/terrorRisk/AlertTable";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { TypicalCaseCards } from "../components/terrorRisk/TypicalCaseCards";
+import { formatAmountDisplay } from "../utils/amount";
 import { buildRuleFilterOptions } from "../utils/terrorRiskRules";
 import { getOverviewRankingItems, OVERVIEW_RANKING_TABS } from "../utils/terrorRiskOverview";
 
@@ -293,12 +294,13 @@ export function TerrorRiskTopicPage({
 
 function MetricCard({ label, value, tone }) {
   const palette = METRIC_TONES[tone] || METRIC_TONES.blue;
+  const displayValue = label === "涉及金额" ? formatAmountDisplay(value) : value;
 
   return (
     <div style={{ ...metricCardStyle, background: palette.background, borderColor: palette.border }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: palette.label }}>{label}</div>
       <div style={{ marginTop: 14 }}>
-        <SummaryMetricValue value={value} color={palette.value} primaryFontSize={42} unitFontSize={18} />
+        <SummaryMetricValue value={displayValue} color={palette.value} primaryFontSize={42} unitFontSize={18} />
       </div>
     </div>
   );
@@ -324,7 +326,7 @@ function CompactRankingPanel({ items = [], emptyLabel }) {
                     <span>笔</span>
                   </span>
                   <span style={rankingStatPillStyle}>
-                    <strong style={rankingStatValueStyle}>{item.amount}</strong>
+                    <strong style={rankingStatValueStyle}>{formatAmountDisplay(item.amount)}</strong>
                   </span>
                 </div>
               </div>

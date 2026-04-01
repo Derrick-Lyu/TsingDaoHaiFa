@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { requestJson } from "../api/client";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
+import { formatAmountDisplay } from "../utils/amount";
 
 const API_PATH = "/terror-risk/transactions";
 
@@ -118,13 +119,6 @@ function serializeForm(form) {
       remarks: form.remarks.trim(),
     },
   };
-}
-
-function formatAmount(amount) {
-  return new Intl.NumberFormat("zh-CN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
 }
 
 function useCompactLayout(maxWidth = 960) {
@@ -448,7 +442,7 @@ export function TransactionDataPage() {
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 16 }}>
         {[
           { label: "交易记录", value: summary.total, tone: { background: "#eef4ff", color: "#1a3a8f" } },
-          { label: "总金额", value: `${formatAmount(summary.totalAmount)} 元`, tone: { background: "#e8f5ef", color: "#0f7a3e" } },
+          { label: "总金额", value: formatAmountDisplay(summary.totalAmount), tone: { background: "#e8f5ef", color: "#0f7a3e" } },
           { label: "闲置账户", value: summary.dormantCount, tone: { background: "#fdecec", color: "#c03838" } },
           { label: "主要对手方", value: summary.counterparties, tone: { background: "#f3f4f6", color: "#374151" } },
         ].map((metric) => (
@@ -537,7 +531,7 @@ export function TransactionDataPage() {
                   </div>
 
                   <div style={{ marginTop: 12, fontSize: 18, fontWeight: 900, color: "#b42318" }}>
-                    {formatAmount(item.amount)} 元
+                    {formatAmountDisplay(item.amount)}
                   </div>
 
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>

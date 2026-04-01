@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
+import { formatAmountDisplay } from "../utils/amount";
 
 export function AlertDetailPage({
   alertId = "",
@@ -115,7 +116,7 @@ export function AlertDetailPage({
             ["交易对手", detail.payee_name],
             ["交易日期", detail.transaction_date],
             ["风险等级", detail.risk_level === "high" ? "高风险" : "预警关注"],
-            ["涉金额", detail.matched_amount],
+            ["涉金额", formatAmountDisplay(detail.matched_amount)],
             ["证据数", `${detail.evidence_count}`],
           ].map(([label, value]) => (
             <div key={label} style={metaCardStyle}>
@@ -201,7 +202,7 @@ export function AlertDetailPage({
                     <tr key={item.transaction_no}>
                       <td style={tdStyle}>{item.transaction_no}</td>
                       <td style={tdStyle}>{item.transaction_date}</td>
-                      <td style={tdStyle}>{item.amount}</td>
+                      <td style={tdStyle}>{formatAmountDisplay(item.amount)}</td>
                       <td style={tdStyle}>{item.payer_name}</td>
                       <td style={tdStyle}>{item.payee_name}</td>
                       <td style={tdStyle}>{item.business_scenario}</td>
@@ -218,7 +219,7 @@ export function AlertDetailPage({
                       <div style={transactionCardLabelStyle}>{item.transaction_no}</div>
                       <div style={transactionCardTitleStyle}>{item.business_scenario}</div>
                     </div>
-                    <div style={transactionAmountStyle}>{item.amount}</div>
+                    <div style={transactionAmountStyle}>{formatAmountDisplay(item.amount)}</div>
                   </div>
                   <div style={transactionMetaGridStyle}>
                     <div>
@@ -390,9 +391,11 @@ const contentGridStyle = {
   display: "grid",
   gap: 16,
   alignItems: "stretch",
+  width: "100%",
 };
 
 const panelStyle = {
+  minWidth: 0,
   background: "white",
   borderRadius: 20,
   padding: 20,
@@ -406,6 +409,7 @@ const rightColumnStackStyle = {
   alignContent: "start",
   gridTemplateRows: "auto minmax(0, 1fr)",
   height: "100%",
+  minWidth: 0,
 };
 
 const panelTitleStyle = {
@@ -721,8 +725,8 @@ function buildEvidenceHighlights(payload) {
 
   maybePush("命中关键字", safePayload.matched_keyword || safePayload.matched_keywords);
   maybePush("名单名称", safePayload.blacklist_name);
-  maybePush("金额", safePayload.amount);
-  maybePush("阈值", safePayload.threshold);
+  maybePush("金额", safePayload.amount !== undefined ? formatAmountDisplay(safePayload.amount) : undefined);
+  maybePush("阈值", safePayload.threshold !== undefined ? formatAmountDisplay(safePayload.threshold) : undefined);
   maybePush("连续天数", safePayload.days ? `${safePayload.days}天` : undefined);
   maybePush("单日次数", safePayload.daily_count ? `${safePayload.daily_count}次` : undefined);
   maybePush("交易笔数", safePayload.transaction_count ? `${safePayload.transaction_count}笔` : undefined);

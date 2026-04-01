@@ -46,19 +46,15 @@ export async function requestJson(
       typeof body === "string" ? body : JSON.stringify(body);
   }
 
-  try {
-    const response = await fetch(url, requestInit);
+  const response = await fetch(url, requestInit);
 
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
   }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return await response.json();
 }

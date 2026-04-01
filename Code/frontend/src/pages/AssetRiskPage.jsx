@@ -17,6 +17,7 @@ import { PageMetaRow } from "../components/shared/PageMetaRow";
 import { AccordionSection } from "../components/shared/AccordionSection";
 import { assetKPIs, barData, terrorBlacklistData } from "../data/assetRisk";
 import { pieData, donutData, recentRisks } from "../data/overview";
+import { formatAmountDisplay } from "../utils/amount";
 
 export function AssetRiskPage() {
   const [subTab, setSubTab] = useState("应收账款逾期");
@@ -114,7 +115,7 @@ export function AssetRiskPage() {
                     marginBottom: 4,
                   }}
                 >
-                  {kpi.value}
+                  {shouldFormatAmountText(kpi.value) ? formatAmountDisplay(kpi.value) : kpi.value}
                 </div>
                 <div
                   style={{
@@ -217,7 +218,7 @@ export function AssetRiskPage() {
                       textAlign: "center",
                     }}
                   >
-                    {item.amount}
+                    {formatAmountDisplay(item.amount)}
                   </div>
                   <div
                     style={{
@@ -598,4 +599,8 @@ export function AssetRiskPage() {
       </div>
     </div>
   );
+}
+
+function shouldFormatAmountText(value) {
+  return /(元|万元|亿元)\s*$/.test(String(value ?? "").trim());
 }
