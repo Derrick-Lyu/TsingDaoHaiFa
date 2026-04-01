@@ -409,62 +409,64 @@ export function AlertDetailPage({
           </div>
         </section>
 
-        <section style={panelStyle}>
-          <div style={panelTitleStyle}>关联交易明细</div>
-          <div className="alert-detail-table">
-            <table style={tableStyle}>
-              <thead>
-                <tr style={{ background: "#f8fafc" }}>
-                  {["流水号", "日期", "金额", "付款方", "收款方", "业务场景"].map((head) => (
-                    <th key={head} style={thStyle}>
-                      {head}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {relatedTransactions.map((item) => (
-                  <tr key={item.transaction_no}>
-                    <td style={tdStyle}>{item.transaction_no}</td>
-                    <td style={tdStyle}>{item.transaction_date}</td>
-                    <td style={tdStyle}>{item.amount}</td>
-                    <td style={tdStyle}>{item.payer_name}</td>
-                    <td style={tdStyle}>{item.payee_name}</td>
-                    <td style={tdStyle}>{item.business_scenario}</td>
+        <div style={rightColumnStackStyle} className="alert-detail-right-column">
+          <section style={panelStyle}>
+            <div style={panelTitleStyle}>关联交易明细</div>
+            <div className="alert-detail-table" style={tableContainerStyle}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr style={{ background: "#f8fafc" }}>
+                    {["流水号", "日期", "金额", "付款方", "收款方", "业务场景"].map((head) => (
+                      <th key={head} style={thStyle}>
+                        {head}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="alert-detail-cards" style={{ marginTop: 2 }}>
-            {relatedTransactions.map((item) => (
-              <div key={item.transaction_no} style={transactionCardStyle}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                  <div>
-                    <div style={transactionCardLabelStyle}>{item.transaction_no}</div>
-                    <div style={transactionCardTitleStyle}>{item.business_scenario}</div>
+                </thead>
+                <tbody>
+                  {relatedTransactions.map((item) => (
+                    <tr key={item.transaction_no}>
+                      <td style={tdStyle}>{item.transaction_no}</td>
+                      <td style={tdStyle}>{item.transaction_date}</td>
+                      <td style={tdStyle}>{item.amount}</td>
+                      <td style={tdStyle}>{item.payer_name}</td>
+                      <td style={tdStyle}>{item.payee_name}</td>
+                      <td style={tdStyle}>{item.business_scenario}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="alert-detail-cards" style={transactionCardsListStyle}>
+              {relatedTransactions.map((item) => (
+                <div key={item.transaction_no} style={transactionCardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                    <div>
+                      <div style={transactionCardLabelStyle}>{item.transaction_no}</div>
+                      <div style={transactionCardTitleStyle}>{item.business_scenario}</div>
+                    </div>
+                    <div style={transactionAmountStyle}>{item.amount}</div>
                   </div>
-                  <div style={transactionAmountStyle}>{item.amount}</div>
+                  <div style={transactionMetaGridStyle}>
+                    <div>
+                      <div style={transactionMetaLabelStyle}>日期</div>
+                      <div style={transactionMetaValueStyle}>{item.transaction_date}</div>
+                    </div>
+                    <div>
+                      <div style={transactionMetaLabelStyle}>付款方</div>
+                      <div style={transactionMetaValueStyle}>{item.payer_name}</div>
+                    </div>
+                    <div>
+                      <div style={transactionMetaLabelStyle}>收款方</div>
+                      <div style={transactionMetaValueStyle}>{item.payee_name}</div>
+                    </div>
+                  </div>
                 </div>
-                <div style={transactionMetaGridStyle}>
-                  <div>
-                    <div style={transactionMetaLabelStyle}>日期</div>
-                    <div style={transactionMetaValueStyle}>{item.transaction_date}</div>
-                  </div>
-                  <div>
-                    <div style={transactionMetaLabelStyle}>付款方</div>
-                    <div style={transactionMetaValueStyle}>{item.payer_name}</div>
-                  </div>
-                  <div>
-                    <div style={transactionMetaLabelStyle}>收款方</div>
-                    <div style={transactionMetaValueStyle}>{item.payee_name}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </section>
 
-          <div style={reviewPanelStyle}>
+          <section style={reviewPanelStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
@@ -537,8 +539,8 @@ export function AlertDetailPage({
                 {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : "提交核查结论"}
               </button>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );
@@ -612,7 +614,7 @@ const metaCardStyle = {
 const contentGridStyle = {
   display: "grid",
   gap: 16,
-  alignItems: "start",
+  alignItems: "stretch",
 };
 
 const panelStyle = {
@@ -621,6 +623,12 @@ const panelStyle = {
   padding: 20,
   boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
   border: "1px solid #edf1f7",
+};
+
+const rightColumnStackStyle = {
+  display: "grid",
+  gap: 16,
+  alignContent: "start",
 };
 
 const panelTitleStyle = {
@@ -641,6 +649,11 @@ const tableStyle = {
   width: "100%",
   borderCollapse: "collapse",
   minWidth: 760,
+};
+
+const tableContainerStyle = {
+  width: "100%",
+  overflowX: "auto",
 };
 
 const thStyle = {
@@ -868,8 +881,11 @@ const transactionMetaValueStyle = {
   wordBreak: "break-word",
 };
 
+const transactionCardsListStyle = {
+  marginTop: 2,
+};
+
 const reviewPanelStyle = {
-  marginTop: 18,
   padding: 18,
   borderRadius: 18,
   background: "linear-gradient(180deg, #ffffff 0%, #f7fbff 100%)",
@@ -947,6 +963,10 @@ function buildEvidenceHighlights(payload) {
 const responsiveStyles = `
   .alert-detail-page .alert-detail-grid {
     grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+  }
+
+  .alert-detail-page .alert-detail-right-column {
+    min-width: 0;
   }
 
   @media (max-width: 980px) {
