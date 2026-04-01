@@ -1,0 +1,26 @@
+# Track only the application workspace under Code/
+/*
+!/.gitignore
+!/Code/
+!/Code/**
+
+# macOS / editor noise
+.DS_Store
+*.swp
+
+# Python cache
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+
+# Env files
+.env
+.env.*
+
+# Frontend build artifacts and dependencies
+node_modules/
+dist/
+
+# Local inspection scratch
+repo_inspect/
