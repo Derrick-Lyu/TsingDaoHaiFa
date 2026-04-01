@@ -14,7 +14,12 @@ def test_terror_risk_topic_returns_summary_and_typical_cases():
     assert payload["snapshot_date"] == "2026-03-31"
     assert int(payload["kpis"]["alert_count"]) >= 1
     assert len(payload["typical_cases"]) == 3
-    assert len(payload["trend"]) >= 5
+    assert [item["title"] for item in payload["typical_cases"]] == [
+        "黑名单直接命中",
+        "高频大额交易",
+        "长期闲置账户异常交易",
+    ]
+    assert len(payload["trend"]) >= 3
 
 
 def test_terror_risk_alert_list_supports_filters_and_detail_lookup():
@@ -37,7 +42,7 @@ def test_terror_risk_alert_list_supports_filters_and_detail_lookup():
     assert detail["review"]["review_status"] in {"pending", "reviewed"}
 
 
-def test_terror_risk_mutation_endpoints_update_demo_state():
+def test_terror_risk_mutation_endpoints_update_repository_state():
     client = TestClient(app)
 
     blacklist_response = client.post(

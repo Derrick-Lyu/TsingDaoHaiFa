@@ -3,20 +3,14 @@ from __future__ import annotations
 import importlib.util
 
 from app.core.config import settings
-from app.repositories.demo_repository import demo_repository
+from app.repositories.postgres_repository import PostgresRepository
 
 
-def get_repository():
-    database_url = settings.database_url
-    if not database_url:
-        return demo_repository
+def get_repository() -> PostgresRepository:
+    if not settings.database_url:
+        raise RuntimeError("DATABASE_URL is required for the backend repository")
 
     if importlib.util.find_spec("psycopg") is None:
-        return demo_repository
+        raise RuntimeError("psycopg is required for the PostgreSQL backend repository")
 
-    try:
-        from app.repositories.postgres_repository import PostgresRepository
-
-        return PostgresRepository(database_url)
-    except Exception:
-        return demo_repository
+    return PostgresRepository(settings.database_url)

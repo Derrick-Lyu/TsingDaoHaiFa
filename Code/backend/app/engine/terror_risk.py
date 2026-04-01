@@ -1,8 +1,26 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from uuid import uuid4
+
+CASE_DOMAIN_ORDER = (
+    "blacklist_screening",
+    "behavioral_frequency",
+    "account_anomaly",
+)
+
+RULE_CASE_DOMAINS = {
+    "blacklist_hit": "blacklist_screening",
+    "high_frequency_high_amount": "behavioral_frequency",
+    "dormant_account_abnormal_payment": "account_anomaly",
+}
+
+RISK_LEVEL_PRIORITY = {
+    "high": 0,
+    "warn": 1,
+    "low": 2,
+}
 
 
 def detect_terror_risk_alerts(
@@ -13,6 +31,8 @@ def detect_terror_risk_alerts(
     snapshot_date: str,
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
     enabled_rules = {rule["ruleCode"]: rule for rule in rules if rule.get("enabled")}
+    _validate_case_domain_mapping(enabled_rules)
+
     alerts: list[dict[str, object]] = []
 
     if "blacklist_hit" in enabled_rules:
@@ -24,19 +44,43 @@ def detect_terror_risk_alerts(
     if "dormant_account_abnormal_payment" in enabled_rules:
         alerts.extend(_detect_dormant_account(transactions, enabled_rules["dormant_account_abnormal_payment"]))
 
-    alerts.sort(key=lambda item: (item["risk_level"] != "high", item["transaction_date"], item["alert_no"]))
+    alerts.sort(key=lambda item: (_alert_sort_key(item)[0], item["transaction_date"], item["alert_no"]))
+    now = datetime.now()
     latest_job = {
-        "job_no": f"JOB-{snapshot_date.replace('-', '')}-{datetime.now().strftime('%H%M%S')}",
+        "job_no": f"JOB-{snapshot_date.replace('-', '')}-{now.strftime('%H%M%S')}",
         "job_status": "succeeded",
         "transaction_count": len(transactions),
         "matched_count": len(alerts),
         "high_risk_count": sum(1 for alert in alerts if alert["risk_level"] == "high"),
         "warning_count": sum(1 for alert in alerts if alert["risk_level"] == "warn"),
-        "started_at": datetime.now().isoformat(timespec="seconds"),
-        "finished_at": datetime.now().isoformat(timespec="seconds"),
+        "started_at": now.isoformat(timespec="seconds"),
+        "finished_at": now.isoformat(timespec="seconds"),
         "input_snapshot_at": f"{snapshot_date}T09:00:00+08:00",
     }
     return alerts, latest_job
+
+
+def select_typical_case_alerts(alerts: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
+    for alert in alerts:
+        domain = RULE_CASE_DOMAINS.get(str(alert["rule_code"]))
+        if not domain:
+            continue
+        grouped[domain].append(alert)
+
+    typical_cases: list[dict[str, object]] = []
+    for domain in CASE_DOMAIN_ORDER:
+        candidates = grouped.get(domain)
+        if not candidates:
+            continue
+        typical_cases.append(sorted(candidates, key=_alert_sort_key)[0])
+    return typical_cases
+
+
+def _validate_case_domain_mapping(enabled_rules: dict[str, dict[str, object]]) -> None:
+    missing = [rule_code for rule_code in enabled_rules if rule_code not in RULE_CASE_DOMAINS]
+    if missing:
+        raise ValueError(f"Missing case domain mapping for enabled rule(s): {', '.join(sorted(missing))}")
 
 
 def _params(rule: dict[str, object]) -> dict[str, str]:
@@ -45,6 +89,23 @@ def _params(rule: dict[str, object]) -> dict[str, str]:
 
 def _format_amount_yuan(amount: float) -> str:
     return f"{amount / 10000:.2f}万元"
+
+
+def _matched_amount_value(alert: dict[str, object]) -> float:
+    if "matched_amount_value" in alert:
+        return float(alert["matched_amount_value"])
+    matched_amount = str(alert.get("matched_amount", "0")).replace("万元", "")
+    return float(matched_amount) * 10000
+
+
+def _alert_sort_key(alert: dict[str, object]) -> tuple[object, ...]:
+    return (
+        RISK_LEVEL_PRIORITY.get(str(alert.get("risk_level")), 99),
+        -int(alert.get("matched_count", 0)),
+        -_matched_amount_value(alert),
+        -date.fromisoformat(str(alert.get("transaction_date"))).toordinal(),
+        str(alert.get("alert_no", "")),
+    )
 
 
 def _make_alert(
@@ -113,6 +174,28 @@ def _normalize_related_transactions(rows: list[dict[str, object]]) -> list[dict[
         }
         for row in rows
     ]
+
+
+def _windowed_rows(
+    rows: list[dict[str, object]],
+    *,
+    window_days: int,
+    predicate,
+) -> list[dict[str, object]]:
+    qualified = [row for row in sorted(rows, key=lambda item: str(item["transactionDate"])) if predicate(row)]
+    best_rows: list[dict[str, object]] = []
+    left = 0
+    for right in range(len(qualified)):
+        right_date = date.fromisoformat(str(qualified[right]["transactionDate"]))
+        while left <= right:
+            left_date = date.fromisoformat(str(qualified[left]["transactionDate"]))
+            if (right_date - left_date).days < window_days:
+                break
+            left += 1
+        window = qualified[left:right + 1]
+        if len(window) > len(best_rows):
+            best_rows = window
+    return best_rows
 
 
 def _detect_blacklist_hits(
@@ -219,6 +302,7 @@ def _detect_high_frequency(
     rule: dict[str, object],
 ) -> list[dict[str, object]]:
     params = _params(rule)
+    window_days = int(params.get("window_days", "10"))
     min_daily_count = int(params.get("min_daily_count", "50"))
     corp_threshold = float(params.get("corp_amount_threshold", "2000000"))
     personal_threshold = float(params.get("personal_amount_threshold", "500000"))
@@ -228,7 +312,11 @@ def _detect_high_frequency(
 
     alerts: list[dict[str, object]] = []
     for (_, member_unit_name, payee_name), rows in grouped.items():
-        qualifying = [row for row in rows if int(row.get("transactionCount", 1)) > min_daily_count]
+        qualifying = _windowed_rows(
+            rows,
+            window_days=window_days,
+            predicate=lambda row: int(row.get("transactionCount", 1)) > min_daily_count,
+        )
         if not qualifying:
             continue
         threshold = corp_threshold if str(rows[0].get("payeeType", "organization")) == "organization" else personal_threshold
@@ -239,9 +327,10 @@ def _detect_high_frequency(
         evidences = [
             {
                 "evidence_type": "frequency",
-                "evidence_title": "连续高频交易",
-                "evidence_detail": f"同一收款人在多个交易日中单日交易次数超过 {min_daily_count} 次。",
+                "evidence_title": "连续窗口高频交易",
+                "evidence_detail": f"同一收款人在连续 {window_days} 日窗口内单日交易次数均超过 {min_daily_count} 次。",
                 "evidence_payload": {
+                    "window_days": window_days,
                     "days": len(qualifying),
                     "max_daily_count": max(int(row.get("transactionCount", 1)) for row in qualifying),
                 },
@@ -250,7 +339,7 @@ def _detect_high_frequency(
             {
                 "evidence_type": "amount",
                 "evidence_title": "累计金额超过阈值",
-                "evidence_detail": f"累计金额达到 {_format_amount_yuan(total_amount)}，超过阈值 {_format_amount_yuan(threshold)}。",
+                "evidence_detail": f"窗口累计金额达到 {_format_amount_yuan(total_amount)}，超过阈值 {_format_amount_yuan(threshold)}。",
                 "evidence_payload": {
                     "amount": _format_amount_yuan(total_amount),
                     "threshold": _format_amount_yuan(threshold),
@@ -272,10 +361,10 @@ def _detect_high_frequency(
                 transaction_date=str(latest_tx["transactionDate"]),
                 matched_amount_value=total_amount,
                 matched_count=sum(int(row.get("transactionCount", 1)) for row in qualifying),
-                alert_summary="连续10日同一收款人单日交易次数超阈值，且累计金额超过限定标准。",
+                alert_summary=f"连续 {window_days} 日内同一收款人单日交易次数超阈值，且累计金额超过限定标准。",
                 evidences=evidences,
                 related_transactions=_normalize_related_transactions(qualifying),
-                latest_evidence_summary="连续10日同一收款人高频高额支付。",
+                latest_evidence_summary=f"连续 {window_days} 日窗口内同一收款人高频高额支付。",
             )
         )
     return alerts
@@ -286,37 +375,53 @@ def _detect_dormant_account(
     rule: dict[str, object],
 ) -> list[dict[str, object]]:
     params = _params(rule)
+    dormant_days_threshold = int(params.get("dormant_days", "365"))
+    window_days = int(params.get("window_days", "10"))
     corp_threshold = float(params.get("corp_amount_threshold", "2000000"))
     personal_threshold = float(params.get("personal_amount_threshold", "500000"))
-    dormant_rows = [tx for tx in transactions if bool(tx.get("isDormantAccount"))]
+    dormant_rows = [tx for tx in transactions if bool(tx.get("isDormantAccount")) and tx.get("accountLastActiveDate")]
     grouped: dict[tuple[str, str], list[dict[str, object]]] = defaultdict(list)
     for tx in dormant_rows:
         grouped[(str(tx["memberUnitCode"]), str(tx["payeeName"]))].append(tx)
 
     alerts: list[dict[str, object]] = []
     for (_, payee_name), rows in grouped.items():
+        qualifying = _windowed_rows(
+            rows,
+            window_days=window_days,
+            predicate=lambda row: (
+                date.fromisoformat(str(row["transactionDate"])) -
+                date.fromisoformat(str(row["accountLastActiveDate"]))
+            ).days > dormant_days_threshold,
+        )
+        if not qualifying:
+            continue
         threshold = corp_threshold if str(rows[0].get("payeeType", "organization")) == "organization" else personal_threshold
-        total_amount = sum(float(row["amount"]) * int(row.get("transactionCount", 1)) for row in rows)
+        total_amount = sum(float(row["amount"]) * int(row.get("transactionCount", 1)) for row in qualifying)
         if total_amount <= threshold:
             continue
-        latest_tx = max(rows, key=lambda row: str(row["transactionDate"]))
+        latest_tx = max(qualifying, key=lambda row: str(row["transactionDate"]))
         dormant_days = (
-            datetime.fromisoformat(str(latest_tx["transactionDate"])) -
-            datetime.fromisoformat(str(latest_tx["accountLastActiveDate"]))
+            date.fromisoformat(str(latest_tx["transactionDate"])) -
+            date.fromisoformat(str(latest_tx["accountLastActiveDate"]))
         ).days
         evidences = [
             {
                 "evidence_type": "dormant_account",
                 "evidence_title": "长期闲置账户恢复交易",
-                "evidence_detail": f"账户闲置 {dormant_days} 天后重新发生支付。",
-                "evidence_payload": {"dormant_days": dormant_days},
+                "evidence_detail": f"账户闲置 {dormant_days} 天后重新发生支付，满足超过 {dormant_days_threshold} 天条件。",
+                "evidence_payload": {
+                    "dormant_days": dormant_days,
+                    "threshold_days": dormant_days_threshold,
+                },
                 "evidence_order": 1,
             },
             {
                 "evidence_type": "amount",
-                "evidence_title": "累计金额超过阈值",
-                "evidence_detail": f"累计金额达到 {_format_amount_yuan(total_amount)}，超过阈值 {_format_amount_yuan(threshold)}。",
+                "evidence_title": "窗口累计金额超过阈值",
+                "evidence_detail": f"连续 {window_days} 日窗口累计金额达到 {_format_amount_yuan(total_amount)}，超过阈值 {_format_amount_yuan(threshold)}。",
                 "evidence_payload": {
+                    "window_days": window_days,
                     "amount": _format_amount_yuan(total_amount),
                     "threshold": _format_amount_yuan(threshold),
                 },
@@ -336,11 +441,11 @@ def _detect_dormant_account(
                 payee_account=str(latest_tx["payeeAccount"]),
                 transaction_date=str(latest_tx["transactionDate"]),
                 matched_amount_value=total_amount,
-                matched_count=sum(int(row.get("transactionCount", 1)) for row in rows),
-                alert_summary="闲置超过一年账户重新发生交易，且连续10日金额达到阈值。",
+                matched_count=sum(int(row.get("transactionCount", 1)) for row in qualifying),
+                alert_summary=f"闲置超过 {dormant_days_threshold} 天账户重新发生交易，且连续 {window_days} 日内金额达到阈值。",
                 evidences=evidences,
-                related_transactions=_normalize_related_transactions(rows),
-                latest_evidence_summary="闲置账户恢复交易后出现连续10日异常支付。",
+                related_transactions=_normalize_related_transactions(qualifying),
+                latest_evidence_summary=f"长期闲置账户在连续 {window_days} 日窗口内恢复异常支付。",
             )
         )
     return alerts

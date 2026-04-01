@@ -3,6 +3,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 import json
 
+from app.engine.terror_risk import select_typical_case_alerts
+
 SNAPSHOT_DATE = "2026-03-31"
 
 
@@ -711,7 +713,7 @@ class PostgresRepository:
                     "risk_level": item["risk_level"],
                     "alert_no": item["alert_no"],
                 }
-                for item in alerts_payload[:3]
+                for item in select_typical_case_alerts(alerts_payload)
             ],
             "latest_job": {
                 "job_no": latest_job["job_no"] if latest_job else None,

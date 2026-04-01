@@ -9,9 +9,17 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 
-@pytest.fixture(autouse=True)
-def reset_demo_repo():
-    from app.repositories.demo_repository import reset_demo_repository
+from tests.support.fake_repository import FakePostgresRepository
 
-    reset_demo_repository()
+
+@pytest.fixture
+def fake_repository() -> FakePostgresRepository:
+    return FakePostgresRepository()
+
+
+@pytest.fixture(autouse=True)
+def patch_app_repositories(monkeypatch: pytest.MonkeyPatch, fake_repository: FakePostgresRepository):
+    monkeypatch.setattr("app.services.fund_safety_service.get_repository", lambda: fake_repository)
+    monkeypatch.setattr("app.services.terror_risk_service.get_repository", lambda: fake_repository)
+    monkeypatch.setattr("app.main.initialize_detection_snapshot", lambda: None)
     yield
