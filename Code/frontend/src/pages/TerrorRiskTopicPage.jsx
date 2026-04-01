@@ -14,6 +14,7 @@ import { AlertTable } from "../components/terrorRisk/AlertTable";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { TypicalCaseCards } from "../components/terrorRisk/TypicalCaseCards";
 import { buildRuleFilterOptions } from "../utils/terrorRiskRules";
+import { getOverviewRankingItems, OVERVIEW_RANKING_TABS } from "../utils/terrorRiskOverview";
 
 const EMPTY_TOPIC = {
   page_title: "涉恐交易风险",
@@ -67,6 +68,7 @@ export function TerrorRiskTopicPage({
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [activeOverviewTab, setActiveOverviewTab] = useState("entities");
 
   useEffect(() => {
     let cancelled = false;
@@ -133,6 +135,10 @@ export function TerrorRiskTopicPage({
 
   const ruleOptions = useMemo(() => buildRuleFilterOptions(rules, alerts), [rules, alerts]);
   const previewCases = useMemo(() => (topic.typical_cases || []).slice(0, 3), [topic.typical_cases]);
+  const overviewRankingItems = useMemo(
+    () => getOverviewRankingItems(topic, activeOverviewTab),
+    [topic, activeOverviewTab],
+  );
   const latestState = mapJobStatus(topic.latest_job?.job_status);
   const lastInput = topic.latest_job?.transaction_count || 0;
   const lastMatched = topic.latest_job?.matched_count || 0;
@@ -231,8 +237,10 @@ export function TerrorRiskTopicPage({
       </div>
 
       <div style={insightGridStyle}>
-        <section style={panelStyle}>
-          <div style={panelTitleStyle}>风险趋势</div>
+        <section style={insightPanelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>风险趋势</div>
+          </div>
           <div style={{ width: "100%", height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={topic.trend}>
@@ -246,12 +254,23 @@ export function TerrorRiskTopicPage({
           </div>
         </section>
 
-        <section style={panelStyle}>
-          <div style={panelTitleStyle}>命中概览</div>
-          <div style={rankingOverviewStyle}>
-            <CompactRankingPanel title="成员单位" items={topic.top_entities} />
-            <CompactRankingPanel title="对手方" items={topic.top_accounts} />
+        <section style={insightPanelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>命中概览</div>
+            <div style={overviewTabsStyle}>
+              {OVERVIEW_RANKING_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveOverviewTab(tab.key)}
+                  style={overviewTabButtonStyle(activeOverviewTab === tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
+          <CompactRankingPanel items={overviewRankingItems} emptyLabel="暂无命中排行数据" />
         </section>
       </div>
 
@@ -283,32 +302,34 @@ function MetricCard({ label, value, tone }) {
   );
 }
 
-function CompactRankingPanel({ title, items = [] }) {
-  const maxCount = Math.max(...items.map((item) => item.count || 0), 1);
+function CompactRankingPanel({ items = [], emptyLabel }) {
+  if (!items.length) {
+    return <div style={rankingEmptyStateStyle}>{emptyLabel}</div>;
+  }
 
   return (
     <div style={rankingPanelStyle}>
-      <div style={rankingPanelHeaderStyle}>
-        <div style={rankingTitleStyle}>{title}</div>
-        <span style={metaPillStyle("#f4f7fb", "#516173")}>{items.length} 项</span>
-      </div>
       {items.map((item, index) => (
-        <div key={`${title}-${item.name}`} style={rankingCompactRowStyle}>
-          <div style={rankingRowHeaderStyle}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+        <div key={`${item.name}-${index}`} style={rankingCompactRowStyle}>
+          <div style={rankingCompactHeaderStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
               <span style={rankingIndexStyle}>{index + 1}</span>
-              <div style={rankingNameStyle}>{item.name}</div>
+              <div style={rankingIdentityStyle}>
+                <div style={rankingNameStyle}>{item.name}</div>
+                <div style={rankingStatRowStyle}>
+                  <span style={rankingStatPillStyle}>
+                    <strong style={rankingStatValueStyle}>{item.count}</strong>
+                    <span>笔</span>
+                  </span>
+                  <span style={rankingStatPillStyle}>
+                    <strong style={rankingStatValueStyle}>{item.amount}</strong>
+                  </span>
+                </div>
+              </div>
             </div>
             <span style={riskPillStyle(item.risk_level)}>
               {item.risk_level === "high" ? "高风险" : item.risk_level === "warn" ? "预警关注" : "提示"}
             </span>
-          </div>
-          <div style={rankingBarTrackStyle}>
-            <div style={rankingBarFillStyle(item.count / maxCount, item.risk_level)} />
-          </div>
-          <div style={rankingMetaRowStyle}>
-            <span>{item.count} 笔</span>
-            <span>{item.amount}</span>
           </div>
         </div>
       ))}
@@ -435,8 +456,9 @@ const metricCardStyle = {
 
 const insightGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
   gap: 16,
+  alignItems: "stretch",
 };
 
 const panelStyle = {
@@ -447,76 +469,98 @@ const panelStyle = {
   boxShadow: "0 16px 28px rgba(15,23,42,0.05)",
 };
 
+const insightPanelStyle = {
+  ...panelStyle,
+  minHeight: 392,
+  display: "flex",
+  flexDirection: "column",
+};
+
 const panelTitleStyle = {
   fontSize: 18,
   fontWeight: 800,
   color: "#102033",
 };
 
-const rankingOverviewStyle = {
+const panelHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 16,
+  marginBottom: 16,
+  flexWrap: "wrap",
+};
+
+const overviewTabsStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  padding: 4,
+  borderRadius: 999,
+  background: "#f4f7fb",
+  border: "1px solid #e0e7f0",
+};
+
+function overviewTabButtonStyle(active) {
+  return {
+    border: "none",
+    borderRadius: 999,
+    padding: "8px 14px",
+    background: active ? "#102c57" : "transparent",
+    color: active ? "#ffffff" : "#516173",
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: "pointer",
+    transition: "background 0.15s ease, color 0.15s ease",
+    whiteSpace: "nowrap",
+  };
+}
+
+const rankingEmptyStateStyle = {
+  flex: 1,
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-  gap: 14,
-  marginTop: 16,
+  placeItems: "center",
+  borderRadius: 18,
+  border: "1px dashed #d9e3ef",
+  background: "#f8fafc",
+  color: "#67778a",
+  fontSize: 13,
+  fontWeight: 700,
 };
 
 const rankingPanelStyle = {
   display: "grid",
-  gap: 10,
-  padding: 14,
-  borderRadius: 18,
-  background: "#f8fafc",
-  border: "1px solid #e6edf5",
+  gap: 12,
+  flex: 1,
+  alignContent: "start",
+  overflowY: "auto",
+  paddingRight: 4,
 };
 
-const rankingPanelHeaderStyle = {
+const rankingCompactRowStyle = {
+  padding: "14px 16px",
+  borderRadius: 18,
+  background: "linear-gradient(180deg, #fbfdff 0%, #f7fafe 100%)",
+  border: "1px solid #e5edf7",
+  boxShadow: "0 10px 20px rgba(15,23,42,0.04)",
+};
+
+const rankingCompactHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   gap: 12,
 };
 
-const rankingTitleStyle = {
-  fontSize: 14,
-  fontWeight: 800,
-  color: "#173d75",
+const rankingIdentityStyle = {
+  minWidth: 0,
+  display: "grid",
+  gap: 8,
 };
-
-const rankingCompactRowStyle = {
-  padding: "10px 12px",
-  borderRadius: 14,
-  background: "white",
-  border: "1px solid #e6edf5",
-};
-
-const rankingRowHeaderStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 10,
-};
-
-const rankingBarTrackStyle = {
-  marginTop: 8,
-  height: 6,
-  borderRadius: 999,
-  background: "#e8eef5",
-  overflow: "hidden",
-};
-
-function rankingBarFillStyle(ratio, level) {
-  const color = level === "high" ? "#b42318" : level === "warn" ? "#b45309" : "#1d4ed8";
-  return {
-    width: `${Math.max(ratio * 100, 18)}%`,
-    height: "100%",
-    borderRadius: 999,
-    background: color,
-  };
-}
 
 const rankingIndexStyle = {
-  width: 22,
-  height: 22,
+  width: 28,
+  height: 28,
   borderRadius: "50%",
   background: "#102c57",
   color: "white",
@@ -529,19 +573,33 @@ const rankingIndexStyle = {
 };
 
 const rankingNameStyle = {
-  fontSize: 13,
-  fontWeight: 700,
+  fontSize: 14,
+  fontWeight: 800,
   color: "#1f2f43",
   wordBreak: "break-word",
 };
 
-const rankingMetaRowStyle = {
-  marginTop: 7,
+const rankingStatRowStyle = {
   display: "flex",
-  justifyContent: "space-between",
+  alignItems: "center",
+  flexWrap: "wrap",
   gap: 12,
+};
+
+const rankingStatPillStyle = {
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: 4,
+  padding: "4px 10px",
+  borderRadius: 999,
+  background: "#eef4fb",
   color: "#67778a",
   fontSize: 12,
+};
+
+const rankingStatValueStyle = {
+  color: "#102c57",
+  fontSize: 13,
 };
 
 const sectionHeaderRowStyle = {
