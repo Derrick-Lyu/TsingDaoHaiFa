@@ -14,6 +14,7 @@ const REVIEW_LABELS = {
 
 export function AlertTable({
   alerts = [],
+  ruleOptions = [],
   filters,
   onChangeFilters,
   onSelectAlert,
@@ -64,9 +65,11 @@ export function AlertTable({
           <span style={filterLabelStyle}>规则类型</span>
           <select value={filters.ruleType} onChange={filterChange("ruleType")} style={selectStyle}>
             <option value="">全部规则</option>
-            <option value="blacklist">黑名单命中</option>
-            <option value="freq">高频大额</option>
-            <option value="dormant">闲置账户异常</option>
+            {ruleOptions.map((rule) => (
+              <option key={rule.value} value={rule.value}>
+                {rule.label}
+              </option>
+            ))}
           </select>
         </label>
         <label style={filterFieldStyle}>

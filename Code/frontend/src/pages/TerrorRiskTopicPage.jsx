@@ -13,128 +13,31 @@ import { requestJson } from "../api/client";
 import { AlertTable } from "../components/terrorRisk/AlertTable";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { TypicalCaseCards } from "../components/terrorRisk/TypicalCaseCards";
+import { buildRuleFilterOptions } from "../utils/terrorRiskRules";
 
-const TOPIC_FALLBACK = {
+const EMPTY_TOPIC = {
   page_title: "涉恐交易风险",
-  snapshot_date: "2026-03-31",
+  snapshot_date: "",
   kpis: {
-    alert_count: "6",
-    high_risk_count: "3",
-    involved_units: "4",
-    involved_amount: "1,280.00万元",
-    blacklist_hit_count: "2",
+    alert_count: "0",
+    high_risk_count: "0",
+    involved_units: "0",
+    involved_amount: "0.00万元",
+    blacklist_hit_count: "0",
   },
-  trend: [
-    { date: "2026-03-25", value: 1 },
-    { date: "2026-03-26", value: 2 },
-    { date: "2026-03-27", value: 2 },
-    { date: "2026-03-28", value: 3 },
-    { date: "2026-03-29", value: 4 },
-    { date: "2026-03-30", value: 5 },
-    { date: "2026-03-31", value: 6 },
-  ],
-  top_entities: [
-    { name: "海发产城投资示例一", count: 3, amount: "620.00万元", risk_level: "high" },
-    { name: "海发园区运营示例二", count: 2, amount: "430.00万元", risk_level: "high" },
-    { name: "海发资本管理示例一", count: 1, amount: "230.00万元", risk_level: "warn" },
-  ],
-  top_accounts: [
-    { name: "青岛西海岸新区某建设工程公司", count: 2, amount: "540.00万元", risk_level: "high" },
-    { name: "山东某高端装备供应链公司", count: 2, amount: "360.00万元", risk_level: "warn" },
-    { name: "青岛某产业园配套服务公司", count: 1, amount: "180.00万元", risk_level: "warn" },
-  ],
-  typical_cases: [
-    {
-      id: "11111111-1111-1111-1111-111111111111",
-      title: "黑名单直接命中",
-      summary: "园区建设类支付命中涉恐黑名单，风险等级高。",
-      risk_level: "high",
-      alert_no: "TA-20260331-001",
-    },
-    {
-      id: "22222222-2222-2222-2222-222222222222",
-      title: "高频大额交易",
-      summary: "同一收款人连续 10 日高频收款并超过阈值。",
-      risk_level: "high",
-      alert_no: "TA-20260331-002",
-    },
-    {
-      id: "33333333-3333-3333-3333-333333333333",
-      title: "长期闲置账户异常交易",
-      summary: "闲置账户恢复交易后出现连续 10 日异常支付。",
-      risk_level: "warn",
-      alert_no: "TA-20260331-003",
-    },
-  ],
+  trend: [],
+  top_entities: [],
+  top_accounts: [],
+  typical_cases: [],
   latest_job: {
-    job_status: "succeeded",
-    transaction_count: 48,
-    matched_count: 6,
-    high_risk_count: 3,
+    job_status: "idle",
+    transaction_count: 0,
+    matched_count: 0,
+    high_risk_count: 0,
   },
 };
 
-const ALERT_LIST_FALLBACK = {
-  total: 4,
-  items: [
-    {
-      id: "11111111-1111-1111-1111-111111111111",
-      alert_no: "TA-20260331-001",
-      rule_code: "TR-BLACKLIST-001",
-      rule_name: "黑名单命中规则",
-      risk_level: "high",
-      member_unit_code: "HF-CP-01",
-      member_unit_name: "海发产城投资示例一",
-      payee_name: "青岛西海岸新区某建设工程公司",
-      matched_amount: "420.00万元",
-      review_status: "pending",
-      evidence_count: 2,
-      alert_summary: "付款账户与黑名单关键词命中，交易直接触发高风险预警。",
-    },
-    {
-      id: "22222222-2222-2222-2222-222222222222",
-      alert_no: "TA-20260331-002",
-      rule_code: "TR-FREQ-010",
-      rule_name: "高频大额交易规则",
-      risk_level: "high",
-      member_unit_code: "HF-PARK-02",
-      member_unit_name: "海发园区运营示例二",
-      payee_name: "青岛某产业园配套服务公司",
-      matched_amount: "360.00万元",
-      review_status: "reviewed",
-      evidence_count: 3,
-      alert_summary: "连续 10 日同一收款人单日交易次数超阈值，且累计金额超过限定标准。",
-    },
-    {
-      id: "33333333-3333-3333-3333-333333333333",
-      alert_no: "TA-20260331-003",
-      rule_code: "TR-DORMANT-011",
-      rule_name: "长期闲置账户异常交易规则",
-      risk_level: "warn",
-      member_unit_code: "HF-CAP-03",
-      member_unit_name: "海发资本管理示例一",
-      payee_name: "山东某基金管理服务公司",
-      matched_amount: "230.00万元",
-      review_status: "pending",
-      evidence_count: 3,
-      alert_summary: "闲置超过一年账户重新发生交易，且连续 10 日金额达到阈值。",
-    },
-    {
-      id: "44444444-4444-4444-4444-444444444444",
-      alert_no: "TA-20260331-004",
-      rule_code: "TR-FREQ-010",
-      rule_name: "高频大额交易规则",
-      risk_level: "warn",
-      member_unit_code: "HF-SERVICE-04",
-      member_unit_name: "海发产业服务示例三",
-      payee_name: "青岛某影视文化配套服务公司",
-      matched_amount: "168.00万元",
-      review_status: "pending",
-      evidence_count: 2,
-      alert_summary: "多笔连续支付但金额未达高风险阈值，当前为预警关注。",
-    },
-  ],
-};
+const EMPTY_ALERT_LIST = { total: 0, items: [] };
 
 const TOPIC_METRICS = [
   { key: "alert_count", label: "预警总数", tone: "blue" },
@@ -151,8 +54,9 @@ export function TerrorRiskTopicPage({
   onBackToOverview,
   onUpdate,
 }) {
-  const [topic, setTopic] = useState(TOPIC_FALLBACK);
-  const [alerts, setAlerts] = useState(ALERT_LIST_FALLBACK.items);
+  const [topic, setTopic] = useState(EMPTY_TOPIC);
+  const [alerts, setAlerts] = useState(EMPTY_ALERT_LIST.items);
+  const [rules, setRules] = useState([]);
   const [filters, setFilters] = useState({
     ruleType: "",
     riskLevel: "",
@@ -165,19 +69,21 @@ export function TerrorRiskTopicPage({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadTopic() {
+    async function loadTopicAndRules() {
       setLoadingTopic(true);
-      const data = await requestJson("/terror-risk/topic", {
-        fallback: TOPIC_FALLBACK,
-      });
+      const [topicData, rulesData] = await Promise.all([
+        requestJson("/terror-risk/topic", { fallback: EMPTY_TOPIC }),
+        requestJson("/terror-risk/rules", { fallback: [] }),
+      ]);
 
       if (!cancelled) {
-        setTopic(data);
+        setTopic(topicData);
+        setRules(Array.isArray(rulesData) ? rulesData : []);
         setLoadingTopic(false);
       }
     }
 
-    loadTopic();
+    loadTopicAndRules();
 
     return () => {
       cancelled = true;
@@ -190,9 +96,7 @@ export function TerrorRiskTopicPage({
     async function loadAlerts() {
       setLoadingAlerts(true);
       const query = buildQueryString(filters);
-      const data = await requestJson(`/terror-risk/alerts${query}`, {
-        fallback: buildAlertFallback(filters),
-      });
+      const data = await requestJson(`/terror-risk/alerts${query}`, { fallback: EMPTY_ALERT_LIST });
 
       if (!cancelled) {
         setAlerts(data.items);
@@ -207,6 +111,7 @@ export function TerrorRiskTopicPage({
     };
   }, [filters]);
 
+  const ruleOptions = useMemo(() => buildRuleFilterOptions(rules, alerts), [rules, alerts]);
   const previewCases = useMemo(() => (topic.typical_cases || []).slice(0, 3), [topic.typical_cases]);
   const latestState = mapJobStatus(topic.latest_job?.job_status);
   const lastInput = topic.latest_job?.transaction_count || 0;
@@ -216,14 +121,14 @@ export function TerrorRiskTopicPage({
     setUpdating(true);
     try {
       await onUpdate?.();
-      const [topicData, alertData] = await Promise.all([
-        requestJson("/terror-risk/topic", { fallback: TOPIC_FALLBACK }),
-        requestJson(`/terror-risk/alerts${buildQueryString(filters)}`, {
-          fallback: buildAlertFallback(filters),
-        }),
+      const [topicData, alertData, rulesData] = await Promise.all([
+        requestJson("/terror-risk/topic", { fallback: EMPTY_TOPIC }),
+        requestJson(`/terror-risk/alerts${buildQueryString(filters)}`, { fallback: EMPTY_ALERT_LIST }),
+        requestJson("/terror-risk/rules", { fallback: [] }),
       ]);
       setTopic(topicData);
       setAlerts(alertData.items);
+      setRules(Array.isArray(rulesData) ? rulesData : []);
     } finally {
       setUpdating(false);
     }
@@ -262,6 +167,7 @@ export function TerrorRiskTopicPage({
 
         <AlertTable
           alerts={alerts}
+          ruleOptions={ruleOptions}
           filters={filters}
           onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
           onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
@@ -391,22 +297,6 @@ function buildQueryString(filters) {
   if (filters.memberUnit) params.set("member_unit", filters.memberUnit);
   const query = params.toString();
   return query ? `?${query}` : "";
-}
-
-function buildAlertFallback(filters) {
-  const items = ALERT_LIST_FALLBACK.items.filter((item) => {
-    const ruleMatch = filters.ruleType ? item.rule_code.toLowerCase().includes(filters.ruleType.toLowerCase()) : true;
-    const riskMatch = filters.riskLevel ? item.risk_level === filters.riskLevel : true;
-    const memberMatch = filters.memberUnit
-      ? item.member_unit_name.includes(filters.memberUnit) || item.member_unit_code.includes(filters.memberUnit)
-      : true;
-    return ruleMatch && riskMatch && memberMatch;
-  });
-
-  return {
-    total: items.length,
-    items,
-  };
 }
 
 function mapJobStatus(status) {
