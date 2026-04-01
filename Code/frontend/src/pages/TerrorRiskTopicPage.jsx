@@ -241,7 +241,8 @@ export function TerrorRiskTopicPage({
           <div style={panelHeaderStyle}>
             <div style={panelTitleStyle}>风险趋势</div>
           </div>
-          <div style={{ width: "100%", height: 280 }}>
+          <div style={trendPanelBodyStyle}>
+            <div style={{ width: "100%", height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={topic.trend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7edf7" />
@@ -251,6 +252,7 @@ export function TerrorRiskTopicPage({
                 <Line type="monotone" dataKey="value" stroke="#102c57" strokeWidth={3} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </section>
 
@@ -476,6 +478,12 @@ const insightPanelStyle = {
   flexDirection: "column",
 };
 
+const trendPanelBodyStyle = {
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+};
+
 const panelTitleStyle = {
   fontSize: 18,
   fontWeight: 800,
@@ -535,6 +543,7 @@ const rankingPanelStyle = {
   alignContent: "start",
   overflowY: "auto",
   paddingRight: 4,
+  maxHeight: 240,
 };
 
 const rankingCompactRowStyle = {
@@ -543,6 +552,7 @@ const rankingCompactRowStyle = {
   background: "linear-gradient(180deg, #fbfdff 0%, #f7fafe 100%)",
   border: "1px solid #e5edf7",
   boxShadow: "0 10px 20px rgba(15,23,42,0.04)",
+  minHeight: 64,
 };
 
 const rankingCompactHeaderStyle = {
@@ -554,8 +564,10 @@ const rankingCompactHeaderStyle = {
 
 const rankingIdentityStyle = {
   minWidth: 0,
-  display: "grid",
-  gap: 8,
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  flex: 1,
 };
 
 const rankingIndexStyle = {
@@ -577,13 +589,15 @@ const rankingNameStyle = {
   fontWeight: 800,
   color: "#1f2f43",
   wordBreak: "break-word",
+  minWidth: 0,
+  flex: 1,
 };
 
 const rankingStatRowStyle = {
   display: "flex",
   alignItems: "center",
-  flexWrap: "wrap",
   gap: 12,
+  flexShrink: 0,
 };
 
 const rankingStatPillStyle = {
