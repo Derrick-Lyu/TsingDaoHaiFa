@@ -251,7 +251,6 @@ export function TerrorRiskTopicPage({
           <div style={sectionHeaderRowStyle}>
             <div>
               <div style={panelTitleStyle}>案例总览</div>
-              <div style={panelSubtitleStyle}>覆盖黑名单命中、高频大额与长期闲置账户异常三类主要命中模式。</div>
             </div>
             <span style={metaPillStyle("#f4f7fb", "#516173")}>共 {(topic.typical_cases || []).length} 个案例</span>
           </div>
@@ -326,7 +325,6 @@ export function TerrorRiskTopicPage({
       <div style={insightGridStyle}>
         <section style={panelStyle}>
           <div style={panelTitleStyle}>风险趋势</div>
-          <div style={panelSubtitleStyle}>观察识别结果在近一周内的变化情况，辅助判断风险是否集中抬升。</div>
           <div style={{ width: "100%", height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={topic.trend}>
@@ -342,10 +340,9 @@ export function TerrorRiskTopicPage({
 
         <section style={panelStyle}>
           <div style={panelTitleStyle}>命中概览</div>
-          <div style={panelSubtitleStyle}>从成员单位和交易对手两个视角理解风险集中分布。</div>
-          <div style={rankingStackStyle}>
-            <RankingPanel title="成员单位排行" items={topic.top_entities} />
-            <RankingPanel title="对手方排行" items={topic.top_accounts} />
+          <div style={rankingOverviewStyle}>
+            <CompactRankingPanel title="成员单位" items={topic.top_entities} />
+            <CompactRankingPanel title="对手方" items={topic.top_accounts} />
           </div>
         </section>
       </div>
@@ -354,7 +351,6 @@ export function TerrorRiskTopicPage({
         <div style={sectionHeaderRowStyle}>
           <div>
             <div style={panelTitleStyle}>典型案例预览</div>
-            <div style={panelSubtitleStyle}>保留在专题概览底部，先建立印象，再按需查看完整案例集。</div>
           </div>
           <button type="button" onClick={onOpenAllCases} style={ghostActionStyle}>
             查看全部典型案例
@@ -392,22 +388,33 @@ function MetricCard({ label, value, tone }) {
   );
 }
 
-function RankingPanel({ title, items = [] }) {
+function CompactRankingPanel({ title, items = [] }) {
+  const maxCount = Math.max(...items.map((item) => item.count || 0), 1);
+
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      <div style={rankingTitleStyle}>{title}</div>
+    <div style={rankingPanelStyle}>
+      <div style={rankingPanelHeaderStyle}>
+        <div style={rankingTitleStyle}>{title}</div>
+        <span style={metaPillStyle("#f4f7fb", "#516173")}>{items.length} 项</span>
+      </div>
       {items.map((item, index) => (
-        <div key={`${title}-${item.name}`} style={rankingItemStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            <span style={rankingIndexStyle}>{index + 1}</span>
-            <div style={{ minWidth: 0 }}>
+        <div key={`${title}-${item.name}`} style={rankingCompactRowStyle}>
+          <div style={rankingRowHeaderStyle}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+              <span style={rankingIndexStyle}>{index + 1}</span>
               <div style={rankingNameStyle}>{item.name}</div>
-              <div style={rankingMetaStyle}>{item.count} 笔 · {item.amount}</div>
             </div>
+            <span style={riskPillStyle(item.risk_level)}>
+              {item.risk_level === "high" ? "高风险" : item.risk_level === "warn" ? "预警关注" : "提示"}
+            </span>
           </div>
-          <span style={riskPillStyle(item.risk_level)}>
-            {item.risk_level === "high" ? "高风险" : item.risk_level === "warn" ? "预警关注" : "提示"}
-          </span>
+          <div style={rankingBarTrackStyle}>
+            <div style={rankingBarFillStyle(item.count / maxCount, item.risk_level)} />
+          </div>
+          <div style={rankingMetaRowStyle}>
+            <span>{item.count} 笔</span>
+            <span>{item.amount}</span>
+          </div>
         </div>
       ))}
     </div>
@@ -605,17 +612,27 @@ const panelTitleStyle = {
   color: "#102033",
 };
 
-const panelSubtitleStyle = {
-  marginTop: 8,
-  marginBottom: 16,
-  color: "#5b6b7d",
-  fontSize: 13,
-  lineHeight: 1.7,
+const rankingOverviewStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+  gap: 14,
+  marginTop: 16,
 };
 
-const rankingStackStyle = {
+const rankingPanelStyle = {
   display: "grid",
-  gap: 14,
+  gap: 10,
+  padding: 14,
+  borderRadius: 18,
+  background: "#f8fafc",
+  border: "1px solid #e6edf5",
+};
+
+const rankingPanelHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
 };
 
 const rankingTitleStyle = {
@@ -624,20 +641,41 @@ const rankingTitleStyle = {
   color: "#173d75",
 };
 
-const rankingItemStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
-  alignItems: "center",
-  padding: "12px 14px",
-  borderRadius: 16,
-  background: "#f8fafc",
+const rankingCompactRowStyle = {
+  padding: "10px 12px",
+  borderRadius: 14,
+  background: "white",
   border: "1px solid #e6edf5",
 };
 
+const rankingRowHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 10,
+};
+
+const rankingBarTrackStyle = {
+  marginTop: 8,
+  height: 6,
+  borderRadius: 999,
+  background: "#e8eef5",
+  overflow: "hidden",
+};
+
+function rankingBarFillStyle(ratio, level) {
+  const color = level === "high" ? "#b42318" : level === "warn" ? "#b45309" : "#1d4ed8";
+  return {
+    width: `${Math.max(ratio * 100, 18)}%`,
+    height: "100%",
+    borderRadius: 999,
+    background: color,
+  };
+}
+
 const rankingIndexStyle = {
-  width: 26,
-  height: 26,
+  width: 22,
+  height: 22,
   borderRadius: "50%",
   background: "#102c57",
   color: "white",
@@ -650,14 +688,17 @@ const rankingIndexStyle = {
 };
 
 const rankingNameStyle = {
-  fontSize: 14,
+  fontSize: 13,
   fontWeight: 700,
   color: "#1f2f43",
   wordBreak: "break-word",
 };
 
-const rankingMetaStyle = {
-  marginTop: 4,
+const rankingMetaRowStyle = {
+  marginTop: 7,
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
   color: "#67778a",
   fontSize: 12,
 };

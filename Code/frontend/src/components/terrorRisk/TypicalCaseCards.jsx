@@ -22,11 +22,16 @@ export function TypicalCaseCards({ cases = [], onSelectCase }) {
       style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-        gap: 14,
+        gap: 12,
       }}
     >
       {cases.map((item) => {
         const tone = RISK_STYLES[item.risk_level] || RISK_STYLES.low;
+        const summaryParts = item.summary
+          .split(/[，。；]/)
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .slice(0, 2);
 
         return (
           <button
@@ -37,8 +42,8 @@ export function TypicalCaseCards({ cases = [], onSelectCase }) {
               textAlign: "left",
               appearance: "none",
               border: `1px solid ${tone.border}`,
-              borderRadius: 18,
-              padding: 18,
+              borderRadius: 16,
+              padding: 14,
               background: tone.background,
               boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
               cursor: "pointer",
@@ -60,7 +65,14 @@ export function TypicalCaseCards({ cases = [], onSelectCase }) {
               </span>
             </div>
 
-            <div style={summaryStyle}>{item.summary}</div>
+            <div style={metaGridStyle}>
+              <span style={metaChipStyle}>编号 {item.alert_no}</span>
+              {summaryParts.map((part) => (
+                <span key={`${item.id}-${part}`} style={metaChipStyle}>
+                  {part}
+                </span>
+              ))}
+            </div>
 
             <div style={footerStyle(tone.badge)}>
               <span>查看详情</span>
@@ -76,23 +88,23 @@ export function TypicalCaseCards({ cases = [], onSelectCase }) {
 const headerStyle = {
   display: "flex",
   justifyContent: "space-between",
-  gap: 12,
+  gap: 10,
   alignItems: "flex-start",
-  marginBottom: 12,
+  marginBottom: 10,
 };
 
 const eyebrowStyle = {
-  fontSize: 12,
+  fontSize: 11,
   color: "#607087",
   fontWeight: 700,
-  marginBottom: 6,
+  marginBottom: 4,
 };
 
 const titleStyle = {
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 800,
   color: "#0f172a",
-  lineHeight: 1.35,
+  lineHeight: 1.3,
   wordBreak: "break-word",
 };
 
@@ -110,16 +122,28 @@ function badgeStyle(color) {
   };
 }
 
-const summaryStyle = {
-  color: "#374151",
-  fontSize: 13,
-  lineHeight: 1.75,
-  minHeight: 56,
+const metaGridStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+  minHeight: 28,
+};
+
+const metaChipStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  padding: "4px 8px",
+  borderRadius: 999,
+  background: "rgba(255,255,255,0.88)",
+  border: "1px solid rgba(15,23,42,0.06)",
+  color: "#425466",
+  fontSize: 11,
+  lineHeight: 1.3,
 };
 
 function footerStyle(color) {
   return {
-    marginTop: 14,
+    marginTop: 10,
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
