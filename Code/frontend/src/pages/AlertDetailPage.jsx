@@ -962,10 +962,14 @@ function buildEvidenceHighlights(payload) {
 
 const responsiveStyles = `
   .alert-detail-page .alert-detail-grid {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr);
   }
 
   .alert-detail-page .alert-detail-right-column {
+    min-width: 0;
+  }
+
+  .alert-detail-page .alert-detail-grid > :first-child {
     min-width: 0;
   }
 
