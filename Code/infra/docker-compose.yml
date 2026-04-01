@@ -15,6 +15,8 @@ services:
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       APP_NAME: ${APP_NAME:-tsingdao-haifa-api}
       APP_ENV: ${APP_ENV:-production}
@@ -27,6 +29,8 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-tsingdao}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

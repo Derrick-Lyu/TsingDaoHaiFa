@@ -262,7 +262,7 @@ export function AlertDetailPage({
     async function loadDetail() {
       setLoading(true);
       const fallback = getFallbackDetail(alertId);
-      const data = await requestJson(`/api/terror-risk/alerts/${alertId}`, {
+      const data = await requestJson(`/terror-risk/alerts/${alertId}`, {
         fallback,
       });
 

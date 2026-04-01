@@ -1,12 +1,35 @@
 const DEFAULT_API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ??
+  import.meta.env?.VITE_API_BASE_URL?.replace(/\/$/, "") ??
   "/api";
+
+export function buildApiUrl(path, baseUrl = DEFAULT_API_BASE_URL) {
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (
+    normalizedBaseUrl &&
+    normalizedBaseUrl !== "/" &&
+    normalizedPath === normalizedBaseUrl
+  ) {
+    return normalizedBaseUrl;
+  }
+
+  if (
+    normalizedBaseUrl &&
+    normalizedBaseUrl !== "/" &&
+    normalizedPath.startsWith(`${normalizedBaseUrl}/`)
+  ) {
+    return normalizedPath;
+  }
+
+  return `${normalizedBaseUrl}${normalizedPath}`;
+}
 
 export async function requestJson(
   path,
   { method = "GET", headers = {}, body, fallback } = {},
 ) {
-  const url = `${DEFAULT_API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = buildApiUrl(path);
   const requestInit = {
     method,
     headers: {

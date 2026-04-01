@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { requestJson } from "../api/client";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
-const API_PATH = "/api/terror-risk/blacklist";
+const API_PATH = "/terror-risk/blacklist";
 
 const FALLBACK_BLACKLIST = [
   {

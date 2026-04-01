@@ -116,12 +116,12 @@ const FUND_SAFETY_FALLBACK = {
 };
 
 export async function getOverviewSummary() {
-  const data = await requestJson("/api/overview", { fallback: OVERVIEW_FALLBACK });
+  const data = await requestJson("/overview", { fallback: OVERVIEW_FALLBACK });
   return normalizeOverview(data);
 }
 
 export async function getFundSafetySummary() {
-  const data = await requestJson("/api/fund-safety/summary", {
+  const data = await requestJson("/fund-safety/summary", {
     fallback: FUND_SAFETY_FALLBACK,
   });
   return normalizeFundSafetySummary(data);

@@ -156,7 +156,7 @@ export default function App() {
   };
 
   const runDetectionJob = async () => {
-    await requestJson("/api/terror-risk/detection-jobs", {
+    await requestJson("/terror-risk/detection-jobs", {
       method: "POST",
       fallback: {
         job_no: "JOB-FALLBACK-001",
@@ -166,7 +166,7 @@ export default function App() {
   };
 
   const saveAlertReview = async (alertId, payload) => {
-    await requestJson(`/api/terror-risk/alerts/${alertId}/review`, {
+    await requestJson(`/terror-risk/alerts/${alertId}/review`, {
       method: "POST",
       body: payload,
       fallback: {

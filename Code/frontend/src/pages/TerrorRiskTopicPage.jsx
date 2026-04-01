@@ -167,7 +167,7 @@ export function TerrorRiskTopicPage({
 
     async function loadTopic() {
       setLoadingTopic(true);
-      const data = await requestJson("/api/terror-risk/topic", {
+      const data = await requestJson("/terror-risk/topic", {
         fallback: TOPIC_FALLBACK,
       });
 
@@ -190,7 +190,7 @@ export function TerrorRiskTopicPage({
     async function loadAlerts() {
       setLoadingAlerts(true);
       const query = buildQueryString(filters);
-      const data = await requestJson(`/api/terror-risk/alerts${query}`, {
+      const data = await requestJson(`/terror-risk/alerts${query}`, {
         fallback: buildAlertFallback(filters),
       });
 
@@ -217,8 +217,8 @@ export function TerrorRiskTopicPage({
     try {
       await onUpdate?.();
       const [topicData, alertData] = await Promise.all([
-        requestJson("/api/terror-risk/topic", { fallback: TOPIC_FALLBACK }),
-        requestJson(`/api/terror-risk/alerts${buildQueryString(filters)}`, {
+        requestJson("/terror-risk/topic", { fallback: TOPIC_FALLBACK }),
+        requestJson(`/terror-risk/alerts${buildQueryString(filters)}`, {
           fallback: buildAlertFallback(filters),
         }),
       ]);
