@@ -5,185 +5,6 @@ import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
 const API_PATH = "/terror-risk/transactions";
 
-const FALLBACK_TRANSACTIONS = [
-  {
-    id: "tx-1",
-    transactionNo: "TX-20260328-001",
-    transactionDate: "2026-03-28",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-CITY-001",
-    memberUnitName: "青岛海发城市更新有限公司",
-    payerName: "青岛海发城市更新有限公司",
-    payerAccount: "622202600001",
-    payeeName: "青岛某项目管理咨询有限公司",
-    payeeAccount: "942700000101",
-    amount: 380000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2026-03-20",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 1,
-    remarks: "正常项目咨询付款样例。",
-  },
-  {
-    id: "tx-2",
-    transactionNo: "TX-20260329-001",
-    transactionDate: "2026-03-29",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-CAP-001",
-    memberUnitName: "青岛海发资本管理有限公司",
-    payerName: "青岛海发资本管理有限公司",
-    payerAccount: "622202600002",
-    payeeName: "山东某高端装备供应链有限公司",
-    payeeAccount: "942700000102",
-    amount: 760000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2026-03-18",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 2,
-    remarks: "正常设备采购样例。",
-  },
-  {
-    id: "tx-3",
-    transactionNo: "TX-20260330-001",
-    transactionDate: "2026-03-30",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-SVC-001",
-    memberUnitName: "青岛海发产业服务有限公司",
-    payerName: "青岛海发产业服务有限公司",
-    payerAccount: "622202600003",
-    payeeName: "青岛某数据服务有限公司",
-    payeeAccount: "942700000103",
-    amount: 120000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2026-03-25",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 3,
-    remarks: "正常产业服务支出样例。",
-  },
-  {
-    id: "tx-4",
-    transactionNo: "TX-20260304-001",
-    transactionDate: "2026-03-04",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-PARK-001",
-    memberUnitName: "青岛海发园区运营有限公司",
-    payerName: "青岛海发园区运营有限公司",
-    payerAccount: "622202600010",
-    payeeName: "青岛西海岸某工程建设有限公司",
-    payeeAccount: "942700000201",
-    amount: 860000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2026-03-02",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 4,
-    remarks: "黑名单命中样例，匹配园区工程类对手方。",
-  },
-  {
-    id: "tx-5",
-    transactionNo: "TX-20260312-001",
-    transactionDate: "2026-03-12",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-CAP-002",
-    memberUnitName: "青岛海发资本管理有限公司",
-    payerName: "青岛海发资本管理有限公司",
-    payerAccount: "622202600011",
-    payeeName: "青岛某基金服务有限公司",
-    payeeAccount: "942700000202",
-    amount: 1240000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2026-03-10",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 5,
-    remarks: "黑名单命中样例，匹配资本运作服务对手方。",
-  },
-  {
-    id: "tx-6",
-    transactionNo: "TX-20260318-001",
-    transactionDate: "2026-03-18",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-SVC-002",
-    memberUnitName: "青岛海发产业服务有限公司",
-    payerName: "青岛海发产业服务有限公司",
-    payerAccount: "622202600012",
-    payeeName: "青岛某供应链结算服务有限公司",
-    payeeAccount: "942700000203",
-    amount: 730000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2026-03-16",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 6,
-    remarks: "黑名单命中样例，匹配供应链结算服务对手方。",
-  },
-  {
-    id: "tx-7",
-    transactionNo: "HF-20260301-01",
-    transactionDate: "2026-03-01",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-CTI-002",
-    memberUnitName: "青岛海发产城投资有限公司",
-    payerName: "青岛海发产城投资有限公司",
-    payerAccount: "622202600020",
-    payeeName: "青岛某园区配套服务有限公司",
-    payeeAccount: "942700000301",
-    amount: 50000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 51,
-    accountLastActiveDate: "2026-02-20",
-    isDormantAccount: false,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 1001,
-    remarks: "连续10日同一收款人高频高额支付样例。",
-  },
-  {
-    id: "tx-8",
-    transactionNo: "DA-20260301-01",
-    transactionDate: "2026-03-01",
-    batchNo: "FS-2026-03-31",
-    memberUnitCode: "HF-PARK-002",
-    memberUnitName: "青岛海发园区运营有限公司",
-    payerName: "青岛海发园区运营有限公司",
-    payerAccount: "622202600030",
-    payeeName: "青岛某影视文化配套服务有限公司",
-    payeeAccount: "942700000401",
-    amount: 120000,
-    currency: "CNY",
-    payeeType: "organization",
-    businessScenario: "财务公司网银支付",
-    transactionCount: 1,
-    accountLastActiveDate: "2024-02-20",
-    isDormantAccount: true,
-    sourceFileName: "haifa_trade_sample_batch_20260331.xlsx",
-    sourceRowNo: 3001,
-    remarks: "长期闲置账户异常支付样例。",
-  },
-];
-
 const INITIAL_FORM = {
   id: "",
   transactionNo: "",
@@ -421,7 +242,7 @@ function buttonStyle(variant = "ghost") {
 }
 
 export function TransactionDataPage() {
-  const [items, setItems] = useState(FALLBACK_TRANSACTIONS.map(normalizeTransaction).filter(Boolean));
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [payeeTypeFilter, setPayeeTypeFilter] = useState("all");
@@ -430,6 +251,7 @@ export function TransactionDataPage() {
   const [selectedId, setSelectedId] = useState(items[0]?.id || "");
   const [draft, setDraft] = useState(buildForm(items[0]));
   const [creating, setCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const compact = useCompactLayout();
 
   useEffect(() => {
@@ -437,17 +259,29 @@ export function TransactionDataPage() {
 
     async function loadTransactions() {
       setLoading(true);
-      const data = await requestJson(API_PATH, { fallback: FALLBACK_TRANSACTIONS });
-      const nextItems = (Array.isArray(data) ? data : FALLBACK_TRANSACTIONS)
-        .map(normalizeTransaction)
-        .filter(Boolean);
+      setErrorMessage("");
+      try {
+        const data = await requestJson(API_PATH);
+        const nextItems = (Array.isArray(data) ? data : [])
+          .map(normalizeTransaction)
+          .filter(Boolean);
 
-      if (!cancelled) {
-        setItems(nextItems);
-        setSelectedId(nextItems[0]?.id || "");
-        setDraft(buildForm(nextItems[0] || null));
-        setCreating(false);
-        setLoading(false);
+        if (!cancelled) {
+          setItems(nextItems);
+          setSelectedId(nextItems[0]?.id || "");
+          setDraft(buildForm(nextItems[0] || null));
+          setCreating(false);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setItems([]);
+          setSelectedId("");
+          setDraft(buildForm(null));
+          setCreating(false);
+          setErrorMessage("交易数据加载失败，当前未显示演示兜底数据。");
+          setLoading(false);
+        }
       }
     }
 
@@ -483,6 +317,7 @@ export function TransactionDataPage() {
   const selectedItem = items.find((item) => item.id === selectedId) || items[0] || null;
 
   function updateForm(field, value) {
+    setErrorMessage("");
     setDraft((current) => ({
       ...current,
       [field]: value,
@@ -490,18 +325,21 @@ export function TransactionDataPage() {
   }
 
   function selectItem(item) {
+    setErrorMessage("");
     setSelectedId(item.id);
     setDraft(buildForm(item));
     setCreating(false);
   }
 
   function openCreate() {
+    setErrorMessage("");
     setSelectedId("");
     setDraft({ ...INITIAL_FORM });
     setCreating(true);
   }
 
   function cancelDraft() {
+    setErrorMessage("");
     if (selectedItem) {
       setSelectedId(selectedItem.id);
       setDraft(buildForm(selectedItem));
@@ -519,47 +357,56 @@ export function TransactionDataPage() {
 
   async function refreshTransactions() {
     setLoading(true);
-    const data = await requestJson(API_PATH, { fallback: FALLBACK_TRANSACTIONS });
-    const nextItems = (Array.isArray(data) ? data : FALLBACK_TRANSACTIONS).map(normalizeTransaction).filter(Boolean);
-    setItems(nextItems);
-    setSelectedId(nextItems[0]?.id || "");
-    setDraft(buildForm(nextItems[0] || null));
-    setCreating(false);
-    setLoading(false);
+    setErrorMessage("");
+    try {
+      const data = await requestJson(API_PATH);
+      const nextItems = (Array.isArray(data) ? data : []).map(normalizeTransaction).filter(Boolean);
+      setItems(nextItems);
+      setSelectedId(nextItems[0]?.id || "");
+      setDraft(buildForm(nextItems[0] || null));
+      setCreating(false);
+    } catch {
+      setItems([]);
+      setSelectedId("");
+      setDraft(buildForm(null));
+      setCreating(false);
+      setErrorMessage("交易数据刷新失败，当前未显示演示兜底数据。");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveTransaction(event) {
     event.preventDefault();
     setSaving(true);
+    setErrorMessage("");
 
-    const payload = serializeForm(draft);
-    const endpoint = draft.id ? `${API_PATH}/${draft.id}` : API_PATH;
-    const method = draft.id ? "PUT" : "POST";
-    const fallbackRecord = {
-      ...payload,
-      id: draft.id || makeId("transaction"),
-      createdAt: draft.id ? undefined : "2026-03-31 09:00:00",
-      updatedAt: "2026-03-31 09:00:00",
-    };
+    try {
+      const payload = serializeForm(draft);
+      const endpoint = draft.id ? `${API_PATH}/${draft.id}` : API_PATH;
+      const method = draft.id ? "PUT" : "POST";
 
-    const saved = await requestJson(endpoint, {
-      method,
-      body: payload,
-      fallback: fallbackRecord,
-    });
+      const saved = await requestJson(endpoint, {
+        method,
+        body: payload,
+      });
 
-    const normalized = normalizeTransaction(saved ?? fallbackRecord);
-    setItems((current) => {
-      const exists = current.some((item) => item.id === normalized.id);
-      if (exists) {
-        return current.map((item) => (item.id === normalized.id ? normalized : item));
-      }
-      return [normalized, ...current];
-    });
-    setSelectedId(normalized.id);
-    setDraft(buildForm(normalized));
-    setCreating(false);
-    setSaving(false);
+      const normalized = normalizeTransaction(saved);
+      setItems((current) => {
+        const exists = current.some((item) => item.id === normalized.id);
+        if (exists) {
+          return current.map((item) => (item.id === normalized.id ? normalized : item));
+        }
+        return [normalized, ...current];
+      });
+      setSelectedId(normalized.id);
+      setDraft(buildForm(normalized));
+      setCreating(false);
+    } catch {
+      setErrorMessage("交易保存失败，数据库未更新，请稍后重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function removeTransaction(item) {
@@ -568,22 +415,27 @@ export function TransactionDataPage() {
       return;
     }
 
-    await requestJson(`${API_PATH}/${item.id}`, {
-      method: "DELETE",
-      fallback: null,
-    });
+    setErrorMessage("");
 
-    setItems((current) => current.filter((row) => row.id !== item.id));
-    setSelectedId((current) => {
-      if (current !== item.id) {
-        return current;
-      }
-      return items.find((row) => row.id !== item.id)?.id || "";
-    });
+    try {
+      await requestJson(`${API_PATH}/${item.id}`, {
+        method: "DELETE",
+      });
 
-    const nextSelected = items.find((row) => row.id !== item.id);
-    setDraft(buildForm(nextSelected || null));
-    setCreating(false);
+      setItems((current) => current.filter((row) => row.id !== item.id));
+      setSelectedId((current) => {
+        if (current !== item.id) {
+          return current;
+        }
+        return items.find((row) => row.id !== item.id)?.id || "";
+      });
+
+      const nextSelected = items.find((row) => row.id !== item.id);
+      setDraft(buildForm(nextSelected || null));
+      setCreating(false);
+    } catch {
+      setErrorMessage("交易删除失败，数据库未更新。");
+    }
   }
 
   return (
@@ -735,6 +587,8 @@ export function TransactionDataPage() {
             </div>
           </div>
 
+          {errorMessage ? <div style={errorBannerStyle}>{errorMessage}</div> : null}
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 16 }}>
             <Field label="交易编号">
               <input value={draft.transactionNo} onChange={(event) => updateForm("transactionNo", event.target.value)} style={inputStyle()} />
@@ -836,3 +690,14 @@ function summaryMetricValueStyle(tone) {
     background: tone.background,
   };
 }
+
+const errorBannerStyle = {
+  marginBottom: 16,
+  padding: "12px 14px",
+  borderRadius: 14,
+  border: "1px solid #ffd5d5",
+  background: "#fff5f5",
+  color: "#b42318",
+  fontSize: 13,
+  fontWeight: 700,
+};

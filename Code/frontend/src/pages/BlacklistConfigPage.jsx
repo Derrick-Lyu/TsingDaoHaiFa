@@ -5,89 +5,6 @@ import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
 const API_PATH = "/terror-risk/blacklist";
 
-const FALLBACK_BLACKLIST = [
-  {
-    id: "blacklist-1",
-    blacklistCode: "BL-001",
-    blacklistName: "青岛西海岸某工程建设有限公司",
-    subjectName: "青岛西海岸某工程建设有限公司",
-    subjectType: "organization",
-    matchKeywords: ["青岛西海岸某工程建设有限公司", "工程建设有限公司结算户"],
-    riskLevel: "high",
-    status: "enabled",
-    sourceSystem: "海发风控名单来源",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "",
-    notes: "与海发园区工程配套类支付链路同名命中。",
-    createdAt: "2026-03-31 09:00:00",
-    updatedAt: "2026-03-31 09:00:00",
-  },
-  {
-    id: "blacklist-2",
-    blacklistCode: "BL-002",
-    blacklistName: "青岛某园区配套服务有限公司",
-    subjectName: "青岛某园区配套服务有限公司",
-    subjectType: "organization",
-    matchKeywords: ["青岛某园区配套服务有限公司", "园区配套服务有限公司"],
-    riskLevel: "high",
-    status: "enabled",
-    sourceSystem: "海发风控名单来源",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "",
-    notes: "用于高频支付链路中的黑名单命中。",
-    createdAt: "2026-03-31 09:00:00",
-    updatedAt: "2026-03-31 09:00:00",
-  },
-  {
-    id: "blacklist-3",
-    blacklistCode: "BL-003",
-    blacklistName: "青岛某影视文化配套服务有限公司",
-    subjectName: "青岛某影视文化配套服务有限公司",
-    subjectType: "organization",
-    matchKeywords: ["青岛某影视文化配套服务有限公司", "影视文化配套服务有限公司"],
-    riskLevel: "medium",
-    status: "enabled",
-    sourceSystem: "海发风控名单来源",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "",
-    notes: "用于园区文化配套类交易命中。",
-    createdAt: "2026-03-31 09:00:00",
-    updatedAt: "2026-03-31 09:00:00",
-  },
-  {
-    id: "blacklist-4",
-    blacklistCode: "BL-004",
-    blacklistName: "青岛某供应链结算服务有限公司",
-    subjectName: "青岛某供应链结算服务有限公司",
-    subjectType: "organization",
-    matchKeywords: ["青岛某供应链结算服务有限公司", "供应链结算服务有限公司"],
-    riskLevel: "medium",
-    status: "enabled",
-    sourceSystem: "海发风控名单来源",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "",
-    notes: "用于资本管理与供应链支付链路命中。",
-    createdAt: "2026-03-31 09:00:00",
-    updatedAt: "2026-03-31 09:00:00",
-  },
-  {
-    id: "blacklist-5",
-    blacklistCode: "BL-005",
-    blacklistName: "青岛某基金服务有限公司",
-    subjectName: "青岛某基金服务有限公司",
-    subjectType: "organization",
-    matchKeywords: ["青岛某基金服务有限公司", "基金服务有限公司"],
-    riskLevel: "medium",
-    status: "enabled",
-    sourceSystem: "海发风控名单来源",
-    effectiveFrom: "2025-01-01",
-    effectiveTo: "",
-    notes: "用于资本运作场景中的名单匹配。",
-    createdAt: "2026-03-31 09:00:00",
-    updatedAt: "2026-03-31 09:00:00",
-  },
-];
-
 const EMPTY_FORM = {
   id: "",
   blacklistCode: "",
@@ -298,7 +215,7 @@ function ActionButton({ variant = "primary", children, type = "button", ...props
 }
 
 export function BlacklistConfigPage() {
-  const [items, setItems] = useState(FALLBACK_BLACKLIST.map(normalizeBlacklistItem).filter(Boolean));
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -307,6 +224,7 @@ export function BlacklistConfigPage() {
   const [selectedId, setSelectedId] = useState(items[0]?.id || "");
   const [draft, setDraft] = useState(buildForm(items[0]));
   const [creating, setCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const compact = useCompactLayout();
 
   useEffect(() => {
@@ -314,17 +232,29 @@ export function BlacklistConfigPage() {
 
     async function loadBlacklist() {
       setLoading(true);
-      const data = await requestJson(API_PATH, { fallback: FALLBACK_BLACKLIST });
-      const nextItems = (Array.isArray(data) ? data : FALLBACK_BLACKLIST)
-        .map(normalizeBlacklistItem)
-        .filter(Boolean);
+      setErrorMessage("");
+      try {
+        const data = await requestJson(API_PATH);
+        const nextItems = (Array.isArray(data) ? data : [])
+          .map(normalizeBlacklistItem)
+          .filter(Boolean);
 
-      if (!cancelled) {
-        setItems(nextItems);
-        setSelectedId(nextItems[0]?.id || "");
-        setDraft(buildForm(nextItems[0] || null));
-        setCreating(false);
-        setLoading(false);
+        if (!cancelled) {
+          setItems(nextItems);
+          setSelectedId(nextItems[0]?.id || "");
+          setDraft(buildForm(nextItems[0] || null));
+          setCreating(false);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setItems([]);
+          setSelectedId("");
+          setDraft(buildForm(null));
+          setCreating(false);
+          setErrorMessage("名单数据加载失败，当前未显示演示兜底数据。");
+          setLoading(false);
+        }
       }
     }
 
@@ -357,18 +287,21 @@ export function BlacklistConfigPage() {
   const selectedItem = items.find((item) => item.id === selectedId) || items[0] || null;
 
   function selectItem(item) {
+    setErrorMessage("");
     setSelectedId(item.id);
     setDraft(buildForm(item));
     setCreating(false);
   }
 
   function openCreate() {
+    setErrorMessage("");
     setSelectedId("");
     setDraft({ ...EMPTY_FORM });
     setCreating(true);
   }
 
   function cancelDraft() {
+    setErrorMessage("");
     if (selectedItem) {
       setDraft(buildForm(selectedItem));
       setCreating(false);
@@ -385,6 +318,7 @@ export function BlacklistConfigPage() {
   }
 
   function updateDraft(field, value) {
+    setErrorMessage("");
     setDraft((current) => ({
       ...current,
       [field]: value,
@@ -393,71 +327,83 @@ export function BlacklistConfigPage() {
 
   async function refreshBlacklist() {
     setLoading(true);
-    const data = await requestJson(API_PATH, { fallback: FALLBACK_BLACKLIST });
-    const nextItems = (Array.isArray(data) ? data : FALLBACK_BLACKLIST)
-      .map(normalizeBlacklistItem)
-      .filter(Boolean);
-    setItems(nextItems);
-    setSelectedId(nextItems[0]?.id || "");
-    setDraft(buildForm(nextItems[0] || null));
-    setCreating(false);
-    setLoading(false);
+    setErrorMessage("");
+    try {
+      const data = await requestJson(API_PATH);
+      const nextItems = (Array.isArray(data) ? data : [])
+        .map(normalizeBlacklistItem)
+        .filter(Boolean);
+      setItems(nextItems);
+      setSelectedId(nextItems[0]?.id || "");
+      setDraft(buildForm(nextItems[0] || null));
+      setCreating(false);
+    } catch {
+      setItems([]);
+      setSelectedId("");
+      setDraft(buildForm(null));
+      setCreating(false);
+      setErrorMessage("名单数据刷新失败，当前未显示演示兜底数据。");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveDraft(event) {
     event.preventDefault();
     setSaving(true);
+    setErrorMessage("");
 
-    const payload = serializeForm(draft);
-    const endpoint = draft.id ? `${API_PATH}/${draft.id}` : API_PATH;
-    const method = draft.id ? "PUT" : "POST";
-    const fallbackRecord = {
-      ...payload,
-      id: draft.id || makeId("blacklist"),
-      createdAt: draft.id ? undefined : "2026-03-31 09:00:00",
-      updatedAt: "2026-03-31 09:00:00",
-    };
+    try {
+      const payload = serializeForm(draft);
+      const endpoint = draft.id ? `${API_PATH}/${draft.id}` : API_PATH;
+      const method = draft.id ? "PUT" : "POST";
 
-    const saved = await requestJson(endpoint, {
-      method,
-      body: payload,
-      fallback: fallbackRecord,
-    });
+      const saved = await requestJson(endpoint, {
+        method,
+        body: payload,
+      });
 
-    const normalized = normalizeBlacklistItem(saved ?? fallbackRecord);
-    setItems((current) => {
-      const exists = current.some((item) => item.id === normalized.id);
-      if (exists) {
-        return current.map((item) => (item.id === normalized.id ? normalized : item));
-      }
-      return [normalized, ...current];
-    });
-    setSelectedId(normalized.id);
-    setDraft(buildForm(normalized));
-    setCreating(false);
-    setSaving(false);
+      const normalized = normalizeBlacklistItem(saved);
+      setItems((current) => {
+        const exists = current.some((item) => item.id === normalized.id);
+        if (exists) {
+          return current.map((item) => (item.id === normalized.id ? normalized : item));
+        }
+        return [normalized, ...current];
+      });
+      setSelectedId(normalized.id);
+      setDraft(buildForm(normalized));
+      setCreating(false);
+    } catch {
+      setErrorMessage("名单保存失败，数据库未更新，请稍后重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleStatus(item) {
     const nextStatus = item.status === "enabled" ? "disabled" : "enabled";
-    const updated = { ...item, status: nextStatus };
+    setErrorMessage("");
 
-    const saved = await requestJson(`${API_PATH}/${item.id}`, {
-      method: "PUT",
-      body: serializeForm({
-        ...buildForm(item),
-        status: nextStatus,
-      }),
-      fallback: updated,
-    });
+    try {
+      const saved = await requestJson(`${API_PATH}/${item.id}`, {
+        method: "PUT",
+        body: serializeForm({
+          ...buildForm(item),
+          status: nextStatus,
+        }),
+      });
 
-    const normalized = normalizeBlacklistItem(saved ?? updated);
-    setItems((current) =>
-      current.map((row) => (row.id === item.id ? normalized : row)),
-    );
+      const normalized = normalizeBlacklistItem(saved);
+      setItems((current) =>
+        current.map((row) => (row.id === item.id ? normalized : row)),
+      );
 
-    if (selectedId === item.id) {
-      setDraft(buildForm(normalized));
+      if (selectedId === item.id) {
+        setDraft(buildForm(normalized));
+      }
+    } catch {
+      setErrorMessage("名单状态更新失败，数据库未更新。");
     }
   }
 
@@ -467,22 +413,27 @@ export function BlacklistConfigPage() {
       return;
     }
 
-    await requestJson(`${API_PATH}/${item.id}`, {
-      method: "DELETE",
-      fallback: null,
-    });
+    setErrorMessage("");
 
-    setItems((current) => current.filter((row) => row.id !== item.id));
-    setSelectedId((current) => {
-      if (current !== item.id) {
-        return current;
-      }
-      return items.find((row) => row.id !== item.id)?.id || "";
-    });
+    try {
+      await requestJson(`${API_PATH}/${item.id}`, {
+        method: "DELETE",
+      });
 
-    const nextSelected = items.find((row) => row.id !== item.id);
-    setDraft(buildForm(nextSelected || null));
-    setCreating(false);
+      setItems((current) => current.filter((row) => row.id !== item.id));
+      setSelectedId((current) => {
+        if (current !== item.id) {
+          return current;
+        }
+        return items.find((row) => row.id !== item.id)?.id || "";
+      });
+
+      const nextSelected = items.find((row) => row.id !== item.id);
+      setDraft(buildForm(nextSelected || null));
+      setCreating(false);
+    } catch {
+      setErrorMessage("名单删除失败，数据库未更新。");
+    }
   }
 
   return (
@@ -645,6 +596,8 @@ export function BlacklistConfigPage() {
             </div>
           </div>
 
+          {errorMessage ? <div style={errorBannerStyle}>{errorMessage}</div> : null}
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 16 }}>
             <Field label="名单编号">
               <input value={draft.blacklistCode} onChange={(event) => updateDraft("blacklistCode", event.target.value)} style={inputStyle()} />
@@ -721,3 +674,14 @@ function summaryMetricValueStyle(tone) {
     background: tone.background,
   };
 }
+
+const errorBannerStyle = {
+  marginBottom: 16,
+  padding: "12px 14px",
+  borderRadius: 14,
+  border: "1px solid #ffd5d5",
+  background: "#fff5f5",
+  color: "#b42318",
+  fontSize: 13,
+  fontWeight: 700,
+};

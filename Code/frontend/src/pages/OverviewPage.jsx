@@ -5,15 +5,24 @@ import { getOverviewSummary } from "../api/terrorRisk";
 
 export function OverviewPage({ onOpenFundSafety }) {
   const [overview, setOverview] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadOverview() {
-      const data = await getOverviewSummary();
+      try {
+        setErrorMessage("");
+        const data = await getOverviewSummary();
 
-      if (!cancelled) {
-        setOverview(data);
+        if (!cancelled) {
+          setOverview(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setErrorMessage("总览数据加载失败，当前未显示演示兜底数据。");
+          setOverview(null);
+        }
       }
     }
 
@@ -27,7 +36,7 @@ export function OverviewPage({ onOpenFundSafety }) {
   if (!overview) {
     return (
       <div style={loadingStyle}>
-        正在加载总览数据...
+        {errorMessage || "正在加载总览数据..."}
       </div>
     );
   }
@@ -85,6 +94,7 @@ export function OverviewPage({ onOpenFundSafety }) {
             </div>
           </div>
         ))}
+        {!overview.riskCards.length ? <div style={emptyPanelStyle}>暂无风险总览数据</div> : null}
       </div>
 
       <div style={insightGridStyle}>
@@ -173,6 +183,12 @@ export function OverviewPage({ onOpenFundSafety }) {
                 <div style={recentRiskCellStyle}>{r.event}</div>
               </div>
             ))}
+            {!overview.recentRisks.length ? (
+              <>
+                <div style={recentRiskCellStyle}>暂无数据</div>
+                <div style={recentRiskCellStyle}>暂无近期新增风险</div>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
@@ -188,6 +204,14 @@ const pageShellStyle = {
 
 const loadingStyle = {
   padding: "0 24px 24px",
+  color: "#607087",
+};
+
+const emptyPanelStyle = {
+  padding: 24,
+  borderRadius: 18,
+  border: "1px dashed #d8e4f5",
+  background: "#f8fbff",
   color: "#607087",
 };
 

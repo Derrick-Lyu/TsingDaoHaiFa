@@ -12,7 +12,6 @@ from app.services.terror_risk_service import initialize_detection_snapshot
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    initialize_detection_snapshot()
     yield
 
 

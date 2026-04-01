@@ -5,61 +5,6 @@ import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
 const API_PATH = "/terror-risk/rules";
 
-const FALLBACK_RULES = [
-  {
-    id: "rule-blacklist",
-    ruleCode: "blacklist_hit",
-    ruleName: "黑名单命中规则",
-    ruleCategory: "terror_risk",
-    ruleDescription: "任意一方账户名称存在于黑名单中则命中。",
-    riskLevel: "high",
-    enabled: true,
-    sortOrder: 1,
-    params: [
-      {
-        paramKey: "enabled",
-        paramLabel: "规则启用",
-        paramValue: "true",
-        valueType: "boolean",
-        unit: "",
-        editable: true,
-      },
-    ],
-  },
-  {
-    id: "rule-frequency",
-    ruleCode: "high_frequency_high_amount",
-    ruleName: "高频大额交易规则",
-    ruleCategory: "terror_risk",
-    ruleDescription: "连续10日内同一收款人单日交易次数超过阈值且金额超过阈值则命中。",
-    riskLevel: "high",
-    enabled: true,
-    sortOrder: 2,
-    params: [
-      { paramKey: "window_days", paramLabel: "连续天数窗口", paramValue: "10", valueType: "number", unit: "天", editable: true },
-      { paramKey: "min_daily_count", paramLabel: "单日交易次数阈值", paramValue: "50", valueType: "number", unit: "次", editable: true },
-      { paramKey: "corp_amount_threshold", paramLabel: "对公金额阈值", paramValue: "2000000", valueType: "number", unit: "元", editable: true },
-      { paramKey: "personal_amount_threshold", paramLabel: "对私金额阈值", paramValue: "500000", valueType: "number", unit: "元", editable: true },
-    ],
-  },
-  {
-    id: "rule-dormant",
-    ruleCode: "dormant_account_abnormal_payment",
-    ruleName: "长期闲置账户异常交易规则",
-    ruleCategory: "terror_risk",
-    ruleDescription: "超过1年未交易账户在连续10日内对同一收款人发生异常支付且金额超过阈值则命中。",
-    riskLevel: "high",
-    enabled: true,
-    sortOrder: 3,
-    params: [
-      { paramKey: "dormant_days", paramLabel: "长期闲置账户判定天数", paramValue: "365", valueType: "number", unit: "天", editable: true },
-      { paramKey: "window_days", paramLabel: "连续天数窗口", paramValue: "10", valueType: "number", unit: "天", editable: true },
-      { paramKey: "corp_amount_threshold", paramLabel: "对公金额阈值", paramValue: "2000000", valueType: "number", unit: "元", editable: true },
-      { paramKey: "personal_amount_threshold", paramLabel: "对私金额阈值", paramValue: "500000", valueType: "number", unit: "元", editable: true },
-    ],
-  },
-];
-
 function makeId(prefix) {
   return globalThis.crypto?.randomUUID?.() ?? `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
@@ -96,6 +41,20 @@ function normalizeRule(rule) {
 }
 
 function buildRuleForm(rule) {
+  if (!rule) {
+    return {
+      id: "",
+      ruleCode: "",
+      ruleName: "",
+      ruleCategory: "terror_risk",
+      ruleDescription: "",
+      riskLevel: "high",
+      enabled: true,
+      sortOrder: 0,
+      params: [],
+    };
+  }
+
   return {
     id: rule.id,
     ruleCode: rule.ruleCode,
@@ -233,11 +192,12 @@ function buttonStyle(variant = "ghost") {
 }
 
 export function RuleConfigPage() {
-  const [rules, setRules] = useState(FALLBACK_RULES.map(normalizeRule).filter(Boolean));
+  const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRuleId, setSelectedRuleId] = useState(FALLBACK_RULES[0].id);
-  const [form, setForm] = useState(buildRuleForm(FALLBACK_RULES[0]));
+  const [selectedRuleId, setSelectedRuleId] = useState("");
+  const [form, setForm] = useState(buildRuleForm(null));
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const compact = useCompactLayout();
 
   useEffect(() => {
@@ -245,15 +205,26 @@ export function RuleConfigPage() {
 
     async function loadRules() {
       setLoading(true);
-      const data = await requestJson(API_PATH, { fallback: FALLBACK_RULES });
-      const nextRules = (Array.isArray(data) ? data : FALLBACK_RULES).map(normalizeRule).filter(Boolean);
+      setErrorMessage("");
+      try {
+        const data = await requestJson(API_PATH);
+        const nextRules = (Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
 
-      if (!cancelled) {
-        setRules(nextRules);
-        const next = nextRules[0] || null;
-        setSelectedRuleId(next?.id || "");
-        setForm(buildRuleForm(next || FALLBACK_RULES[0]));
-        setLoading(false);
+        if (!cancelled) {
+          setRules(nextRules);
+          const next = nextRules[0] || null;
+          setSelectedRuleId(next?.id || "");
+          setForm(buildRuleForm(next));
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setRules([]);
+          setSelectedRuleId("");
+          setForm(buildRuleForm(null));
+          setErrorMessage("规则数据加载失败，当前未显示演示兜底数据。");
+          setLoading(false);
+        }
       }
     }
 
@@ -272,6 +243,7 @@ export function RuleConfigPage() {
   };
 
   function updateForm(field, value) {
+    setErrorMessage("");
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -279,6 +251,7 @@ export function RuleConfigPage() {
   }
 
   function updateParam(paramKey, field, value) {
+    setErrorMessage("");
     setForm((current) => ({
       ...current,
       params: current.params.map((param) =>
@@ -288,59 +261,78 @@ export function RuleConfigPage() {
   }
 
   function selectRule(rule) {
+    setErrorMessage("");
     setSelectedRuleId(rule.id);
     setForm(buildRuleForm(rule));
   }
 
   async function refreshRules() {
     setLoading(true);
-    const data = await requestJson(API_PATH, { fallback: FALLBACK_RULES });
-    const nextRules = (Array.isArray(data) ? data : FALLBACK_RULES).map(normalizeRule).filter(Boolean);
-    setRules(nextRules);
-    const next = nextRules[0] || null;
-    setSelectedRuleId(next?.id || "");
-    setForm(buildRuleForm(next || FALLBACK_RULES[0]));
-    setLoading(false);
+    setErrorMessage("");
+    try {
+      const data = await requestJson(API_PATH);
+      const nextRules = (Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
+      setRules(nextRules);
+      const next = nextRules[0] || null;
+      setSelectedRuleId(next?.id || "");
+      setForm(buildRuleForm(next));
+    } catch {
+      setRules([]);
+      setSelectedRuleId("");
+      setForm(buildRuleForm(null));
+      setErrorMessage("规则数据刷新失败，当前未显示演示兜底数据。");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveRule(event) {
     event.preventDefault();
     setSaving(true);
+    setErrorMessage("");
 
-    const payload = serializeRule(form);
-    const saved = await requestJson(`${API_PATH}/${form.id}`, {
-      method: "PUT",
-      body: payload,
-      fallback: { ...payload, id: form.id },
-    });
+    try {
+      const payload = serializeRule(form);
+      const saved = await requestJson(`${API_PATH}/${form.id}`, {
+        method: "PUT",
+        body: payload,
+      });
 
-    const normalized = normalizeRule(saved ?? { ...payload, id: form.id });
-    setRules((current) =>
-      current.map((rule) => (rule.id === normalized.id ? normalized : rule)),
-    );
-    setSelectedRuleId(normalized.id);
-    setForm(buildRuleForm(normalized));
-    setSaving(false);
+      const normalized = normalizeRule(saved);
+      setRules((current) =>
+        current.map((rule) => (rule.id === normalized.id ? normalized : rule)),
+      );
+      setSelectedRuleId(normalized.id);
+      setForm(buildRuleForm(normalized));
+    } catch {
+      setErrorMessage("规则保存失败，数据库未更新，请稍后重试。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function toggleRuleEnabled(rule) {
     const nextRule = { ...rule, enabled: !rule.enabled };
+    setErrorMessage("");
 
-    const saved = await requestJson(`${API_PATH}/${rule.id}`, {
-      method: "PUT",
-      body: serializeRule({
-        ...buildRuleForm(rule),
-        enabled: nextRule.enabled,
-      }),
-      fallback: nextRule,
-    });
+    try {
+      const saved = await requestJson(`${API_PATH}/${rule.id}`, {
+        method: "PUT",
+        body: serializeRule({
+          ...buildRuleForm(rule),
+          enabled: nextRule.enabled,
+        }),
+      });
 
-    const normalized = normalizeRule(saved ?? nextRule);
-    setRules((current) =>
-      current.map((item) => (item.id === normalized.id ? normalized : item)),
-    );
-    if (selectedRuleId === rule.id) {
-      setForm(buildRuleForm(normalized));
+      const normalized = normalizeRule(saved);
+      setRules((current) =>
+        current.map((item) => (item.id === normalized.id ? normalized : item)),
+      );
+      if (selectedRuleId === rule.id) {
+        setForm(buildRuleForm(normalized));
+      }
+    } catch {
+      setErrorMessage("规则状态更新失败，数据库未更新。");
     }
   }
 
@@ -442,6 +434,8 @@ export function RuleConfigPage() {
             </div>
           </div>
 
+          {errorMessage ? <div style={errorBannerStyle}>{errorMessage}</div> : null}
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 16 }}>
             <Field label="规则名称">
               <input value={form.ruleName} onChange={(event) => updateForm("ruleName", event.target.value)} style={inputStyle()} />
@@ -509,3 +503,14 @@ function summaryMetricValueStyle(tone) {
     background: tone.background,
   };
 }
+
+const errorBannerStyle = {
+  marginBottom: 16,
+  padding: "12px 14px",
+  borderRadius: 14,
+  border: "1px solid #ffd5d5",
+  background: "#fff5f5",
+  color: "#b42318",
+  fontSize: 13,
+  fontWeight: 700,
+};

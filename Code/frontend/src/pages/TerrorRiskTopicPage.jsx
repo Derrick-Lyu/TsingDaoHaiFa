@@ -65,21 +65,33 @@ export function TerrorRiskTopicPage({
   const [loadingTopic, setLoadingTopic] = useState(true);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadTopicAndRules() {
       setLoadingTopic(true);
-      const [topicData, rulesData] = await Promise.all([
-        requestJson("/terror-risk/topic", { fallback: EMPTY_TOPIC }),
-        requestJson("/terror-risk/rules", { fallback: [] }),
-      ]);
+      setLoadError("");
+      try {
+        const [topicData, rulesData] = await Promise.all([
+          requestJson("/terror-risk/topic"),
+          requestJson("/terror-risk/rules"),
+        ]);
 
-      if (!cancelled) {
-        setTopic(topicData);
-        setRules(Array.isArray(rulesData) ? rulesData : []);
-        setLoadingTopic(false);
+        if (!cancelled) {
+          setTopic(topicData);
+          setRules(Array.isArray(rulesData) ? rulesData : []);
+          setLoadingTopic(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setTopic(EMPTY_TOPIC);
+          setRules([]);
+          setLoadError("专题数据加载失败，当前未显示演示兜底数据。");
+          setLoadingTopic(false);
+        }
       }
     }
 
@@ -96,11 +108,19 @@ export function TerrorRiskTopicPage({
     async function loadAlerts() {
       setLoadingAlerts(true);
       const query = buildQueryString(filters);
-      const data = await requestJson(`/terror-risk/alerts${query}`, { fallback: EMPTY_ALERT_LIST });
+      try {
+        const data = await requestJson(`/terror-risk/alerts${query}`);
 
-      if (!cancelled) {
-        setAlerts(data.items);
-        setLoadingAlerts(false);
+        if (!cancelled) {
+          setAlerts(data.items);
+          setLoadingAlerts(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setAlerts([]);
+          setLoadError("预警列表加载失败，当前未显示演示兜底数据。");
+          setLoadingAlerts(false);
+        }
       }
     }
 
@@ -119,16 +139,19 @@ export function TerrorRiskTopicPage({
 
   async function handleRefresh() {
     setUpdating(true);
+    setUpdateError("");
     try {
       await onUpdate?.();
       const [topicData, alertData, rulesData] = await Promise.all([
-        requestJson("/terror-risk/topic", { fallback: EMPTY_TOPIC }),
-        requestJson(`/terror-risk/alerts${buildQueryString(filters)}`, { fallback: EMPTY_ALERT_LIST }),
-        requestJson("/terror-risk/rules", { fallback: [] }),
+        requestJson("/terror-risk/topic"),
+        requestJson(`/terror-risk/alerts${buildQueryString(filters)}`),
+        requestJson("/terror-risk/rules"),
       ]);
       setTopic(topicData);
       setAlerts(alertData.items);
       setRules(Array.isArray(rulesData) ? rulesData : []);
+    } catch {
+      setUpdateError("重新识别失败，数据库未更新，请稍后重试。");
     } finally {
       setUpdating(false);
     }
@@ -192,6 +215,9 @@ export function TerrorRiskTopicPage({
       <div style={heroHintStyle}>
         本次识别共处理 {lastInput} 笔交易，命中 {lastMatched} 条预警，其中高风险 {topic.latest_job?.high_risk_count || 0} 条。
       </div>
+
+      {loadError ? <div style={errorBannerStyle}>{loadError}</div> : null}
+      {updateError ? <div style={errorBannerStyle}>{updateError}</div> : null}
 
       <div style={metricGridStyle}>
         {TOPIC_METRICS.map((metric) => (
@@ -525,4 +551,15 @@ const sectionHeaderRowStyle = {
   gap: 16,
   marginBottom: 16,
   flexWrap: "wrap",
+};
+
+const errorBannerStyle = {
+  marginBottom: 16,
+  padding: "12px 14px",
+  borderRadius: 14,
+  border: "1px solid #ffd5d5",
+  background: "#fff5f5",
+  color: "#b42318",
+  fontSize: 13,
+  fontWeight: 700,
 };

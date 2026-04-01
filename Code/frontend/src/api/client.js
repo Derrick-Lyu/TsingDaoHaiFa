@@ -27,7 +27,7 @@ export function buildApiUrl(path, baseUrl = DEFAULT_API_BASE_URL) {
 
 export async function requestJson(
   path,
-  { method = "GET", headers = {}, body, fallback } = {},
+  { method = "GET", headers = {}, body } = {},
 ) {
   const url = buildApiUrl(path);
   const requestInit = {
@@ -59,10 +59,6 @@ export async function requestJson(
 
     return await response.json();
   } catch (error) {
-    if (fallback !== undefined) {
-      return typeof fallback === "function" ? fallback() : fallback;
-    }
-
     throw error;
   }
 }

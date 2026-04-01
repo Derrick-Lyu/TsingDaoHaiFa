@@ -1,23 +1,39 @@
 import { useEffect, useState } from "react";
 
-import { buildFundSafetyFallback, getFundSafetySummary } from "../api/terrorRisk";
+import { getFundSafetySummary } from "../api/terrorRisk";
 import { TopicSummaryCard } from "../components/fundSafety/TopicSummaryCard";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
+const EMPTY_SUMMARY = {
+  updatedAt: "",
+  heroMetrics: [],
+  topics: [],
+};
+
 export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
-  const [summary, setSummary] = useState(buildFundSafetyFallback);
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [status, setStatus] = useState("loading");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadSummary() {
       setStatus("loading");
-      const data = await getFundSafetySummary();
+      setErrorMessage("");
+      try {
+        const data = await getFundSafetySummary();
 
-      if (!cancelled) {
-        setSummary(data);
-        setStatus("ready");
+        if (!cancelled) {
+          setSummary(data);
+          setStatus("ready");
+        }
+      } catch {
+        if (!cancelled) {
+          setSummary(EMPTY_SUMMARY);
+          setStatus("error");
+          setErrorMessage("资金安全摘要加载失败，当前未显示演示兜底数据。");
+        }
       }
     }
 
@@ -33,12 +49,14 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
       <div style={statusClusterStyle}>
         <div style={metaCardStyle}>
           <div style={metaLabelStyle}>更新时间</div>
-          <div style={metaValueStyle}>{summary.updatedAt}</div>
+          <div style={metaValueStyle}>{summary.updatedAt || "-"}</div>
         </div>
         <div style={statusPillStyle(status === "loading")}>
-          {status === "loading" ? "更新中" : "已更新"}
+          {status === "loading" ? "更新中" : status === "error" ? "加载失败" : "已更新"}
         </div>
       </div>
+
+      {errorMessage ? <div style={errorBannerStyle}>{errorMessage}</div> : null}
 
       <div style={heroMetricGridStyle}>
         {summary.heroMetrics.map((metric) => (
@@ -47,6 +65,7 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
             <SummaryMetricValue value={metric.value} color="#0f2f66" primaryFontSize={32} unitFontSize={14} />
           </div>
         ))}
+        {!summary.heroMetrics.length ? <div style={emptyStateStyle}>暂无摘要指标</div> : null}
       </div>
 
       <div style={topicGridStyle}>
@@ -58,6 +77,7 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
             onClick={topic.isClickable ? onOpenTerrorTopic : undefined}
           />
         ))}
+        {!summary.topics.length ? <div style={emptyStateStyle}>暂无专题摘要数据</div> : null}
       </div>
     </div>
   );
@@ -137,4 +157,22 @@ const topicGridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
   gap: 16,
+};
+
+const errorBannerStyle = {
+  padding: "12px 14px",
+  borderRadius: 14,
+  border: "1px solid #ffd5d5",
+  background: "#fff5f5",
+  color: "#b42318",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const emptyStateStyle = {
+  padding: 24,
+  borderRadius: 16,
+  border: "1px dashed #d7e0ea",
+  background: "#fbfcfe",
+  color: "#607087",
 };

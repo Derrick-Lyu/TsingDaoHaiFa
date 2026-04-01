@@ -158,10 +158,6 @@ export default function App() {
   const runDetectionJob = async () => {
     await requestJson("/terror-risk/detection-jobs", {
       method: "POST",
-      fallback: {
-        job_no: "JOB-FALLBACK-001",
-        job_status: "succeeded",
-      },
     });
   };
 
@@ -169,9 +165,6 @@ export default function App() {
     await requestJson(`/terror-risk/alerts/${alertId}/review`, {
       method: "POST",
       body: payload,
-      fallback: {
-        review: payload,
-      },
     });
   };
 

@@ -2,274 +2,39 @@ import { useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
 
-const DEFAULT_ALERT_ID = "11111111-1111-1111-1111-111111111111";
-
-const ALERT_DETAILS = {
-  "11111111-1111-1111-1111-111111111111": {
-    id: DEFAULT_ALERT_ID,
-    alert_no: "TA-20260331-001",
-    rule_code: "TR-BLACKLIST-001",
-    rule_name: "黑名单命中规则",
-    risk_level: "high",
-    alert_status: "open",
-    review_status: "pending",
-    member_unit_code: "HF-CP-01",
-    member_unit_name: "海发产城投资示例一",
-    payer_name: "海发产城投资示例一",
-    payer_account: "6222000000000001",
-    payee_name: "青岛西海岸新区某建设工程公司",
-    payee_account: "6222000000000101",
-    transaction_date: "2026-03-31",
-    matched_amount: "420.00万元",
-    matched_count: 1,
-    evidence_count: 2,
-    latest_evidence_summary: "账户名称命中黑名单并触发高风险预警。",
-    alert_summary: "付款账户与黑名单关键词命中，交易直接触发高风险预警。",
-    evidences: [
-      {
-        evidence_type: "blacklist_match",
-        evidence_title: "账户名称命中黑名单",
-        evidence_detail: "付款账户名称包含涉恐黑名单关键字，直接命中规则。",
-        evidence_payload: { matched_keyword: "西海岸工程黑名单" },
-        evidence_order: 1,
-      },
-      {
-        evidence_type: "amount",
-        evidence_title: "交易金额超过关注阈值",
-        evidence_detail: "本笔支付金额达到 420.00 万元。",
-        evidence_payload: { amount: "420.00万元", threshold: "200.00万元" },
-        evidence_order: 2,
-      },
-    ],
-    review: {
-      review_status: "pending",
-      reviewer_name: "",
-      review_result: "",
-      review_comment: "",
-      reviewed_at: null,
-    },
-    related_transactions: [
-      {
-        transaction_no: "TX-20260331-0001",
-        transaction_date: "2026-03-31",
-        amount: "420.00万元",
-        payer_name: "海发产城投资示例一",
-        payee_name: "青岛西海岸新区某建设工程公司",
-        business_scenario: "园区建设款支付",
-      },
-    ],
-  },
-  "22222222-2222-2222-2222-222222222222": {
-    id: "22222222-2222-2222-2222-222222222222",
-    alert_no: "TA-20260331-002",
-    rule_code: "TR-FREQ-010",
-    rule_name: "高频大额交易规则",
-    risk_level: "high",
-    alert_status: "open",
-    review_status: "reviewed",
-    member_unit_code: "HF-PARK-02",
-    member_unit_name: "海发园区运营示例二",
-    payer_name: "海发园区运营示例二",
-    payer_account: "6222000000000002",
-    payee_name: "青岛某产业园配套服务公司",
-    payee_account: "6222000000000102",
-    transaction_date: "2026-03-30",
-    matched_amount: "360.00万元",
-    matched_count: 12,
-    evidence_count: 3,
-    latest_evidence_summary: "连续10日同一收款人高频高额支付。",
-    alert_summary: "连续10日同一收款人单日交易次数超阈值，且累计金额超过限定标准。",
-    evidences: [
-      {
-        evidence_type: "frequency",
-        evidence_title: "10日高频交易",
-        evidence_detail: "连续10日内对同一收款人单日交易超过50次。",
-        evidence_payload: { days: 10, daily_count: 56 },
-        evidence_order: 1,
-      },
-      {
-        evidence_type: "amount",
-        evidence_title: "累计金额超过阈值",
-        evidence_detail: "连续10日累计金额达到 360.00 万元。",
-        evidence_payload: { amount: "360.00万元", threshold: "200.00万元" },
-        evidence_order: 2,
-      },
-      {
-        evidence_type: "counterparty",
-        evidence_title: "同一收款人集中收款",
-        evidence_detail: "交易集中流向同一产业园配套服务公司。",
-        evidence_payload: { counterparty: "青岛某产业园配套服务公司" },
-        evidence_order: 3,
-      },
-    ],
-    review: {
-      review_status: "reviewed",
-      reviewer_name: "风控专员A",
-      review_result: "确认异常",
-      review_comment: "建议补充合同与对账资料。",
-      reviewed_at: "2026-03-31T10:20:00+08:00",
-    },
-    related_transactions: [
-      {
-        transaction_no: "TX-20260330-0007",
-        transaction_date: "2026-03-30",
-        amount: "120.00万元",
-        payer_name: "海发园区运营示例二",
-        payee_name: "青岛某产业园配套服务公司",
-        business_scenario: "园区运营服务费支付",
-      },
-      {
-        transaction_no: "TX-20260330-0008",
-        transaction_date: "2026-03-30",
-        amount: "240.00万元",
-        payer_name: "海发园区运营示例二",
-        payee_name: "青岛某产业园配套服务公司",
-        business_scenario: "园区运营服务费支付",
-      },
-    ],
-  },
-  "33333333-3333-3333-3333-333333333333": {
-    id: "33333333-3333-3333-3333-333333333333",
-    alert_no: "TA-20260331-003",
-    rule_code: "TR-DORMANT-011",
-    rule_name: "长期闲置账户异常交易规则",
-    risk_level: "warn",
-    alert_status: "open",
-    review_status: "pending",
-    member_unit_code: "HF-CAP-03",
-    member_unit_name: "海发资本管理示例一",
-    payer_name: "海发资本管理示例一",
-    payer_account: "6222000000000003",
-    payee_name: "山东某基金管理服务公司",
-    payee_account: "6222000000000103",
-    transaction_date: "2026-03-29",
-    matched_amount: "230.00万元",
-    matched_count: 10,
-    evidence_count: 3,
-    latest_evidence_summary: "闲置账户恢复交易后出现连续10日异常支付。",
-    alert_summary: "闲置超过一年账户重新发生交易，且连续10日金额达到阈值。",
-    evidences: [
-      {
-        evidence_type: "dormant_account",
-        evidence_title: "长期闲置账户恢复交易",
-        evidence_detail: "账户超过 365 天未发生交易后再次发生支付。",
-        evidence_payload: { dormant_days: 420 },
-        evidence_order: 1,
-      },
-      {
-        evidence_type: "frequency",
-        evidence_title: "连续10日累计交易",
-        evidence_detail: "连续10日对同一单位收款人累计交易达到阈值。",
-        evidence_payload: { days: 10, daily_count: 22 },
-        evidence_order: 2,
-      },
-      {
-        evidence_type: "amount",
-        evidence_title: "累计金额超过对私阈值",
-        evidence_detail: "累计金额达到 230.00 万元。",
-        evidence_payload: { amount: "230.00万元", threshold: "50.00万元" },
-        evidence_order: 3,
-      },
-    ],
-    review: {
-      review_status: "pending",
-      reviewer_name: "",
-      review_result: "",
-      review_comment: "",
-      reviewed_at: null,
-    },
-    related_transactions: [
-      {
-        transaction_no: "TX-20260329-0012",
-        transaction_date: "2026-03-29",
-        amount: "230.00万元",
-        payer_name: "海发资本管理示例一",
-        payee_name: "山东某基金管理服务公司",
-        business_scenario: "基金投资款支付",
-      },
-    ],
-  },
-  "44444444-4444-4444-4444-444444444444": {
-    id: "44444444-4444-4444-4444-444444444444",
-    alert_no: "TA-20260331-004",
-    rule_code: "TR-FREQ-010",
-    rule_name: "高频大额交易规则",
-    risk_level: "warn",
-    alert_status: "open",
-    review_status: "pending",
-    member_unit_code: "HF-SERVICE-04",
-    member_unit_name: "海发产业服务示例三",
-    payer_name: "海发产业服务示例三",
-    payer_account: "6222000000000004",
-    payee_name: "青岛某影视文化配套服务公司",
-    payee_account: "6222000000000104",
-    transaction_date: "2026-03-28",
-    matched_amount: "168.00万元",
-    matched_count: 8,
-    evidence_count: 2,
-    latest_evidence_summary: "连续支付但金额未达高风险阈值，当前为预警关注。",
-    alert_summary: "多笔连续支付但金额未达高风险阈值，当前为预警关注。",
-    evidences: [
-      {
-        evidence_type: "frequency",
-        evidence_title: "高频连续支付",
-        evidence_detail: "连续多日存在高频交易行为。",
-        evidence_payload: { days: 10, daily_count: 22 },
-        evidence_order: 1,
-      },
-      {
-        evidence_type: "amount",
-        evidence_title: "金额接近阈值",
-        evidence_detail: "累计金额接近风险阈值但未达到高风险标准。",
-        evidence_payload: { amount: "168.00万元", threshold: "200.00万元" },
-        evidence_order: 2,
-      },
-    ],
-    review: {
-      review_status: "pending",
-      reviewer_name: "",
-      review_result: "",
-      review_comment: "",
-      reviewed_at: null,
-    },
-    related_transactions: [
-      {
-        transaction_no: "TX-20260328-0018",
-        transaction_date: "2026-03-28",
-        amount: "168.00万元",
-        payer_name: "海发产业服务示例三",
-        payee_name: "青岛某影视文化配套服务公司",
-        business_scenario: "产业服务费支付",
-      },
-    ],
-  },
-};
-
 export function AlertDetailPage({
-  alertId = DEFAULT_ALERT_ID,
+  alertId = "",
   embedded = false,
   onBack,
   onSaveReview,
 }) {
-  const [detail, setDetail] = useState(() => getFallbackDetail(alertId));
+  const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState(() => buildReviewDraft(getFallbackDetail(alertId).review));
+  const [draft, setDraft] = useState(() => buildReviewDraft(null));
   const [saveState, setSaveState] = useState("idle");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadDetail() {
       setLoading(true);
-      const fallback = getFallbackDetail(alertId);
-      const data = await requestJson(`/terror-risk/alerts/${alertId}`, {
-        fallback,
-      });
+      setLoadError("");
+      try {
+        const data = await requestJson(`/terror-risk/alerts/${alertId}`);
 
-      if (!cancelled) {
-        setDetail(data);
-        setDraft(buildReviewDraft(data.review));
-        setLoading(false);
+        if (!cancelled) {
+          setDetail(data);
+          setDraft(buildReviewDraft(data.review));
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setDetail(null);
+          setDraft(buildReviewDraft(null));
+          setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
+          setLoading(false);
+        }
       }
     }
 
@@ -301,6 +66,14 @@ export function AlertDetailPage({
     return (
       <div style={pageShellStyle(embedded)}>
         <div style={{ color: "#667085" }}>正在加载核查详情...</div>
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <div style={pageShellStyle(embedded)}>
+        <div style={{ color: "#b42318" }}>{loadError || "未找到核查详情数据。"}</div>
       </div>
     );
   }
@@ -532,11 +305,15 @@ export function AlertDetailPage({
             </label>
 
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 12, color: "#64748b" }}>
-                {detail.review.reviewed_at ? `已于 ${detail.review.reviewed_at} 保存` : "当前尚未保存核查结果"}
+              <div style={{ fontSize: 12, color: saveState === "error" ? "#b42318" : "#64748b" }}>
+                {saveState === "error"
+                  ? "提交失败，核查结果尚未写入数据库。"
+                  : detail.review.reviewed_at
+                    ? `已于 ${detail.review.reviewed_at} 保存`
+                    : "当前尚未保存核查结果"}
               </div>
               <button type="button" onClick={handleSave} style={saveButtonStyle}>
-                {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : "提交核查结论"}
+                {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : saveState === "error" ? "重试提交" : "提交核查结论"}
               </button>
             </div>
           </section>
@@ -544,10 +321,6 @@ export function AlertDetailPage({
       </div>
     </div>
   );
-}
-
-function getFallbackDetail(alertId) {
-  return ALERT_DETAILS[alertId] || ALERT_DETAILS[DEFAULT_ALERT_ID];
 }
 
 function buildReviewDraft(review) {
