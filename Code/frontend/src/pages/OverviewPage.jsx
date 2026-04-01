@@ -34,20 +34,6 @@ export function OverviewPage({ onOpenFundSafety }) {
 
   return (
     <div style={pageShellStyle}>
-      <div style={headerRowStyle}>
-        <div style={{ minWidth: 0, maxWidth: 720 }}>
-          <div style={eyebrowStyle}>集团级风险总览</div>
-          <h2 style={titleStyle}>风险总览</h2>
-          <div style={descriptionStyle}>
-            聚焦资金安全专题入口与全局风险分布，便于快速切入重点风险链路。
-          </div>
-        </div>
-        <div style={headerMetaStyle}>
-          <MetaChip label="更新时间" value={overview.updatedAt} />
-          <MetaChip label="重点专题" value={overview.fundSafetyEntry.title} />
-        </div>
-      </div>
-
       <button type="button" onClick={onOpenFundSafety} style={focusPanelStyle}>
         <div style={focusCopyStyle}>
           <div style={focusLabelStyle}>资金安全重点入口</div>
@@ -194,15 +180,6 @@ export function OverviewPage({ onOpenFundSafety }) {
   );
 }
 
-function MetaChip({ label, value }) {
-  return (
-    <div style={metaChipStyle}>
-      <div style={metaChipLabelStyle}>{label}</div>
-      <div style={metaChipValueStyle}>{value}</div>
-    </div>
-  );
-}
-
 const pageShellStyle = {
   padding: "0 24px 28px",
   display: "grid",
@@ -212,68 +189,6 @@ const pageShellStyle = {
 const loadingStyle = {
   padding: "0 24px 24px",
   color: "#607087",
-};
-
-const headerRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 16,
-  flexWrap: "wrap",
-};
-
-const eyebrowStyle = {
-  fontSize: 12,
-  color: "#607087",
-  marginBottom: 8,
-  fontWeight: 800,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 32,
-  color: "#0f172a",
-  lineHeight: 1.15,
-};
-
-const descriptionStyle = {
-  marginTop: 10,
-  fontSize: 14,
-  color: "#4f5d70",
-  lineHeight: 1.7,
-  maxWidth: 760,
-};
-
-const headerMetaStyle = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-  alignItems: "center",
-};
-
-const metaChipStyle = {
-  minWidth: 168,
-  padding: "12px 14px",
-  background: "rgba(255,255,255,0.92)",
-  borderRadius: 14,
-  border: "1px solid #e7edf6",
-  boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-};
-
-const metaChipLabelStyle = {
-  fontSize: 12,
-  color: "#6b7280",
-  fontWeight: 700,
-};
-
-const metaChipValueStyle = {
-  marginTop: 4,
-  fontSize: 13,
-  fontWeight: 700,
-  color: "#111827",
-  wordBreak: "break-word",
 };
 
 const focusPanelStyle = {

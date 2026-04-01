@@ -30,23 +30,13 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
 
   return (
     <div style={pageShellStyle}>
-      <div style={headerRowStyle}>
-        <div style={{ minWidth: 0, maxWidth: 820 }}>
-          <div style={eyebrowStyle}>资金安全总览</div>
-          <h2 style={titleStyle}>二级主题摘要</h2>
-          <div style={descriptionStyle}>
-            按二级主题展示当前识别结果与风险结论，便于快速判断需要进一步进入专题核查的重点方向。
-          </div>
+      <div style={statusClusterStyle}>
+        <div style={metaCardStyle}>
+          <div style={metaLabelStyle}>更新时间</div>
+          <div style={metaValueStyle}>{summary.updatedAt}</div>
         </div>
-
-        <div style={statusClusterStyle}>
-          <div style={metaCardStyle}>
-            <div style={metaLabelStyle}>更新时间</div>
-            <div style={metaValueStyle}>{summary.updatedAt}</div>
-          </div>
-          <div style={statusPillStyle(status === "loading")}>
-            {status === "loading" ? "更新中" : "已更新"}
-          </div>
+        <div style={statusPillStyle(status === "loading")}>
+          {status === "loading" ? "更新中" : "已更新"}
         </div>
       </div>
 
@@ -79,44 +69,12 @@ const pageShellStyle = {
   gap: 18,
 };
 
-const headerRowStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 16,
-  flexWrap: "wrap",
-  padding: "4px 0 0",
-};
-
-const eyebrowStyle = {
-  fontSize: 12,
-  color: "#607087",
-  marginBottom: 8,
-  fontWeight: 800,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontSize: 32,
-  color: "#0f172a",
-  lineHeight: 1.15,
-};
-
-const descriptionStyle = {
-  marginTop: 10,
-  fontSize: 14,
-  color: "#4f5d70",
-  lineHeight: 1.7,
-  maxWidth: 760,
-};
-
 const statusClusterStyle = {
   display: "flex",
   gap: 10,
   flexWrap: "wrap",
   alignItems: "center",
+  justifyContent: "flex-end",
 };
 
 const metaCardStyle = {

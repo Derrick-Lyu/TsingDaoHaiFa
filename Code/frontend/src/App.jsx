@@ -72,19 +72,6 @@ function ShellHeader({ activeTab, onChangeTab }) {
   );
 }
 
-function PageIntro({ eyebrow, title, description, meta }) {
-  return (
-    <section style={introCardStyle} className="page-intro">
-      <div style={{ minWidth: 0 }}>
-        <div style={introEyebrowStyle}>{eyebrow}</div>
-        <h1 style={introTitleStyle}>{title}</h1>
-        <p style={introDescriptionStyle}>{description}</p>
-      </div>
-      {meta ? <div style={introMetaWrapStyle}>{meta}</div> : null}
-    </section>
-  );
-}
-
 function TopicWorkspace({
   activeView,
   onNavigate,
@@ -94,14 +81,6 @@ function TopicWorkspace({
   return (
     <div style={workspaceGridStyle} className="topic-workspace">
       <aside style={sidePaneStyle} className="topic-side-pane">
-        <div style={sidePaneBlockStyle}>
-          <div style={sidePaneLabelStyle}>涉恐交易风险专题</div>
-          <div style={sidePaneTitleStyle}>结果先行，配置后置</div>
-          <div style={sidePaneTextStyle}>
-            默认先展示识别结论、案例与预警。配置与数据维护作为次级入口保留，用于证明规则和数据调整会影响结果。
-          </div>
-        </div>
-
         <nav style={sideNavStyle} aria-label="专题二级导航">
           {TOPIC_NAV_ITEMS.map((item) => {
             const active = activeView === item.value;
@@ -119,13 +98,6 @@ function TopicWorkspace({
             );
           })}
         </nav>
-
-        <div style={sidePaneBlockStyle}>
-          <div style={sidePaneMiniTitleStyle}>演示动作</div>
-          <div style={sidePaneTextStyle}>
-            在 `专题概览` 中执行 `重新识别`，可结合左侧配置页展示“修改输入后结果随之变化”的能力。
-          </div>
-        </div>
       </aside>
 
       <div style={{ minWidth: 0 }}>
@@ -207,79 +179,43 @@ export default function App() {
 
   if (activeTab === "overview") {
     pageContent = (
-      <>
-        <PageIntro
-          eyebrow="集团视角"
-          title="风险总览"
-          description="从集团风险版图快速定位重点专题。本次演示聚焦资金安全链路，并进一步进入涉恐交易风险专题。"
-        />
-        <Suspense fallback={<PageLoadingState label="正在加载风险总览..." />}>
-          <OverviewPage onOpenFundSafety={openFundSafety} />
-        </Suspense>
-      </>
+      <Suspense fallback={<PageLoadingState label="正在加载风险总览..." />}>
+        <OverviewPage onOpenFundSafety={openFundSafety} />
+      </Suspense>
     );
   }
 
   if (activeTab === "fund-safety") {
     if (fundSafetyView === "summary") {
       pageContent = (
-        <>
-        <PageIntro
-          eyebrow="资金安全"
-          title="资金安全总览"
-          description="面向领导视角汇总各二级主题的核心结论，并以统一摘要方式呈现当前关注重点。"
-        />
         <Suspense fallback={<PageLoadingState label="正在加载资金安全总览..." />}>
           <FundSafetySummaryPage onOpenTerrorTopic={openTerrorTopic} />
         </Suspense>
-      </>
       );
     }
 
     if (fundSafetyView === "topic") {
       pageContent = (
-        <>
-          <PageIntro
-            eyebrow="资金安全"
-            title="涉恐交易风险专题"
-            description="默认按客户演示顺序展示识别结论、典型案例和预警记录；左侧保留配置与数据维护入口，用于演示规则和样例调整对结果的影响。"
+        <Suspense fallback={<PageLoadingState label="正在加载涉恐交易风险专题..." />}>
+          <TopicWorkspace
+            activeView={topicView}
+            onNavigate={setTopicView}
+            onOpenDetail={openAlertDetail}
+            onRunDetection={runDetectionJob}
           />
-          <Suspense fallback={<PageLoadingState label="正在加载涉恐交易风险专题..." />}>
-            <TopicWorkspace
-              activeView={topicView}
-              onNavigate={setTopicView}
-              onOpenDetail={openAlertDetail}
-              onRunDetection={runDetectionJob}
-            />
-          </Suspense>
-        </>
+        </Suspense>
       );
     }
 
     if (fundSafetyView === "detail") {
       pageContent = (
-        <>
-          <PageIntro
-            eyebrow="风险核查"
-            title="风险核查详情"
-            description="围绕单条预警展示风险摘要、证据说明、关联交易与人工核查结论。"
-            meta={
-              <button
-                type="button"
-                onClick={() => setFundSafetyView("topic")}
-                style={returnButtonStyle}
-              >
-                返回涉恐交易风险专题
-              </button>
-            }
+        <Suspense fallback={<PageLoadingState label="正在加载风险核查详情..." />}>
+          <AlertDetailPage
+            alertId={selectedAlertId}
+            onSaveReview={saveAlertReview}
+            onBack={() => setFundSafetyView("topic")}
           />
-          <Suspense fallback={<PageLoadingState label="正在加载风险核查详情..." />}>
-            <AlertDetailPage
-              alertId={selectedAlertId}
-              onSaveReview={saveAlertReview}
-            />
-          </Suspense>
-        </>
+        </Suspense>
       );
     }
   }
@@ -396,50 +332,6 @@ const audienceBadgeStyle = {
   fontWeight: 700,
 };
 
-const introCardStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 20,
-  padding: 28,
-  marginBottom: 20,
-  borderRadius: 28,
-  border: "1px solid rgba(205,217,232,0.9)",
-  background:
-    "linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(245,248,252,0.96) 100%)",
-  boxShadow: "0 24px 50px rgba(15,23,42,0.08)",
-  flexWrap: "wrap",
-};
-
-const introEyebrowStyle = {
-  fontSize: 12,
-  fontWeight: 700,
-  color: "#5c7088",
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const introTitleStyle = {
-  margin: "8px 0 0",
-  fontSize: 40,
-  lineHeight: 1.05,
-  color: "#102033",
-};
-
-const introDescriptionStyle = {
-  marginTop: 12,
-  maxWidth: 920,
-  color: "#445466",
-  lineHeight: 1.75,
-};
-
-const introMetaWrapStyle = {
-  display: "flex",
-  gap: 12,
-  flexWrap: "wrap",
-  alignItems: "flex-start",
-};
-
 const loadingCardStyle = {
   padding: "18px 20px",
   borderRadius: 18,
@@ -448,18 +340,6 @@ const loadingCardStyle = {
   color: "#516173",
   fontSize: 14,
   fontWeight: 600,
-};
-
-const returnButtonStyle = {
-  border: "1px solid #d2dceb",
-  background: "white",
-  color: "#102c57",
-  borderRadius: 999,
-  padding: "11px 16px",
-  font: "inherit",
-  fontSize: 13,
-  fontWeight: 700,
-  cursor: "pointer",
 };
 
 const workspaceGridStyle = {
@@ -474,44 +354,7 @@ const sidePaneStyle = {
   top: 108,
   display: "flex",
   flexDirection: "column",
-  gap: 14,
-};
-
-const sidePaneBlockStyle = {
-  borderRadius: 22,
-  border: "1px solid #d8e1ee",
-  background: "rgba(255,255,255,0.92)",
-  boxShadow: "0 18px 30px rgba(15,23,42,0.06)",
-  padding: 18,
-};
-
-const sidePaneLabelStyle = {
-  fontSize: 12,
-  fontWeight: 700,
-  color: "#5e7288",
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const sidePaneTitleStyle = {
-  marginTop: 8,
-  fontSize: 22,
-  lineHeight: 1.15,
-  fontWeight: 800,
-  color: "#11273d",
-};
-
-const sidePaneMiniTitleStyle = {
-  fontSize: 13,
-  fontWeight: 800,
-  color: "#18385e",
-  marginBottom: 8,
-};
-
-const sidePaneTextStyle = {
-  color: "#516173",
-  lineHeight: 1.75,
-  fontSize: 13,
+  gap: 8,
 };
 
 const sideNavStyle = {

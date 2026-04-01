@@ -232,20 +232,12 @@ export function TerrorRiskTopicPage({
   if (mode === "cases") {
     return (
       <div style={pageShellStyle}>
-        <section style={heroStyle}>
-          <SectionHeader
-            title="典型案例"
-            description="集中查看本专题的代表性命中场景，快速建立风险印象，再进入单笔核查详情查看证据与处置建议。"
-            meta={
-              <div style={sectionMetaStyle}>
-                <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
-                <button type="button" onClick={onBackToOverview} style={ghostActionStyle}>
-                  返回专题概览
-                </button>
-              </div>
-            }
-          />
-        </section>
+        <div style={toolbarStyle}>
+          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
+          <button type="button" onClick={onBackToOverview} style={ghostActionStyle}>
+            返回专题概览
+          </button>
+        </div>
 
         <section style={panelStyle}>
           <div style={sectionHeaderRowStyle}>
@@ -263,18 +255,10 @@ export function TerrorRiskTopicPage({
   if (mode === "alerts") {
     return (
       <div style={pageShellStyle}>
-        <section style={heroStyle}>
-          <SectionHeader
-            title="预警记录"
-            description="查看专题下全部识别结果，可按规则类型、风险等级和成员单位筛选，并进入风险核查详情页。"
-            meta={
-              <div style={sectionMetaStyle}>
-                <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
-                <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
-              </div>
-            }
-          />
-        </section>
+        <div style={toolbarStyle}>
+          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
+          <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
+        </div>
 
         <AlertTable
           alerts={alerts}
@@ -289,38 +273,30 @@ export function TerrorRiskTopicPage({
 
   return (
     <div style={pageShellStyle}>
-      <section style={heroStyle}>
-        <SectionHeader
-          title="专题概览"
-          description="先展示专题结论、关键指标与主要命中模式，再从典型案例和预警记录进入单笔核查详情。"
-          meta={
-            <div style={sectionMetaStyle}>
-              <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
-              <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
-            </div>
-          }
-        />
-
-        <div style={heroActionRowStyle}>
-          <button type="button" onClick={handleRefresh} disabled={updating || loadingTopic || loadingAlerts} style={primaryActionStyle}>
-            {updating ? "重新识别中..." : "重新识别"}
-          </button>
-          <div style={heroHintStyle}>
-            本次识别共处理 {lastInput} 笔交易，命中 {lastMatched} 条预警，其中高风险 {topic.latest_job?.high_risk_count || 0} 条。
-          </div>
+      <div style={toolbarStyle}>
+        <div style={sectionMetaStyle}>
+          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
+          <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
         </div>
+        <button type="button" onClick={handleRefresh} disabled={updating || loadingTopic || loadingAlerts} style={primaryActionStyle}>
+          {updating ? "重新识别中..." : "重新识别"}
+        </button>
+      </div>
 
-        <div style={metricGridStyle}>
-          {TOPIC_METRICS.map((metric) => (
-            <MetricCard
-              key={metric.key}
-              label={metric.label}
-              value={topic.kpis?.[metric.key] || "0"}
-              tone={metric.tone}
-            />
-          ))}
-        </div>
-      </section>
+      <div style={heroHintStyle}>
+        本次识别共处理 {lastInput} 笔交易，命中 {lastMatched} 条预警，其中高风险 {topic.latest_job?.high_risk_count || 0} 条。
+      </div>
+
+      <div style={metricGridStyle}>
+        {TOPIC_METRICS.map((metric) => (
+          <MetricCard
+            key={metric.key}
+            label={metric.label}
+            value={topic.kpis?.[metric.key] || "0"}
+            tone={metric.tone}
+          />
+        ))}
+      </div>
 
       <div style={insightGridStyle}>
         <section style={panelStyle}>
@@ -358,19 +334,6 @@ export function TerrorRiskTopicPage({
         </div>
         <TypicalCaseCards cases={previewCases} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
       </section>
-    </div>
-  );
-}
-
-function SectionHeader({ title, description, meta }) {
-  return (
-    <div style={sectionHeaderStyle}>
-      <div style={{ minWidth: 0 }}>
-        <div style={eyebrowStyle}>涉恐交易风险专题</div>
-        <h2 style={heroTitleStyle}>{title}</h2>
-        <div style={heroTextStyle}>{description}</div>
-      </div>
-      {meta ? <div style={sectionMetaStyle}>{meta}</div> : null}
     </div>
   );
 }
@@ -495,55 +458,17 @@ const pageShellStyle = {
   gap: 18,
 };
 
-const sectionHeaderStyle = {
+const toolbarStyle = {
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "flex-start",
-  gap: 16,
+  alignItems: "center",
+  gap: 12,
   flexWrap: "wrap",
 };
 
 const sectionMetaStyle = {
   display: "flex",
   gap: 10,
-  alignItems: "center",
-  flexWrap: "wrap",
-};
-
-const heroStyle = {
-  padding: 24,
-  borderRadius: 26,
-  border: "1px solid #d9e2ee",
-  background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,249,253,0.96) 100%)",
-  boxShadow: "0 18px 34px rgba(15,23,42,0.07)",
-};
-
-const eyebrowStyle = {
-  fontSize: 12,
-  color: "#5f7088",
-  fontWeight: 800,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const heroTitleStyle = {
-  margin: "8px 0 0",
-  fontSize: 30,
-  color: "#102033",
-  lineHeight: 1.15,
-};
-
-const heroTextStyle = {
-  marginTop: 12,
-  color: "#47586b",
-  lineHeight: 1.75,
-  maxWidth: 880,
-};
-
-const heroActionRowStyle = {
-  marginTop: 20,
-  display: "flex",
-  gap: 14,
   alignItems: "center",
   flexWrap: "wrap",
 };

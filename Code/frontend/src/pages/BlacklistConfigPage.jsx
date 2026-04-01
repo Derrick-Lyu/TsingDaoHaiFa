@@ -487,21 +487,10 @@ export function BlacklistConfigPage() {
 
   return (
     <div style={{ padding: "0 24px 24px", background: "linear-gradient(180deg, #f8fafc 0%, #f5f7fa 100%)" }}>
-      <section style={{ ...cardSurfaceStyle(), padding: 22, marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, color: "#1a3a8f", fontWeight: 700 }}>名单维护</div>
-            <h2 style={{ margin: "6px 0 10px", fontSize: 28, color: "#0f172a" }}>黑名单配置</h2>
-            <div style={{ color: "#4f5a6a", lineHeight: 1.7, maxWidth: 760 }}>
-              维护命中主体、关键词和启停状态，名单调整后可直接参与重新识别。
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <ActionButton variant="primary" onClick={openCreate}>新增名单项</ActionButton>
-            <ActionButton variant="ghost" onClick={refreshBlacklist}>刷新数据</ActionButton>
-          </div>
-        </div>
-      </section>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+        <ActionButton variant="primary" onClick={openCreate}>新增名单项</ActionButton>
+        <ActionButton variant="ghost" onClick={refreshBlacklist}>刷新数据</ActionButton>
+      </div>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 16 }}>
         {[

@@ -346,20 +346,9 @@ export function RuleConfigPage() {
 
   return (
     <div style={{ padding: "0 24px 24px", background: "linear-gradient(180deg, #f8fafc 0%, #f5f7fa 100%)" }}>
-      <section style={{ ...surfaceStyle(), padding: 22, marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 13, color: "#1a3a8f", fontWeight: 700 }}>规则维护</div>
-            <h2 style={{ margin: "6px 0 10px", fontSize: 28, color: "#0f172a" }}>规则配置</h2>
-            <div style={{ color: "#4f5a6a", lineHeight: 1.7, maxWidth: 760 }}>
-              维护三类识别规则与阈值，调整后可直接用于重新识别并观察结果变化。
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" onClick={refreshRules} style={buttonStyle("ghost")}>刷新数据</button>
-          </div>
-        </div>
-      </section>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+        <button type="button" onClick={refreshRules} style={buttonStyle("ghost")}>刷新数据</button>
+      </div>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 16 }}>
         {[
