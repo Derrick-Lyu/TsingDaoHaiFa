@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { buildFundSafetyFallback, getFundSafetySummary } from "../api/terrorRisk";
 import { TopicSummaryCard } from "../components/fundSafety/TopicSummaryCard";
+import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
 export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
   const [summary, setSummary] = useState(buildFundSafetyFallback);
@@ -53,7 +54,7 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
         {summary.heroMetrics.map((metric) => (
           <div key={metric.label} style={heroMetricCardStyle}>
             <div style={heroMetricLabelStyle}>{metric.label}</div>
-            <div style={heroMetricValueStyle}>{metric.value}</div>
+            <SummaryMetricValue value={metric.value} color="#0f2f66" primaryFontSize={32} unitFontSize={14} />
           </div>
         ))}
       </div>
@@ -172,13 +173,6 @@ const heroMetricLabelStyle = {
   color: "#6b7280",
   marginBottom: 8,
   fontWeight: 700,
-};
-
-const heroMetricValueStyle = {
-  fontSize: 24,
-  fontWeight: 800,
-  color: "#0f2f66",
-  lineHeight: 1.2,
 };
 
 const topicGridStyle = {

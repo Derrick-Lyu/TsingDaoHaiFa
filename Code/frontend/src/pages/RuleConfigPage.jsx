@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { requestJson } from "../api/client";
+import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 
 const API_PATH = "/api/terror-risk/rules";
 
@@ -369,7 +370,9 @@ export function RuleConfigPage() {
         ].map((metric) => (
           <div key={metric.label} style={{ ...surfaceStyle(), padding: 16 }}>
             <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{metric.label}</div>
-            <div style={chipStyle(metric.tone)}>{metric.value}</div>
+            <div style={summaryMetricValueStyle(metric.tone)}>
+              <SummaryMetricValue value={metric.value} color={metric.tone.color} primaryFontSize={30} unitFontSize={13} />
+            </div>
           </div>
         ))}
       </section>
@@ -505,4 +508,15 @@ function Field({ label, children, hint }) {
       {hint ? <span style={{ fontSize: 11, color: "#8a93a3", lineHeight: 1.5 }}>{hint}</span> : null}
     </label>
   );
+}
+
+function summaryMetricValueStyle(tone) {
+  return {
+    display: "flex",
+    alignItems: "stretch",
+    minHeight: 74,
+    padding: "10px 12px",
+    borderRadius: 16,
+    background: tone.background,
+  };
 }

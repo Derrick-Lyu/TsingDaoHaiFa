@@ -11,6 +11,7 @@ import {
 
 import { requestJson } from "../api/client";
 import { AlertTable } from "../components/terrorRisk/AlertTable";
+import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { TypicalCaseCards } from "../components/terrorRisk/TypicalCaseCards";
 
 const TOPIC_FALLBACK = {
@@ -384,7 +385,9 @@ function MetricCard({ label, value, tone }) {
   return (
     <div style={{ ...metricCardStyle, background: palette.background, borderColor: palette.border }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: palette.label }}>{label}</div>
-      <div style={{ marginTop: 12, fontSize: 30, fontWeight: 900, color: palette.value }}>{value}</div>
+      <div style={{ marginTop: 14 }}>
+        <SummaryMetricValue value={value} color={palette.value} primaryFontSize={42} unitFontSize={18} />
+      </div>
     </div>
   );
 }
@@ -579,6 +582,7 @@ const metricCardStyle = {
   border: "1px solid transparent",
   borderRadius: 18,
   padding: 18,
+  minHeight: 118,
 };
 
 const insightGridStyle = {
