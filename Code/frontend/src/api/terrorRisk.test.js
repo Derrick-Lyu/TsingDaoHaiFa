@@ -3,14 +3,18 @@ import assert from "node:assert/strict";
 
 import { assignAlertReviewer, getFundSafetySummary, getOverviewSummary } from "./terrorRisk.js";
 
-test("getOverviewSummary rethrows when the backend request fails", async () => {
+test("getOverviewSummary falls back to demo cockpit data when the backend request fails", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => {
     throw new Error("overview unavailable");
   };
 
   try {
-    await assert.rejects(() => getOverviewSummary(), /overview unavailable/);
+    const overview = await getOverviewSummary();
+    assert.equal(overview.source, "demo");
+    assert.equal(overview.heroMetrics.length, 4);
+    assert.equal(overview.topicCards.length >= 4, true);
+    assert.equal(overview.recentAlerts.length > 0, true);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
 import { formatAmountDisplay } from "../utils/amount";
@@ -18,11 +18,15 @@ export function AlertDetailPage({
   const [assignState, setAssignState] = useState("idle");
   const [loadError, setLoadError] = useState("");
 
+  const fetchDetail = useCallback(async () => {
+    return requestJson(`/terror-risk/alerts/${alertId}`);
+  }, [alertId]);
+
   async function loadDetail(isCancelled = () => false) {
     setLoading(true);
     setLoadError("");
     try {
-      const data = await requestJson(`/terror-risk/alerts/${alertId}`);
+      const data = await fetchDetail();
 
       if (!isCancelled()) {
         setDetail(data);
@@ -44,12 +48,34 @@ export function AlertDetailPage({
   useEffect(() => {
     let cancelled = false;
 
-    void loadDetail(() => cancelled);
+    async function loadInitialDetail() {
+      try {
+        const data = await fetchDetail();
+
+        if (!cancelled) {
+          setDetail(data);
+          setDraft(buildReviewDraft(data.review));
+          setAssignmentDraft(buildAssignmentDraft(data.review));
+          setLoadError("");
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setDetail(null);
+          setDraft(buildReviewDraft(null));
+          setAssignmentDraft(buildAssignmentDraft(null));
+          setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadInitialDetail();
 
     return () => {
       cancelled = true;
     };
-  }, [alertId]);
+  }, [fetchDetail]);
 
   const evidenceSections = useMemo(() => detail?.evidences || [], [detail]);
   const relatedTransactions = detail?.related_transactions || [];

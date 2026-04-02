@@ -15,7 +15,11 @@ import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { TypicalCaseCards } from "../components/terrorRisk/TypicalCaseCards";
 import { formatAmountDisplay } from "../utils/amount";
 import { buildRuleFilterOptions } from "../utils/terrorRiskRules";
-import { getOverviewRankingItems, OVERVIEW_RANKING_TABS } from "../utils/terrorRiskOverview";
+import {
+  buildTerrorRiskDashboardModel,
+  getOverviewRankingItems,
+  OVERVIEW_RANKING_TABS,
+} from "../utils/terrorRiskOverview";
 
 const EMPTY_TOPIC = {
   page_title: "涉恐交易风险",
@@ -40,14 +44,6 @@ const EMPTY_TOPIC = {
 };
 
 const EMPTY_ALERT_LIST = { total: 0, items: [] };
-
-const TOPIC_METRICS = [
-  { key: "alert_count", label: "预警总数", tone: "blue" },
-  { key: "high_risk_count", label: "高风险数量", tone: "red" },
-  { key: "blacklist_hit_count", label: "黑名单命中", tone: "amber" },
-  { key: "involved_units", label: "涉及成员单位", tone: "teal" },
-  { key: "involved_amount", label: "涉及金额", tone: "slate" },
-];
 
 export function TerrorRiskTopicPage({
   mode = "overview",
@@ -135,14 +131,15 @@ export function TerrorRiskTopicPage({
   }, [filters]);
 
   const ruleOptions = useMemo(() => buildRuleFilterOptions(rules, alerts), [rules, alerts]);
-  const previewCases = useMemo(() => (topic.typical_cases || []).slice(0, 3), [topic.typical_cases]);
-  const overviewRankingItems = useMemo(
-    () => getOverviewRankingItems(topic, activeOverviewTab),
-    [topic, activeOverviewTab],
+  const dashboard = useMemo(
+    () => buildTerrorRiskDashboardModel(topic, alerts, rules),
+    [topic, alerts, rules],
   );
-  const latestState = mapJobStatus(topic.latest_job?.job_status);
-  const lastInput = topic.latest_job?.transaction_count || 0;
-  const lastMatched = topic.latest_job?.matched_count || 0;
+  const overviewRankingItems = useMemo(
+    () => getOverviewRankingItems(dashboard, activeOverviewTab),
+    [dashboard, activeOverviewTab],
+  );
+  const latestState = mapJobStatus(dashboard.latestJob?.job_status);
 
   async function handleRefresh() {
     setUpdating(true);
@@ -168,7 +165,7 @@ export function TerrorRiskTopicPage({
     return (
       <div style={pageShellStyle}>
         <div style={toolbarStyle}>
-          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
+          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {dashboard.snapshotDate || topic.snapshot_date}</span>
           <button type="button" onClick={onBackToOverview} style={ghostActionStyle}>
             返回专题概览
           </button>
@@ -179,9 +176,9 @@ export function TerrorRiskTopicPage({
             <div>
               <div style={panelTitleStyle}>案例总览</div>
             </div>
-            <span style={metaPillStyle("#f4f7fb", "#516173")}>共 {(topic.typical_cases || []).length} 个案例</span>
+            <span style={metaPillStyle("#f4f7fb", "#516173")}>共 {dashboard.typicalCases.length} 个案例</span>
           </div>
-          <TypicalCaseCards cases={topic.typical_cases || []} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+          <TypicalCaseCards cases={dashboard.typicalCases} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
         </section>
       </div>
     );
@@ -191,7 +188,7 @@ export function TerrorRiskTopicPage({
     return (
       <div style={pageShellStyle}>
         <div style={toolbarStyle}>
-          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
+          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {dashboard.snapshotDate || topic.snapshot_date}</span>
           <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
         </div>
 
@@ -211,7 +208,7 @@ export function TerrorRiskTopicPage({
     <div style={pageShellStyle}>
       <div style={toolbarStyle}>
         <div style={sectionMetaStyle}>
-          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {topic.snapshot_date}</span>
+          <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {dashboard.snapshotDate || topic.snapshot_date}</span>
           <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
         </div>
         <button type="button" onClick={handleRefresh} disabled={updating || loadingTopic || loadingAlerts} style={primaryActionStyle}>
@@ -219,20 +216,24 @@ export function TerrorRiskTopicPage({
         </button>
       </div>
 
-      <div style={heroHintStyle}>
-        本次识别共处理 {lastInput} 笔交易，命中 {lastMatched} 条预警，其中高风险 {topic.latest_job?.high_risk_count || 0} 条。
-      </div>
+      <ExecutiveSummaryPanel
+        summary={dashboard.executiveSummary}
+        latestState={latestState}
+        snapshotDate={dashboard.snapshotDate || topic.snapshot_date}
+        latestJob={dashboard.latestJob}
+      />
 
       {loadError ? <div style={errorBannerStyle}>{loadError}</div> : null}
       {updateError ? <div style={errorBannerStyle}>{updateError}</div> : null}
 
       <div style={metricGridStyle}>
-        {TOPIC_METRICS.map((metric) => (
+        {dashboard.kpiStrip.map((metric) => (
           <MetricCard
-            key={metric.key}
+            key={metric.key || metric.label}
             label={metric.label}
-            value={topic.kpis?.[metric.key] || "0"}
+            value={metric.value}
             tone={metric.tone}
+            sublabel={metric.sublabel}
           />
         ))}
       </div>
@@ -241,11 +242,14 @@ export function TerrorRiskTopicPage({
         <section style={insightPanelStyle}>
           <div style={panelHeaderStyle}>
             <div style={panelTitleStyle}>风险趋势</div>
+            <span style={sectionMetaPillStyle}>
+              {topic.trend?.length || dashboard.trend.length || 0} 个时间点
+            </span>
           </div>
           <div style={trendPanelBodyStyle}>
             <div style={{ width: "100%", height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={topic.trend}>
+              <LineChart data={dashboard.trend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7edf7" />
                 <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
@@ -257,6 +261,112 @@ export function TerrorRiskTopicPage({
           </div>
         </section>
 
+        <section style={insightPanelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>规则命中拆解</div>
+            <span style={sectionMetaPillStyle}>{dashboard.ruleBreakdown.length || 0} 个规则</span>
+          </div>
+          {dashboard.ruleBreakdown.length ? (
+            <div style={breakdownListStyle}>
+              {dashboard.ruleBreakdown.map((item) => (
+                <div key={item.key} style={breakdownItemStyle}>
+                  <div style={breakdownItemHeaderStyle}>
+                    <div style={breakdownTitleWrapStyle}>
+                      <div style={breakdownNameStyle}>{item.label}</div>
+                      <div style={breakdownMetaStyle}>{item.note}</div>
+                    </div>
+                    <span style={riskPillStyle(item.riskLevel)}>
+                      {item.riskLevel === "high" ? "高风险" : item.riskLevel === "warn" ? "预警关注" : "提示"}
+                    </span>
+                  </div>
+                  <div style={breakdownMetricRowStyle}>
+                    <strong style={breakdownCountStyle}>{item.count} 条</strong>
+                    <span style={breakdownShareStyle}>{item.share || "-"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={rankingEmptyStateStyle}>暂无规则拆解数据，等待后端提供 rule_breakdown。</div>
+          )}
+        </section>
+      </div>
+
+      <div style={insightGridStyle}>
+        <section style={insightPanelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>监管闭环</div>
+            <span style={sectionMetaPillStyle}>流程穿透</span>
+          </div>
+          {dashboard.supervisionFunnel.length ? (
+            <div style={funnelListStyle}>
+              {dashboard.supervisionFunnel.map((item, index) => (
+                <div key={item.key} style={funnelStepStyle}>
+                  <div style={funnelStepTopStyle}>
+                    <div style={funnelStepIndexStyle}>{index + 1}</div>
+                    <div style={funnelStepTitleWrapStyle}>
+                      <div style={funnelStepTitleStyle}>{item.label}</div>
+                      <div style={funnelStepNoteStyle}>{item.note}</div>
+                    </div>
+                  </div>
+                  <div style={funnelStepBottomStyle}>
+                    <SummaryMetricValue
+                      value={String(item.value ?? 0)}
+                      color={funnelToneColor(item.status)}
+                      primaryFontSize={28}
+                      unitFontSize={13}
+                    />
+                    <span style={sectionMetaPillStyle}>{funnelStatusLabel(item.status)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={rankingEmptyStateStyle}>暂无监管闭环数据，等待后端提供 supervision_funnel。</div>
+          )}
+        </section>
+
+        <section style={insightPanelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>重点督办清单</div>
+            <span style={sectionMetaPillStyle}>{dashboard.watchlist.length || 0} 项</span>
+          </div>
+          {dashboard.watchlist.length ? (
+            <div style={watchlistStyle}>
+              {dashboard.watchlist.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  style={watchItemStyle}
+                  onClick={() => {
+                    if (item.targetId) {
+                      onOpenAlertDetail?.(item.targetId);
+                    }
+                  }}
+                >
+                  <div style={watchItemHeadStyle}>
+                    <div style={watchItemTitleWrapStyle}>
+                      <div style={watchItemTitleStyle}>{item.title}</div>
+                      <div style={watchItemSubtitleStyle}>{item.subtitle}</div>
+                    </div>
+                    <span style={riskPillStyle(item.riskLevel)}>
+                      {item.statusLabel || (item.riskLevel === "high" ? "高风险" : "关注")}
+                    </span>
+                  </div>
+                  <div style={watchItemBodyStyle}>
+                    <div style={watchItemValueStyle}>{item.value || "-"}</div>
+                    <div style={watchItemNoteStyle}>{item.note || item.actionLabel}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div style={rankingEmptyStateStyle}>暂无重点督办清单。</div>
+          )}
+        </section>
+      </div>
+
+      <div style={insightGridStyle}>
         <section style={insightPanelStyle}>
           <div style={panelHeaderStyle}>
             <div style={panelTitleStyle}>命中概览</div>
@@ -275,24 +385,86 @@ export function TerrorRiskTopicPage({
           </div>
           <CompactRankingPanel items={overviewRankingItems} emptyLabel="暂无命中排行数据" />
         </section>
+
+        <section style={insightPanelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>典型案例预览</div>
+            <button type="button" onClick={onOpenAllCases} style={ghostActionStyle}>
+              查看全部典型案例
+            </button>
+          </div>
+          <TypicalCaseCards cases={dashboard.typicalCases.slice(0, 3)} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+        </section>
       </div>
 
       <section style={panelStyle}>
         <div style={sectionHeaderRowStyle}>
           <div>
-            <div style={panelTitleStyle}>典型案例预览</div>
+            <div style={panelTitleStyle}>预警明细入口</div>
           </div>
-          <button type="button" onClick={onOpenAllCases} style={ghostActionStyle}>
-            查看全部典型案例
+          <button type="button" onClick={() => onOpenAlertDetail?.(alerts[0]?.id)} style={ghostActionStyle} disabled={!alerts.length}>
+            查看首条预警
           </button>
         </div>
-        <TypicalCaseCards cases={previewCases} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+        <AlertTable
+          alerts={alerts}
+          ruleOptions={ruleOptions}
+          filters={filters}
+          onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
+          onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
+          loading={loadingAlerts}
+        />
       </section>
     </div>
   );
 }
 
-function MetricCard({ label, value, tone }) {
+function ExecutiveSummaryPanel({ summary, latestState, snapshotDate, latestJob }) {
+  const tags = Array.isArray(summary?.tags) ? summary.tags : [];
+  const focus = Array.isArray(summary?.focus) ? summary.focus : [];
+
+  return (
+    <section style={executivePanelStyle}>
+      <div style={executivePanelTopStyle}>
+        <div style={executiveCopyStyle}>
+          <div style={executiveKickerStyle}>监管判断</div>
+          <div style={executiveHeadlineStyle}>{summary?.headline || "当前监管态势稳定，继续保持全量监测。"}</div>
+          <div style={executiveSubheadlineStyle}>{summary?.subheadline || "系统已进入穿透式监管视角，风险可视、链路可追、责任可查。"}</div>
+        </div>
+        <div style={executiveStatusCardStyle}>
+          <div style={executiveStatusLabelStyle}>数据日期</div>
+          <div style={executiveStatusValueStyle}>{snapshotDate || "-"}</div>
+          <div style={executiveStatusLabelStyle}>识别状态</div>
+          <div style={executiveStatusValueStyle}>{latestState}</div>
+          <div style={executiveStatusLabelStyle}>监管动作</div>
+          <div style={executiveStatusValueStyle}>{summary?.note || "重点事项待督办"}</div>
+        </div>
+      </div>
+
+      <div style={executiveMetaGridStyle}>
+        <div style={executiveMetaItemStyle}>
+          <div style={executiveMetaLabelStyle}>本次识别处理</div>
+          <div style={executiveMetaValueStyle}>{latestJob?.transaction_count || 0} 笔</div>
+        </div>
+        <div style={executiveMetaItemStyle}>
+          <div style={executiveMetaLabelStyle}>命中预警</div>
+          <div style={executiveMetaValueStyle}>{latestJob?.matched_count || 0} 条</div>
+        </div>
+        <div style={executiveMetaItemStyle}>
+          <div style={executiveMetaLabelStyle}>高风险命中</div>
+          <div style={executiveMetaValueStyle}>{latestJob?.high_risk_count || 0} 条</div>
+        </div>
+      </div>
+
+      <div style={executiveTagRowStyle}>
+        {tags.length ? tags.map((tag) => <span key={tag} style={executiveTagStyle}>{tag}</span>) : null}
+        {focus.length ? focus.map((item) => <span key={item} style={executiveFocusTagStyle}>{item}</span>) : null}
+      </div>
+    </section>
+  );
+}
+
+function MetricCard({ label, value, tone, sublabel }) {
   const palette = METRIC_TONES[tone] || METRIC_TONES.blue;
   const displayValue = label === "涉及金额" ? formatAmountDisplay(value) : value;
 
@@ -302,6 +474,7 @@ function MetricCard({ label, value, tone }) {
       <div style={{ marginTop: 14 }}>
         <SummaryMetricValue value={displayValue} color={palette.value} primaryFontSize={42} unitFontSize={18} />
       </div>
+      {sublabel ? <div style={metricSubLabelStyle}>{sublabel}</div> : null}
     </div>
   );
 }
@@ -437,13 +610,6 @@ const ghostActionStyle = {
   cursor: "pointer",
 };
 
-const heroHintStyle = {
-  color: "#5c6f83",
-  fontSize: 13,
-  lineHeight: 1.7,
-  maxWidth: 620,
-};
-
 const metricGridStyle = {
   marginTop: 22,
   display: "grid",
@@ -456,6 +622,13 @@ const metricCardStyle = {
   borderRadius: 18,
   padding: 18,
   minHeight: 118,
+};
+
+const metricSubLabelStyle = {
+  marginTop: 10,
+  color: "#5f7088",
+  fontSize: 12,
+  lineHeight: 1.6,
 };
 
 const insightGridStyle = {
@@ -471,6 +644,16 @@ const panelStyle = {
   border: "1px solid #dde4ee",
   background: "white",
   boxShadow: "0 16px 28px rgba(15,23,42,0.05)",
+};
+
+const sectionMetaPillStyle = {
+  padding: "6px 10px",
+  borderRadius: 999,
+  background: "#f4f7fb",
+  color: "#5b697b",
+  fontSize: 12,
+  fontWeight: 700,
+  whiteSpace: "nowrap",
 };
 
 const insightPanelStyle = {
@@ -525,6 +708,314 @@ function overviewTabButtonStyle(active) {
     whiteSpace: "nowrap",
   };
 }
+
+const executivePanelStyle = {
+  ...panelStyle,
+  display: "grid",
+  gap: 16,
+  background: "linear-gradient(135deg, rgba(16,44,87,0.05), rgba(255,255,255,0.96) 40%, rgba(255,247,237,0.36))",
+  borderTop: "4px solid #102c57",
+};
+
+const executivePanelTopStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1.8fr) minmax(260px, 0.9fr)",
+  gap: 16,
+  alignItems: "stretch",
+};
+
+const executiveCopyStyle = {
+  display: "grid",
+  gap: 10,
+};
+
+const executiveKickerStyle = {
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: "0.08em",
+  color: "#1d4ed8",
+  textTransform: "uppercase",
+};
+
+const executiveHeadlineStyle = {
+  fontSize: 24,
+  lineHeight: 1.45,
+  fontWeight: 800,
+  color: "#0f172a",
+};
+
+const executiveSubheadlineStyle = {
+  fontSize: 14,
+  lineHeight: 1.8,
+  color: "#4b5b6e",
+};
+
+const executiveStatusCardStyle = {
+  borderRadius: 18,
+  border: "1px solid #e3e9f2",
+  background: "#ffffff",
+  padding: 16,
+  display: "grid",
+  gap: 6,
+  alignContent: "start",
+};
+
+const executiveStatusLabelStyle = {
+  fontSize: 12,
+  fontWeight: 700,
+  color: "#6b7280",
+  marginTop: 2,
+};
+
+const executiveStatusValueStyle = {
+  fontSize: 13,
+  lineHeight: 1.6,
+  color: "#111827",
+  fontWeight: 700,
+};
+
+const executiveMetaGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+  gap: 10,
+};
+
+const executiveMetaItemStyle = {
+  borderRadius: 16,
+  background: "#f8fbff",
+  border: "1px solid #e2ebf6",
+  padding: "12px 14px",
+};
+
+const executiveMetaLabelStyle = {
+  fontSize: 12,
+  color: "#6b7280",
+  fontWeight: 700,
+};
+
+const executiveMetaValueStyle = {
+  marginTop: 6,
+  color: "#102c57",
+  fontSize: 18,
+  fontWeight: 800,
+};
+
+const executiveTagRowStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 8,
+};
+
+const executiveTagStyle = {
+  padding: "6px 10px",
+  borderRadius: 999,
+  background: "#eef4ff",
+  color: "#1d4ed8",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const executiveFocusTagStyle = {
+  padding: "6px 10px",
+  borderRadius: 999,
+  background: "#fff7ed",
+  color: "#b45309",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const breakdownListStyle = {
+  display: "grid",
+  gap: 12,
+  flex: 1,
+};
+
+const breakdownItemStyle = {
+  borderRadius: 16,
+  padding: 16,
+  border: "1px solid #e6edf6",
+  background: "linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%)",
+  display: "grid",
+  gap: 12,
+};
+
+const breakdownItemHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "flex-start",
+};
+
+const breakdownTitleWrapStyle = {
+  minWidth: 0,
+  display: "grid",
+  gap: 4,
+};
+
+const breakdownNameStyle = {
+  fontSize: 15,
+  fontWeight: 800,
+  color: "#0f172a",
+};
+
+const breakdownMetaStyle = {
+  fontSize: 12,
+  lineHeight: 1.6,
+  color: "#64748b",
+};
+
+const breakdownMetricRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "baseline",
+  gap: 12,
+};
+
+const breakdownCountStyle = {
+  color: "#102c57",
+  fontSize: 18,
+};
+
+const breakdownShareStyle = {
+  color: "#6b7280",
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const funnelListStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const funnelStepStyle = {
+  borderRadius: 16,
+  padding: 16,
+  border: "1px solid #e6edf6",
+  background: "#fbfdff",
+  display: "grid",
+  gap: 12,
+};
+
+const funnelStepTopStyle = {
+  display: "flex",
+  gap: 12,
+  alignItems: "flex-start",
+};
+
+const funnelStepIndexStyle = {
+  width: 28,
+  height: 28,
+  borderRadius: "50%",
+  background: "#102c57",
+  color: "white",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 12,
+  fontWeight: 800,
+  flexShrink: 0,
+};
+
+const funnelStepTitleWrapStyle = {
+  minWidth: 0,
+  display: "grid",
+  gap: 4,
+};
+
+const funnelStepTitleStyle = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: "#102033",
+};
+
+const funnelStepNoteStyle = {
+  fontSize: 12,
+  lineHeight: 1.6,
+  color: "#64748b",
+};
+
+const funnelStepBottomStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "baseline",
+  gap: 10,
+};
+
+function funnelToneColor(status) {
+  if (status === "high") return "#b42318";
+  if (status === "warning") return "#b45309";
+  if (status === "normal") return "#0f766e";
+  return "#173d75";
+}
+
+function funnelStatusLabel(status) {
+  if (status === "high") return "高风险";
+  if (status === "warning") return "关注";
+  if (status === "normal") return "已闭环";
+  return "处理中";
+}
+
+const watchlistStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const watchItemStyle = {
+  width: "100%",
+  textAlign: "left",
+  font: "inherit",
+  borderRadius: 16,
+  border: "1px solid #e6edf6",
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
+  padding: 16,
+  display: "grid",
+  gap: 12,
+  cursor: "pointer",
+};
+
+const watchItemHeadStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "flex-start",
+};
+
+const watchItemTitleWrapStyle = {
+  minWidth: 0,
+  display: "grid",
+  gap: 4,
+};
+
+const watchItemTitleStyle = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: "#102033",
+};
+
+const watchItemSubtitleStyle = {
+  fontSize: 12,
+  lineHeight: 1.6,
+  color: "#64748b",
+};
+
+const watchItemBodyStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "baseline",
+};
+
+const watchItemValueStyle = {
+  fontSize: 16,
+  fontWeight: 800,
+  color: "#102c57",
+};
+
+const watchItemNoteStyle = {
+  fontSize: 12,
+  color: "#6b7280",
+  fontWeight: 700,
+};
 
 const rankingEmptyStateStyle = {
   flex: 1,

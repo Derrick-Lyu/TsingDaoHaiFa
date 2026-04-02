@@ -1,28 +1,80 @@
 import { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { getOverviewSummary } from "../api/terrorRisk";
 
+const toneStyles = {
+  critical: {
+    border: "rgba(185, 28, 28, 0.18)",
+    text: "#991b1b",
+    bg: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(254,242,242,0.96))",
+  },
+  warning: {
+    border: "rgba(180, 83, 9, 0.18)",
+    text: "#b45309",
+    bg: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,247,237,0.96))",
+  },
+  neutral: {
+    border: "rgba(30, 64, 175, 0.14)",
+    text: "#1d4ed8",
+    bg: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,246,255,0.96))",
+  },
+  positive: {
+    border: "rgba(22, 101, 52, 0.16)",
+    text: "#166534",
+    bg: "linear-gradient(180deg, rgba(255,255,255,0.98), rgba(240,253,244,0.96))",
+  },
+};
+
+const accentMap = {
+  critical: "#b91c1c",
+  warning: "#c2410c",
+  neutral: "#1d4ed8",
+};
+
+const alertLevelTone = {
+  高风险: { color: "#991b1b", bg: "rgba(185, 28, 28, 0.08)" },
+  预警: { color: "#b45309", bg: "rgba(180, 83, 9, 0.08)" },
+};
+
+const riskDistributionColors = [
+  "#163d65",
+  "#2563eb",
+  "#0f766e",
+  "#c2410c",
+  "#7c3aed",
+  "#64748b",
+];
+
 export function OverviewPage({ onOpenFundSafety }) {
   const [overview, setOverview] = useState(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [selectedOrgId, setSelectedOrgId] = useState("capital");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadOverview() {
-      try {
-        setErrorMessage("");
-        const data = await getOverviewSummary();
+      const data = await getOverviewSummary();
 
-        if (!cancelled) {
-          setOverview(data);
-        }
-      } catch {
-        if (!cancelled) {
-          setErrorMessage("总览数据加载失败，当前未显示演示兜底数据。");
-          setOverview(null);
-        }
+      if (!cancelled) {
+        setOverview(data);
       }
     }
 
@@ -34,435 +86,1025 @@ export function OverviewPage({ onOpenFundSafety }) {
   }, []);
 
   if (!overview) {
-    return (
-      <div style={loadingStyle}>
-        {errorMessage || "正在加载总览数据..."}
-      </div>
-    );
+    return <div style={loadingStyle}>正在加载驾驶舱首页...</div>;
   }
 
+  const selectedOrg =
+    overview.orgTree[0].children.find((item) => item.id === selectedOrgId) ??
+    overview.orgTree[0];
+  const selectedOrgInsight =
+    overview.orgInsights?.[selectedOrgId] ?? overview.orgInsights?.group;
+
   return (
-    <div style={pageShellStyle}>
-      <button type="button" onClick={onOpenFundSafety} style={focusPanelStyle}>
-        <div style={focusCopyStyle}>
-          <div style={focusLabelStyle}>资金安全重点入口</div>
-          <div style={focusTitleStyle}>{overview.fundSafetyEntry.title}</div>
-          <div style={focusSubtitleStyle}>{overview.fundSafetyEntry.subtitle}</div>
-          <div style={focusActionStyle}>
-            <span>{overview.fundSafetyEntry.actionLabel}</span>
-            <span aria-hidden="true">→</span>
+    <div style={pageStyle} className="cockpit-page">
+      <section style={heroStyle} className="cockpit-hero">
+        <div style={heroBackdropStyle} aria-hidden="true" />
+        <div style={heroCopyStyle}>
+          <div style={eyebrowStyle}>{overview.heroBanner.eyebrow}</div>
+          <h1 style={heroTitleStyle}>{overview.heroBanner.title}</h1>
+          <p style={heroDescriptionStyle}>{overview.heroBanner.description}</p>
+          <div style={heroMetaStyle}>
+            <button type="button" onClick={onOpenFundSafety} style={primaryButtonStyle}>
+              {overview.heroBanner.primaryActionLabel}
+            </button>
+            <span style={heroNoteStyle}>{overview.heroBanner.secondaryNote}</span>
           </div>
         </div>
-        <div style={focusMetricGridStyle}>
-          {overview.heroNotes.map((item) => (
-            <div key={item.label} style={focusMetricCardStyle}>
-              <div style={focusMetricLabelStyle}>{item.label}</div>
-              <div style={focusMetricValueStyle}>{item.value}</div>
+
+        <div style={heroAsideStyle}>
+          <div style={heroAsideLabelStyle}>数据快照</div>
+          <div style={heroAsideDateStyle}>{overview.updatedAt}</div>
+          <div style={heroAsideSourceStyle}>
+            {overview.source === "demo" ? "Demo fallback" : "API + fallback"}
+          </div>
+        </div>
+      </section>
+
+      <section style={metricGridStyle} className="cockpit-metric-grid">
+        {overview.heroMetrics.map((metric) => {
+          const tone = toneStyles[metric.tone] ?? toneStyles.neutral;
+          return (
+            <article
+              key={metric.label}
+              style={{
+                ...metricCardStyle,
+                background: tone.bg,
+                borderColor: tone.border,
+              }}
+            >
+              <div style={metricLabelStyle}>{metric.label}</div>
+              <div style={metricValueStyle}>{metric.value}</div>
+              <div style={{ ...metricDeltaStyle, color: tone.text }}>{metric.delta}</div>
+            </article>
+          );
+        })}
+      </section>
+
+      <section style={panelGridStyle} className="cockpit-panel-grid">
+        <article style={panelStyle} className="cockpit-panel">
+          <PanelHeading
+            title="风险预警全景"
+            subtitle="全级次分布、趋势变化与高风险排行"
+          />
+          <div style={panelSplitStyle} className="cockpit-panel-split">
+            <div>
+              <div style={miniTitleStyle}>全级次风险分布</div>
+              <div style={distributionChartWrapStyle}>
+                <div style={distributionPieStyle}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={overview.riskDistribution}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="48%"
+                        innerRadius={48}
+                        outerRadius={82}
+                        paddingAngle={2}
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {overview.riskDistribution.map((item, index) => (
+                          <Cell
+                            key={item.name}
+                            fill={riskDistributionColors[index % riskDistributionColors.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value}`, "预警数量"]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={listStyle}>
+                  {overview.riskDistribution.map((item, index) => (
+                    <div key={item.name} style={listRowStyle}>
+                      <div>
+                        <div style={distributionLegendLabelStyle}>
+                          <span
+                            style={legendDotStyle(
+                              riskDistributionColors[index % riskDistributionColors.length],
+                            )}
+                          />
+                          {item.name}
+                        </div>
+                        <div style={listSecondaryStyle}>{item.share} 风险占比</div>
+                      </div>
+                      <div style={listValueStyle}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
+            <div>
+              <div style={miniTitleStyle}>预警趋势</div>
+              <div style={distributionChartWrapStyle}>
+                <div style={chartStyle}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={overview.trendSeries}>
+                      <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" />
+                      <XAxis dataKey="period" stroke="#64748b" tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" tickLine={false} axisLine={false} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="alerts" stroke="#0f3b66" strokeWidth={3} dot={false} />
+                      <Line type="monotone" dataKey="highRisk" stroke="#b91c1c" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={listStyle}>
+                  {overview.highRiskRanking.map((item) => (
+                    <div key={item.name} style={listRowStyle}>
+                      <div>
+                        <div style={listPrimaryStyle}>{item.name}</div>
+                        <div style={listSecondaryStyle}>高风险预警</div>
+                      </div>
+                      <div style={listValueStyle}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style={miniTitleStyle}>高风险排行</div>
+            <div style={compactChartStyle}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={overview.highRiskRanking} layout="vertical" margin={{ left: 8, right: 8 }}>
+                  <CartesianGrid horizontal={false} stroke="#eef2f7" />
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={92} tickLine={false} axisLine={false} stroke="#64748b" />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#163d65" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </article>
+
+        <article style={panelStyle} className="cockpit-panel">
+          <PanelHeading
+            title="监管流程闭环"
+            subtitle="预警到销号的流程压降和时效观察"
+          />
+          <div style={funnelStyle}>
+            {overview.processStages.map((stage, index) => (
+              <div key={stage.name} style={stageRowStyle}>
+                <div style={stageNameWrapStyle}>
+                  <span style={stageIndexStyle}>{index + 1}</span>
+                  <span style={stageNameStyle}>{stage.name}</span>
+                </div>
+                <div style={stageBarTrackStyle}>
+                  <div
+                    style={{
+                      ...stageBarStyle,
+                      width: `${Math.max(18, (stage.total / overview.processStages[0].total) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <div style={stageValueStyle}>{stage.total}</div>
+                <div style={stageAgingStyle}>{stage.aging}</div>
+              </div>
+            ))}
+          </div>
+          <div style={eventListStyle}>
+            {overview.processEvents.map((item) => (
+              <div key={`${item.unit}-${item.event}`} style={eventCardStyle}>
+                <div style={eventUnitStyle}>{item.unit}</div>
+                <div style={eventTextStyle}>{item.event}</div>
+                <div style={eventStatusStyle}>{item.status}</div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article style={panelStyle} className="cockpit-panel">
+          <PanelHeading
+            title="组织穿透视图"
+            subtitle="上半区展示树状评分，下半区展示当前选中单位的风险画像"
+          />
+          <div style={orgPanelStackStyle} className="cockpit-org-panel">
+            <div style={orgTopGridStyle}>
+              <div style={orgTreeColumnStyle}>
+                {overview.orgTree.map((node) => (
+                  <div key={node.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrgId(node.id)}
+                      style={orgNodeStyle(
+                        selectedOrgId === node.id,
+                        overview.orgInsights?.[node.id]?.score ?? 88,
+                      )}
+                    >
+                      <span>{node.name}</span>
+                      <span style={scoreBadgeStyle(overview.orgInsights?.[node.id]?.score ?? 88)}>
+                        {overview.orgInsights?.[node.id]?.score ?? 88}
+                      </span>
+                    </button>
+                    <div style={orgChildrenStyle}>
+                      {node.children.map((child) => (
+                        <button
+                          key={child.id}
+                          type="button"
+                          onClick={() => setSelectedOrgId(child.id)}
+                          style={orgChildStyle(
+                            selectedOrgId === child.id,
+                            overview.orgInsights?.[child.id]?.score ?? 70,
+                          )}
+                        >
+                          <span>{child.name}</span>
+                          <span style={scoreBadgeStyle(overview.orgInsights?.[child.id]?.score ?? 70)}>
+                            {overview.orgInsights?.[child.id]?.score ?? 70}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div style={selectedOrgCardStyle}>
+                  <div style={miniTitleStyle}>当前穿透节点</div>
+                  <div style={selectedOrgNameStyle}>{selectedOrg.name}</div>
+                  <div style={selectedOrgMetaStyle}>
+                    {selectedOrg.level} | 预警 {selectedOrg.alerts} | 综合评分 {selectedOrgInsight.score}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={orgRadarGridStyle}>
+              <div style={radarCardStyle}>
+                <div style={miniTitleStyle}>风险等级雷达图</div>
+                <div style={chartInfoTextStyle}>
+                  当前选中公司在高风险、中风险、低风险、预警四个等级上的暴露分布。
+                </div>
+                <div style={radarChartStyle}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={selectedOrgInsight.levelRadar}>
+                      <PolarGrid stroke="#dbe4ee" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: "#475569", fontSize: 12 }} />
+                      <Radar dataKey="value" stroke="#c2410c" fill="#fb923c" fillOpacity={0.28} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div style={radarCardStyle}>
+                <div style={miniTitleStyle}>风险类型雷达图</div>
+                <div style={chartInfoTextStyle}>
+                  当前选中公司在主要风险类型上的暴露侧重，用于区分风险来源结构。
+                </div>
+                <div style={radarChartStyle}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={selectedOrgInsight.typeRadar}>
+                      <PolarGrid stroke="#dbe4ee" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: "#475569", fontSize: 12 }} />
+                      <Radar dataKey="value" stroke="#2563eb" fill="#60a5fa" fillOpacity={0.28} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article style={panelStyle} className="cockpit-panel">
+          <PanelHeading
+            title="监督追责挂钩"
+            subtitle="整改进度、超期事项与考核扣分联动"
+          />
+          <div style={accountabilityGridStyle} className="cockpit-accountability-grid">
+            <div style={trackerCardStyle}>
+              <div style={miniTitleStyle}>问题整改率</div>
+              <div style={trackerValueStyle}>{overview.accountability.rectificationRate}</div>
+              <div style={listSecondaryStyle}>超期事项 {overview.accountability.overdueCount} 项</div>
+            </div>
+            <div style={trackerCardStyle}>
+              <div style={miniTitleStyle}>监督提醒</div>
+              <div style={trackerValueStyle}>3 家单位</div>
+              <div style={listSecondaryStyle}>需在本周完成复核回传</div>
+            </div>
+          </div>
+          <div style={deductionTableStyle}>
+            {overview.accountability.scoreDeductions.map((item) => (
+              <div key={item.unit} style={deductionRowStyle}>
+                <div>
+                  <div style={listPrimaryStyle}>{item.unit}</div>
+                  <div style={listSecondaryStyle}>{item.reason}</div>
+                </div>
+                <div style={deductionPointsStyle}>-{item.points}</div>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section style={topicSectionStyle} className="cockpit-topic-section">
+        <div style={sectionHeadingStyle}>
+          <div>
+            <div style={sectionKickerStyle}>专题入口区</div>
+            <h2 style={sectionTitleStyle}>风险主题下钻</h2>
+          </div>
+          <button type="button" onClick={onOpenFundSafety} style={ghostButtonStyle}>
+            查看资金安全专题
+          </button>
+        </div>
+        <div style={topicGridStyle} className="cockpit-topic-grid">
+          {overview.topicCards.map((topic) => (
+            <button
+              key={topic.title}
+              type="button"
+              onClick={onOpenFundSafety}
+              style={topicCardStyle(accentMap[topic.accent] ?? accentMap.neutral)}
+            >
+              <div style={topicMetricStyle}>{topic.metric}</div>
+              <div style={topicTitleStyle}>{topic.title}</div>
+              <div style={topicNoteStyle}>{topic.note}</div>
+            </button>
           ))}
         </div>
-      </button>
+      </section>
 
-      <div style={sectionLabelStyle}>风险概览</div>
-      <div style={riskCardGridStyle}>
-        {overview.riskCards.map((card) => (
-          <div
-            key={card.title}
-            style={riskCardStyle}
-          >
-            <div style={riskCardHeaderStyle}>
-              <div>
-                <div style={riskCardKickerStyle}>主题风险</div>
-                <div style={riskCardTitleStyle}>{card.title}</div>
-              </div>
-              <div style={riskCardBadgeStyle}>当前关注</div>
-            </div>
-            <div style={riskLineListStyle}>
-              {[
-                { label: "高风险", val: card.high, color: "#c03838" },
-                { label: "预警关注", val: card.warn, color: "#b45309" },
-                { label: "问题提示", val: card.hint, color: "#1a3a8f" },
-              ].map((item) => (
-                <div key={item.label} style={riskLineStyle}>
-                  <span style={riskLineLabelStyle}>
-                    <span style={riskDotStyle(item.color)} />
-                    {item.label}
+      <section style={tableSectionStyle} className="cockpit-table-section">
+        <div style={sectionHeadingStyle}>
+          <div>
+            <div style={sectionKickerStyle}>底部详情区</div>
+            <h2 style={sectionTitleStyle}>近期预警列表</h2>
+          </div>
+          <div style={tableMetaStyle}>默认展示最近 4 条预警</div>
+        </div>
+
+        <div style={tableStyle} className="cockpit-table">
+          <div style={tableHeaderStyle}>预警编号</div>
+          <div style={tableHeaderStyle}>规则名称</div>
+          <div style={tableHeaderStyle}>成员单位</div>
+          <div style={tableHeaderStyle}>风险等级</div>
+          <div style={tableHeaderStyle}>状态</div>
+          <div style={tableHeaderStyle}>日期</div>
+
+          {overview.recentAlerts.map((alert) => {
+            const tone = alertLevelTone[alert.level] ?? alertLevelTone.预警;
+            return (
+              <div key={alert.id} style={{ display: "contents" }}>
+                <div style={tableCellStyle}>{alert.id}</div>
+                <div style={tableCellStyle}>{alert.rule}</div>
+                <div style={tableCellStyle}>{alert.unit}</div>
+                <div style={tableCellStyle}>
+                  <span style={{ ...tagStyle, color: tone.color, background: tone.bg }}>
+                    {alert.level}
                   </span>
-                  <strong style={riskLineValueStyle(item.color)}>{item.val}条</strong>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
-        {!overview.riskCards.length ? <div style={emptyPanelStyle}>暂无风险总览数据</div> : null}
-      </div>
-
-      <div style={insightGridStyle}>
-        <div style={insightPanelStyle}>
-          <div style={panelTitleStyle}>风险等级分布</div>
-          <div style={legendRowStyle}>
-            {overview.pieData.map((d) => (
-              <span key={d.name} style={legendItemStyle}>
-                <span style={legendDotStyle(d.color)} />
-                {d.name}
-              </span>
-            ))}
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={overview.pieData}
-                dataKey="value"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label={({ value, percent }) =>
-                  `${value} (${(percent * 100).toFixed(0)}%)`
-                }
-                labelLine={false}
-              >
-                {overview.pieData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div style={insightPanelStyle}>
-          <div style={panelTitleStyle}>风险处理进度</div>
-          <div style={legendRowStyle}>
-            {[
-              { name: "待处理", color: "#e05c5c" },
-              { name: "跟进中", color: "#7ab3e0" },
-            ].map((d) => (
-              <span key={d.name} style={legendItemStyle}>
-                <span style={legendDotStyle(d.color)} />
-                {d.name}
-              </span>
-            ))}
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={overview.donutData}
-                dataKey="value"
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={80}
-                label={false}
-              >
-                {overview.donutData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={22}
-                fontWeight={700}
-                fill="#333"
-              >
-                60%
-              </text>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div style={insightPanelStyle}>
-          <div style={panelTitleStyle}>近期新增风险</div>
-          <div style={recentRiskTableStyle}>
-            <div style={recentRiskHeadStyle}>组织名称</div>
-            <div style={recentRiskHeadStyle}>风险事项</div>
-            {overview.recentRisks.map((r, i) => (
-              <div key={i} style={{ display: "contents" }}>
-                <div style={recentRiskCellStyle}>{r.org}</div>
-                <div style={recentRiskCellStyle}>{r.event}</div>
+                <div style={tableCellStyle}>{alert.status}</div>
+                <div style={tableCellStyle}>{alert.date}</div>
               </div>
-            ))}
-            {!overview.recentRisks.length ? (
-              <>
-                <div style={recentRiskCellStyle}>暂无数据</div>
-                <div style={recentRiskCellStyle}>暂无近期新增风险</div>
-              </>
-            ) : null}
-          </div>
+            );
+          })}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-const pageShellStyle = {
-  padding: "0 24px 28px",
+function PanelHeading({ title, subtitle }) {
+  return (
+    <div style={panelHeadingStyle}>
+      <div style={panelTitleStyle}>{title}</div>
+      <div style={panelSubtitleStyle}>{subtitle}</div>
+    </div>
+  );
+}
+
+const pageStyle = {
   display: "grid",
-  gap: 18,
+  gap: 20,
 };
 
 const loadingStyle = {
-  padding: "0 24px 24px",
-  color: "#607087",
+  padding: "24px 0 36px",
+  color: "#4b5563",
 };
 
-const emptyPanelStyle = {
-  padding: 24,
-  borderRadius: 18,
-  border: "1px dashed #d8e4f5",
-  background: "#f8fbff",
-  color: "#607087",
+const heroStyle = {
+  position: "relative",
+  overflow: "hidden",
+  borderRadius: 28,
+  border: "1px solid rgba(15, 59, 102, 0.08)",
+  background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 48%, #eef5fb 100%)",
+  boxShadow: "0 24px 80px rgba(15, 23, 42, 0.08)",
+  padding: 28,
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1.8fr) minmax(240px, 0.8fr)",
+  gap: 20,
 };
 
-const focusPanelStyle = {
-  width: "100%",
-  textAlign: "left",
-  font: "inherit",
-  appearance: "none",
-  cursor: "pointer",
-  border: "1px solid #d8e4f5",
-  borderTop: "4px solid #1a3a8f",
-  borderRadius: 22,
-  padding: 24,
+const heroBackdropStyle = {
+  position: "absolute",
+  inset: 0,
   background:
-    "linear-gradient(135deg, rgba(26,58,143,0.07), rgba(79,142,220,0.1) 45%, rgba(255,255,255,0.98) 100%)",
-  boxShadow: "0 14px 36px rgba(15, 23, 42, 0.08)",
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-  gap: 18,
-  alignItems: "start",
+    "radial-gradient(circle at top right, rgba(37,99,235,0.12), transparent 24%), radial-gradient(circle at left bottom, rgba(180,83,9,0.08), transparent 18%)",
+  pointerEvents: "none",
 };
 
-const focusCopyStyle = {
-  minWidth: 0,
+const heroCopyStyle = {
+  position: "relative",
+  zIndex: 1,
 };
 
-const focusLabelStyle = {
-  fontSize: 12,
-  color: "#1a3a8f",
-  fontWeight: 800,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  marginBottom: 10,
-};
-
-const focusTitleStyle = {
-  fontSize: 26,
-  fontWeight: 800,
-  lineHeight: 1.25,
-  color: "#0f172a",
-};
-
-const focusSubtitleStyle = {
-  marginTop: 10,
-  color: "#324057",
-  lineHeight: 1.7,
-  fontSize: 14,
-  maxWidth: 620,
-};
-
-const focusActionStyle = {
-  marginTop: 18,
+const eyebrowStyle = {
   display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  color: "#1a3a8f",
-  fontWeight: 800,
-  fontSize: 13,
-};
-
-const focusMetricGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-  gap: 10,
-};
-
-const focusMetricCardStyle = {
-  background: "rgba(255,255,255,0.78)",
-  border: "1px solid rgba(148,163,184,0.18)",
-  borderRadius: 16,
-  padding: 14,
-};
-
-const focusMetricLabelStyle = {
+  padding: "6px 12px",
+  borderRadius: 999,
+  background: "#e8f1fb",
+  color: "#0f3b66",
+  fontWeight: 700,
   fontSize: 12,
-  color: "#64748b",
-};
-
-const focusMetricValueStyle = {
-  marginTop: 6,
-  fontSize: 16,
-  fontWeight: 800,
-  color: "#0f172a",
-  lineHeight: 1.35,
-};
-
-const sectionLabelStyle = {
-  fontSize: 12,
-  color: "#607087",
-  fontWeight: 800,
   letterSpacing: "0.08em",
   textTransform: "uppercase",
-  marginTop: 4,
 };
 
-const riskCardGridStyle = {
+const heroTitleStyle = {
+  margin: "16px 0 12px",
+  fontSize: "clamp(30px, 3.6vw, 44px)",
+  lineHeight: 1.1,
+  color: "#102033",
+};
+
+const heroDescriptionStyle = {
+  maxWidth: 760,
+  color: "#475569",
+  fontSize: 16,
+  lineHeight: 1.75,
+};
+
+const heroMetaStyle = {
+  marginTop: 24,
+  display: "flex",
+  flexWrap: "wrap",
+  gap: 14,
+  alignItems: "center",
+};
+
+const primaryButtonStyle = {
+  border: 0,
+  borderRadius: 14,
+  padding: "12px 18px",
+  fontWeight: 700,
+  color: "#fff",
+  background: "linear-gradient(135deg, #163d65, #2563eb)",
+  cursor: "pointer",
+  boxShadow: "0 12px 28px rgba(37, 99, 235, 0.22)",
+};
+
+const ghostButtonStyle = {
+  border: "1px solid rgba(15, 59, 102, 0.12)",
+  borderRadius: 14,
+  padding: "10px 16px",
+  color: "#0f3b66",
+  background: "#fff",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
+const heroNoteStyle = {
+  color: "#64748b",
+  fontSize: 14,
+};
+
+const heroAsideStyle = {
+  position: "relative",
+  zIndex: 1,
+  borderRadius: 22,
+  background: "rgba(15, 59, 102, 0.96)",
+  color: "#eff6ff",
+  padding: 22,
+  display: "grid",
+  alignContent: "space-between",
+  minHeight: 200,
+};
+
+const heroAsideLabelStyle = {
+  fontSize: 12,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "rgba(239, 246, 255, 0.72)",
+};
+
+const heroAsideDateStyle = {
+  fontSize: 30,
+  fontWeight: 800,
+  lineHeight: 1.2,
+};
+
+const heroAsideSourceStyle = {
+  alignSelf: "end",
+  color: "rgba(239, 246, 255, 0.84)",
+};
+
+const metricGridStyle = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   gap: 16,
 };
 
-const riskCardStyle = {
-  background: "white",
-  borderRadius: 16,
-  padding: "18px 20px",
-  boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-  border: "1px solid #e7edf6",
+const metricCardStyle = {
+  border: "1px solid",
+  borderRadius: 20,
+  padding: 20,
+  boxShadow: "0 12px 32px rgba(15, 23, 42, 0.05)",
 };
 
-const riskCardHeaderStyle = {
-  display: "flex",
-  justifyContent: "space-between",
-  gap: 12,
-  alignItems: "flex-start",
+const metricLabelStyle = {
+  fontSize: 13,
+  color: "#475569",
   marginBottom: 14,
 };
 
-const riskCardKickerStyle = {
-  fontSize: 11,
-  color: "#607087",
+const metricValueStyle = {
+  fontSize: 34,
   fontWeight: 800,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  marginBottom: 6,
+  color: "#102033",
+  lineHeight: 1.1,
 };
 
-const riskCardTitleStyle = {
-  fontSize: 15,
-  fontWeight: 800,
-  color: "#111827",
-  lineHeight: 1.35,
-};
-
-const riskCardBadgeStyle = {
-  padding: "5px 10px",
-  borderRadius: 999,
-  background: "#eef4ff",
-  color: "#1a3a8f",
-  fontSize: 12,
+const metricDeltaStyle = {
+  marginTop: 10,
   fontWeight: 700,
-  flexShrink: 0,
-  whiteSpace: "nowrap",
+  fontSize: 14,
 };
 
-const riskLineListStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-};
-
-const riskLineStyle = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 14,
-  fontSize: 13,
-};
-
-const riskLineLabelStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  color: "#334155",
-  minWidth: 0,
-};
-
-function riskDotStyle(color) {
-  return {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    background: color,
-    flexShrink: 0,
-  };
-}
-
-function riskLineValueStyle(color) {
-  return {
-    color,
-    fontWeight: 800,
-    whiteSpace: "nowrap",
-  };
-}
-
-const insightGridStyle = {
+const panelGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: 16,
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 18,
 };
 
-const insightPanelStyle = {
-  background: "white",
-  borderRadius: 16,
-  padding: 24,
-  boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-  border: "1px solid #e7edf6",
+const panelStyle = {
+  borderRadius: 24,
+  background: "#ffffff",
+  border: "1px solid rgba(15, 59, 102, 0.08)",
+  boxShadow: "0 16px 44px rgba(15, 23, 42, 0.05)",
+  padding: 22,
+  display: "grid",
+  gap: 18,
+};
+
+const panelHeadingStyle = {
+  display: "grid",
+  gap: 6,
 };
 
 const panelTitleStyle = {
-  fontSize: 15,
+  fontSize: 22,
   fontWeight: 800,
-  color: "#111827",
-  marginBottom: 14,
+  color: "#102033",
 };
 
-const legendRowStyle = {
+const panelSubtitleStyle = {
+  color: "#64748b",
+  fontSize: 14,
+};
+
+const panelSplitStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(220px, 0.95fr) minmax(0, 1.05fr)",
+  gap: 18,
+};
+
+const miniTitleStyle = {
+  marginBottom: 12,
+  fontSize: 13,
+  color: "#0f3b66",
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  fontWeight: 800,
+};
+
+const distributionChartWrapStyle = {
+  display: "grid",
+  gap: 14,
+};
+
+const distributionPieStyle = {
+  height: 230,
+  borderRadius: 18,
+  background: "#f8fbff",
+  border: "1px solid rgba(15,59,102,0.08)",
+  padding: 8,
+};
+
+const listStyle = {
+  display: "grid",
+  gap: 10,
+};
+
+const listRowStyle = {
   display: "flex",
-  flexWrap: "wrap",
+  justifyContent: "space-between",
+  alignItems: "center",
   gap: 12,
+  padding: "12px 14px",
+  borderRadius: 16,
+  background: "#f8fafc",
+};
+
+const listPrimaryStyle = {
+  fontWeight: 700,
+  color: "#102033",
+};
+
+const distributionLegendLabelStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  fontWeight: 700,
+  color: "#102033",
+};
+
+const legendDotStyle = (color) => ({
+  width: 10,
+  height: 10,
+  borderRadius: 999,
+  background: color,
+  flexShrink: 0,
+});
+
+const listSecondaryStyle = {
+  color: "#64748b",
+  fontSize: 13,
+  marginTop: 4,
+};
+
+const listValueStyle = {
+  fontWeight: 800,
+  color: "#0f3b66",
+};
+
+const chartStyle = {
+  height: 240,
+};
+
+const compactChartStyle = {
+  height: 220,
+};
+
+const funnelStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const stageRowStyle = {
+  display: "grid",
+  gridTemplateColumns: "112px minmax(0, 1fr) 64px 104px",
+  gap: 12,
+  alignItems: "center",
+};
+
+const stageNameWrapStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+};
+
+const stageIndexStyle = {
+  width: 24,
+  height: 24,
+  borderRadius: 999,
+  background: "#e8f1fb",
+  color: "#0f3b66",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 800,
+  fontSize: 12,
+};
+
+const stageNameStyle = {
+  color: "#102033",
+  fontWeight: 700,
+};
+
+const stageBarTrackStyle = {
+  height: 12,
+  background: "#edf2f7",
+  borderRadius: 999,
+  overflow: "hidden",
+};
+
+const stageBarStyle = {
+  height: "100%",
+  borderRadius: 999,
+  background: "linear-gradient(90deg, #163d65, #3b82f6)",
+};
+
+const stageValueStyle = {
+  fontWeight: 800,
+  color: "#102033",
+  textAlign: "right",
+};
+
+const stageAgingStyle = {
+  color: "#64748b",
+  fontSize: 13,
+  textAlign: "right",
+};
+
+const eventListStyle = {
+  display: "grid",
+  gap: 10,
+};
+
+const eventCardStyle = {
+  borderRadius: 16,
+  background: "#f8fafc",
+  padding: "14px 16px",
+  display: "grid",
+  gap: 6,
+};
+
+const eventUnitStyle = {
+  fontWeight: 800,
+  color: "#102033",
+};
+
+const eventTextStyle = {
+  color: "#475569",
+};
+
+const eventStatusStyle = {
+  color: "#0f3b66",
+  fontWeight: 700,
+  fontSize: 13,
+};
+
+const orgPanelStackStyle = {
+  display: "grid",
+  gap: 18,
+};
+
+const orgTopGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "minmax(240px, 0.88fr) minmax(0, 1.12fr)",
+  gap: 18,
+};
+
+const orgTreeColumnStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const orgNodeStyle = (active, score) => ({
+  width: "100%",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  minHeight: 62,
+  borderRadius: 16,
+  border: `1px solid ${active ? scoreBorderColor(score) : "rgba(15,59,102,0.08)"}`,
+  background: active ? scoreBackgroundColor(score) : "#fff",
+  color: "#102033",
+  padding: "14px 16px",
+  cursor: "pointer",
+  fontWeight: 700,
+});
+
+const orgChildrenStyle = {
+  display: "grid",
+  gap: 8,
+  marginTop: 8,
+  paddingLeft: 18,
+};
+
+const orgChildStyle = (active, score) => ({
+  width: "100%",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  minHeight: 62,
+  borderRadius: 14,
+  border: `1px solid ${active ? scoreBorderColor(score) : "rgba(15,59,102,0.08)"}`,
+  background: active ? scoreBackgroundColor(score) : "#f8fafc",
+  color: "#334155",
+  padding: "14px 16px",
+  cursor: "pointer",
+});
+
+const selectedOrgCardStyle = {
+  borderRadius: 18,
+  background: "#f8fbff",
+  border: "1px solid rgba(15,59,102,0.08)",
+  padding: 18,
+  marginBottom: 12,
+};
+
+const chartInfoTextStyle = {
+  color: "#64748b",
+  fontSize: 13,
+  lineHeight: 1.7,
+};
+
+const scoreBadgeStyle = (score) => ({
+  minWidth: 52,
+  height: 32,
+  borderRadius: 999,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: scoreBackgroundColor(score),
+  color: scoreTextColor(score),
+  fontWeight: 800,
+  fontSize: 13,
+});
+
+const selectedOrgNameStyle = {
+  fontSize: 24,
+  fontWeight: 800,
+  color: "#102033",
+};
+
+const selectedOrgMetaStyle = {
+  marginTop: 6,
+  color: "#64748b",
+};
+
+const orgRadarGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 16,
+};
+
+const radarCardStyle = {
+  borderRadius: 18,
+  background: "#f8fbff",
+  border: "1px solid rgba(15,59,102,0.08)",
+  padding: 18,
+};
+
+const radarChartStyle = {
+  height: 280,
+};
+
+const accountabilityGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 12,
+};
+
+const trackerCardStyle = {
+  borderRadius: 18,
+  background: "#f8fafc",
+  padding: 18,
+};
+
+const trackerValueStyle = {
+  fontSize: 32,
+  fontWeight: 800,
+  color: "#102033",
+};
+
+const deductionTableStyle = {
+  display: "grid",
+  gap: 10,
+};
+
+const deductionRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "center",
+  borderRadius: 16,
+  padding: "14px 16px",
+  background: "#fff7ed",
+};
+
+const deductionPointsStyle = {
+  fontWeight: 800,
+  fontSize: 22,
+  color: "#b45309",
+};
+
+const topicSectionStyle = {
+  borderRadius: 24,
+  background: "#ffffff",
+  border: "1px solid rgba(15, 59, 102, 0.08)",
+  boxShadow: "0 16px 44px rgba(15, 23, 42, 0.05)",
+  padding: 22,
+  display: "grid",
+  gap: 18,
+};
+
+const sectionHeadingStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 16,
+  alignItems: "center",
+  flexWrap: "wrap",
+};
+
+const sectionKickerStyle = {
+  fontSize: 12,
+  color: "#0f3b66",
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  fontWeight: 800,
+  marginBottom: 6,
+};
+
+const sectionTitleStyle = {
+  margin: 0,
+  fontSize: 26,
+  color: "#102033",
+};
+
+const topicGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 14,
+};
+
+const topicCardStyle = (accent) => ({
+  textAlign: "left",
+  borderRadius: 20,
+  border: `1px solid ${accent}22`,
+  background: `linear-gradient(180deg, #ffffff, ${accent}10)`,
+  padding: 18,
+  cursor: "pointer",
+});
+
+const topicMetricStyle = {
+  fontSize: 13,
+  fontWeight: 800,
+  color: "#0f3b66",
+  marginBottom: 12,
+};
+
+const topicTitleStyle = {
+  fontSize: 22,
+  fontWeight: 800,
+  color: "#102033",
   marginBottom: 8,
 };
 
-const legendItemStyle = {
-  fontSize: 12,
-  color: "#566274",
+const topicNoteStyle = {
+  color: "#475569",
+  lineHeight: 1.65,
+};
+
+const tableSectionStyle = {
+  ...topicSectionStyle,
+};
+
+const tableMetaStyle = {
+  color: "#64748b",
+  fontSize: 14,
+};
+
+const tableStyle = {
+  display: "grid",
+  gridTemplateColumns: "1.1fr 2fr 1.4fr 0.9fr 0.9fr 0.9fr",
+  borderRadius: 18,
+  overflow: "hidden",
+  border: "1px solid rgba(15,59,102,0.08)",
+};
+
+const tableHeaderStyle = {
+  padding: "14px 16px",
+  background: "#f8fbff",
+  fontWeight: 800,
+  color: "#0f3b66",
+  borderBottom: "1px solid rgba(15,59,102,0.08)",
+};
+
+const tableCellStyle = {
+  padding: "15px 16px",
+  borderBottom: "1px solid rgba(15,59,102,0.06)",
+  color: "#334155",
+  background: "#fff",
+};
+
+const tagStyle = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  fontWeight: 700,
+  justifyContent: "center",
+  padding: "4px 10px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 800,
 };
 
-function legendDotStyle(color) {
-  return {
-    width: 10,
-    height: 10,
-    borderRadius: 3,
-    background: color,
-    display: "inline-block",
-  };
+function scoreBackgroundColor(score) {
+  if (score >= 85) return "rgba(185, 28, 28, 0.10)";
+  if (score >= 70) return "rgba(234, 88, 12, 0.10)";
+  return "rgba(22, 163, 74, 0.10)";
 }
 
-const recentRiskTableStyle = {
-  display: "grid",
-  gridTemplateColumns: "1fr 2fr",
-  gap: 0,
-};
+function scoreBorderColor(score) {
+  if (score >= 85) return "rgba(185, 28, 28, 0.26)";
+  if (score >= 70) return "rgba(234, 88, 12, 0.24)";
+  return "rgba(22, 163, 74, 0.24)";
+}
 
-const recentRiskHeadStyle = {
-  fontSize: 12,
-  color: "#7a8595",
-  padding: "6px 0 10px",
-  borderBottom: "1px solid #edf2f7",
-  fontWeight: 700,
-  textAlign: "center",
-};
-
-const recentRiskCellStyle = {
-  fontSize: 12,
-  color: "#394557",
-  padding: "10px 8px",
-  borderBottom: "1px solid #f3f6fb",
-  textAlign: "center",
-  lineHeight: 1.6,
-};
+function scoreTextColor(score) {
+  if (score >= 85) return "#991b1b";
+  if (score >= 70) return "#c2410c";
+  return "#166534";
+}

@@ -1,8 +1,13 @@
 import { requestJson } from "./client.js";
+import { demoCockpitOverview } from "../data/cockpit.js";
 
 export async function getOverviewSummary() {
-  const data = await requestJson("/overview");
-  return normalizeOverview(data);
+  try {
+    const data = await requestJson("/overview");
+    return normalizeOverview(data);
+  } catch {
+    return normalizeOverview(null);
+  }
 }
 
 export async function getFundSafetySummary() {
@@ -20,27 +25,79 @@ export async function assignAlertReviewer(alertId, assignedReviewerName) {
 }
 
 function normalizeOverview(data) {
-  if (data?.updatedAt) {
-    return data;
+  if (data?.heroMetrics && data?.topicCards && data?.recentAlerts) {
+    return {
+      ...demoCockpitOverview,
+      ...data,
+      source: data.source ?? "api",
+    };
   }
 
+  if (!data) {
+    return demoCockpitOverview;
+  }
+
+  const riskCards = data?.risk_cards ?? [];
+  const recentRisks = data?.recent_risks ?? [];
+  const pieData = data?.pie_data ?? [];
+  const totalAlerts = pieData.reduce(
+    (sum, item) => sum + Number(item?.value ?? 0),
+    0,
+  );
+  const highRisk = pieData.find((item) => String(item?.name).includes("高"));
+  const pending = (data?.donut_data ?? []).find((item) =>
+    String(item?.name).includes("待"),
+  );
+
   return {
-    updatedAt: data?.snapshot_date ?? "",
-    heroNotes: [
-      { label: "资金安全专题", value: "1个" },
-      { label: "重点关注主题", value: "1个" },
-      { label: "近期新增事项", value: String((data?.recent_risks ?? []).length) },
+    ...demoCockpitOverview,
+    source: "api",
+    updatedAt: data?.updatedAt ?? data?.snapshot_date ?? demoCockpitOverview.updatedAt,
+    heroMetrics: [
+      {
+        label: "全级次预警总数",
+        value: String(totalAlerts || demoCockpitOverview.riskDistribution.reduce((sum, item) => sum + item.value, 0)),
+        delta: `${recentRisks.length || demoCockpitOverview.recentAlerts.length} 条近期新增`,
+        tone: "critical",
+      },
+      {
+        label: "高风险数量",
+        value: String(highRisk?.value ?? demoCockpitOverview.heroMetrics[1].value),
+        delta: "接口映射",
+        tone: "warning",
+      },
+      {
+        label: "待核查数量",
+        value: String(pending?.value ?? demoCockpitOverview.heroMetrics[2].value),
+        delta: "接口映射",
+        tone: "neutral",
+      },
+      demoCockpitOverview.heroMetrics[3],
     ],
-    fundSafetyEntry: {
-      title: data?.fund_safety_focus?.title ?? "资金安全",
-      subtitle: data?.fund_safety_focus?.summary ?? "查看资金安全专题与重点风险结果",
-      note: "重点关注支付识别、账户管理和跨客户资金使用等风险场景。",
-      actionLabel: "查看资金安全专题",
-    },
-    riskCards: data?.risk_cards ?? [],
-    pieData: data?.pie_data ?? [],
-    donutData: data?.donut_data ?? [],
-    recentRisks: data?.recent_risks ?? [],
+    highRiskRanking: riskCards.length
+      ? riskCards
+          .map((item) => ({ name: item.title, value: Number(item.high ?? 0) }))
+          .sort((left, right) => right.value - left.value)
+          .slice(0, 5)
+      : demoCockpitOverview.highRiskRanking,
+    topicCards: riskCards.length
+      ? riskCards.slice(0, 5).map((item) => ({
+          title: `${item.title}专题`,
+          metric: `高风险 ${item.high ?? 0} 条`,
+          note: `预警 ${item.warn ?? 0} 条，提示 ${item.hint ?? 0} 条`,
+          accent: Number(item.high ?? 0) > 0 ? "critical" : "neutral",
+        }))
+      : demoCockpitOverview.topicCards,
+    recentAlerts: recentRisks.length
+      ? recentRisks.slice(0, 6).map((item, index) => ({
+          id: `OV-${index + 1}`,
+          rule: item.event,
+          unit: item.org,
+          level: "预警",
+          status: "待核查",
+          date: data?.snapshot_date ?? demoCockpitOverview.updatedAt.slice(0, 10),
+        }))
+      : demoCockpitOverview.recentAlerts,
   };
 }
 

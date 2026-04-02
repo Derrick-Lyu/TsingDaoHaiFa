@@ -27,8 +27,8 @@ const TransactionDataPage = lazy(() =>
 );
 
 const PRIMARY_TABS = [
-  { label: "风险总览", value: "overview" },
-  { label: "资金安全", value: "fund-safety" },
+  { label: "驾驶舱首页", value: "overview" },
+  { label: "资金安全专题", value: "fund-safety" },
 ];
 
 const TOPIC_NAV_ITEMS = [
@@ -41,13 +41,17 @@ const TOPIC_NAV_ITEMS = [
 ];
 
 function ShellHeader({ activeTab, onChangeTab }) {
+  const title = activeTab === "overview" ? "穿透式监管管理驾驶舱" : "资金安全监管专题";
+  const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与核查闭环";
+
   return (
     <header style={headerStyle} className="app-header">
       <div style={brandWrapStyle}>
         <img src={haifaLogo} alt="Haifa Logo" style={logoStyle} />
         <div>
-          <div style={brandLabelStyle}>青岛海发风险预警演示</div>
-          <div style={brandTitleStyle}>资金安全专题</div>
+          <div style={brandLabelStyle}>青岛海发集团</div>
+          <div style={brandTitleStyle}>{title}</div>
+          <div style={brandSubtitleStyle}>{subtitle}</div>
         </div>
       </div>
 
@@ -68,7 +72,7 @@ function ShellHeader({ activeTab, onChangeTab }) {
         })}
       </nav>
 
-      <div style={audienceBadgeStyle}>演示视角优先</div>
+      <div style={audienceBadgeStyle}>Demo Fallback</div>
     </header>
   );
 }
@@ -298,6 +302,12 @@ const brandTitleStyle = {
   fontSize: 18,
   fontWeight: 800,
   color: "#102033",
+};
+
+const brandSubtitleStyle = {
+  marginTop: 4,
+  fontSize: 13,
+  color: "#607087",
 };
 
 const topNavStyle = {

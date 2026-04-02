@@ -1,21 +1,21 @@
 :root {
-  --text: #556070;
+  --text: #465467;
   --text-h: #102033;
-  --bg: #eef2f7;
-  --border: #d7e0ea;
+  --bg: #f3f6fa;
+  --border: #dce5ee;
   --code-bg: #eef3f8;
-  --accent: #102c57;
-  --accent-bg: rgba(16, 44, 87, 0.08);
-  --accent-border: rgba(16, 44, 87, 0.22);
+  --accent: #163d65;
+  --accent-bg: rgba(22, 61, 101, 0.08);
+  --accent-border: rgba(22, 61, 101, 0.22);
   --shadow:
     rgba(15, 23, 42, 0.08) 0 16px 24px -12px,
     rgba(15, 23, 42, 0.05) 0 6px 12px -8px;
-  --sans: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --heading: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --sans: "PingFang SC", "Noto Serif SC", "Microsoft YaHei", sans-serif;
+  --heading: "STSong", "Songti SC", "Noto Serif SC", serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 17px/150% var(--sans);
-  letter-spacing: 0.14px;
+  letter-spacing: 0.08px;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -62,7 +62,7 @@ h2 {
 
 h1 {
   font-size: 56px;
-  letter-spacing: -1.6px;
+  letter-spacing: -0.9px;
   margin: 0;
 }
 
