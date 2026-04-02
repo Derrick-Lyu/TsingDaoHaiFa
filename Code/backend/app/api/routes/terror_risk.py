@@ -7,10 +7,12 @@ from app.schemas.terror_risk import (
 )
 from app.services.terror_risk_service import (
     assign_alert_reviewer_data,
+    create_manual_alert_data,
     create_blacklist_data,
     create_transaction_data,
     delete_blacklist_data,
     delete_transaction_data,
+    dispatch_alert_data,
     get_terror_alert_detail_data,
     get_terror_risk_topic_data,
     list_blacklist_data,
@@ -18,6 +20,9 @@ from app.services.terror_risk_service import (
     list_terror_alerts_data,
     list_transactions_data,
     run_detection_job,
+    save_alert_ack_data,
+    save_alert_feedback_data,
+    save_alert_recheck_data,
     save_alert_review_data,
     update_blacklist_data,
     update_rule_data,
@@ -37,19 +42,45 @@ def list_alerts(
     rule_type: str | None = Query(default=None),
     risk_level: str | None = Query(default=None),
     member_unit: str | None = Query(default=None),
+    ticket_type: str | None = Query(default=None),
+    trigger_source: str | None = Query(default=None),
+    dispatch_status: str | None = Query(default=None),
+    feedback_status: str | None = Query(default=None),
+    review_status: str | None = Query(default=None),
+    recheck_status: str | None = Query(default=None),
+    is_overdue: bool | None = Query(default=None),
 ) -> dict[str, object]:
     payload = list_terror_alerts_data(
         rule_type=rule_type,
         risk_level=risk_level,
         member_unit=member_unit,
+        ticket_type=ticket_type,
+        trigger_source=trigger_source,
+        dispatch_status=dispatch_status,
+        feedback_status=feedback_status,
+        review_status=review_status,
+        recheck_status=recheck_status,
+        is_overdue=is_overdue,
     )
     payload["page_title"] = "涉恐交易预警"
     payload["filters_applied"] = {
         "rule_type": rule_type,
         "risk_level": risk_level,
         "member_unit": member_unit,
+        "ticket_type": ticket_type,
+        "trigger_source": trigger_source,
+        "dispatch_status": dispatch_status,
+        "feedback_status": feedback_status,
+        "review_status": review_status,
+        "recheck_status": recheck_status,
+        "is_overdue": is_overdue,
     }
     return payload
+
+
+@router.post("/alerts/manual", response_model=AlertDetailResponse, status_code=status.HTTP_201_CREATED)
+def create_manual_alert(payload: dict[str, object]) -> dict[str, object]:
+    return create_manual_alert_data(payload)
 
 
 @router.get("/alerts/{alert_id}", response_model=AlertDetailResponse)
@@ -60,6 +91,11 @@ def get_alert_detail(alert_id: str) -> dict[str, object]:
 @router.post("/alerts/{alert_id}/assign", response_model=AlertDetailResponse)
 def assign_alert_reviewer(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
     return assign_alert_reviewer_data(alert_id, payload)
+
+
+@router.post("/alerts/{alert_id}/dispatch", response_model=AlertDetailResponse)
+def dispatch_alert(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    return dispatch_alert_data(alert_id, payload)
 
 
 @router.get("/blacklist")
@@ -117,6 +153,21 @@ def delete_transaction(item_id: str) -> Response:
 @router.post("/alerts/{alert_id}/review")
 def save_alert_review(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
     return save_alert_review_data(alert_id, payload)
+
+
+@router.post("/alerts/{alert_id}/feedback", response_model=AlertDetailResponse)
+def save_alert_feedback(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    return save_alert_feedback_data(alert_id, payload)
+
+
+@router.post("/alerts/{alert_id}/recheck", response_model=AlertDetailResponse)
+def save_alert_recheck(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    return save_alert_recheck_data(alert_id, payload)
+
+
+@router.post("/alerts/{alert_id}/ack", response_model=AlertDetailResponse)
+def save_alert_ack(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    return save_alert_ack_data(alert_id, payload)
 
 
 @router.post("/detection-jobs")

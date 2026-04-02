@@ -1,7 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { assignAlertReviewer, getFundSafetySummary, getOverviewSummary } from "./terrorRisk.js";
+import {
+  assignAlertReviewer,
+  createManualAlert,
+  getFundSafetySummary,
+  getOverviewSummary,
+  listRiskTickets,
+  saveAlertAck,
+  saveAlertFeedback,
+  saveAlertRecheck,
+  saveAlertReview,
+} from "./terrorRisk.js";
 
 test("getOverviewSummary falls back to demo cockpit data when the backend request fails", async () => {
   const originalFetch = globalThis.fetch;
@@ -77,6 +87,71 @@ test("assignAlertReviewer posts the reviewer name to the assignment endpoint", a
     assert.equal(capturedUrl, "/api/terror-risk/alerts/alert-1/assign");
     assert.match(String(capturedBody), /assignedReviewerName/);
     assert.match(String(capturedBody), /风控专员A/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listRiskTickets serializes the new workflow filters into the alerts query", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedUrl = "";
+
+  globalThis.fetch = async (url) => {
+    capturedUrl = String(url);
+    return new Response(
+      JSON.stringify({ total: 0, items: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    await listRiskTickets({
+      ticketType: "risk_tip",
+      triggerSource: "trend_change",
+      dispatchStatus: "dispatched",
+      feedbackStatus: "pending",
+      reviewStatus: "pending",
+      recheckStatus: "pending",
+      memberUnit: "集团本部",
+      isOverdue: true,
+    });
+    assert.match(capturedUrl, /ticket_type=risk_tip/);
+    assert.match(capturedUrl, /trigger_source=trend_change/);
+    assert.match(capturedUrl, /dispatch_status=dispatched/);
+    assert.match(capturedUrl, /feedback_status=pending/);
+    assert.match(capturedUrl, /review_status=pending/);
+    assert.match(capturedUrl, /recheck_status=pending/);
+    assert.match(capturedUrl, /member_unit=%E9%9B%86%E5%9B%A2%E6%9C%AC%E9%83%A8/);
+    assert.match(capturedUrl, /is_overdue=true/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("workflow actions post to the new risk ticket endpoints", async () => {
+  const originalFetch = globalThis.fetch;
+  const captured = [];
+
+  globalThis.fetch = async (url, options = {}) => {
+    captured.push({ url: String(url), body: String(options.body || "") });
+    return new Response(
+      JSON.stringify({ id: "alert-1", ticket_type: "warning_notice", ack_records: [], flow_logs: [] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    await saveAlertFeedback("alert-1", { operator_name: "A" });
+    await saveAlertReview("alert-1", { reviewer_name: "B" });
+    await saveAlertRecheck("alert-1", { operator_name: "C" });
+    await saveAlertAck("alert-1", { operator_name: "D" });
+    await createManualAlert({ ticket_type: "risk_tip", member_unit_name: "集团本部" });
+
+    assert.equal(captured[0].url, "/api/terror-risk/alerts/alert-1/feedback");
+    assert.equal(captured[1].url, "/api/terror-risk/alerts/alert-1/review");
+    assert.equal(captured[2].url, "/api/terror-risk/alerts/alert-1/recheck");
+    assert.equal(captured[3].url, "/api/terror-risk/alerts/alert-1/ack");
+    assert.equal(captured[4].url, "/api/terror-risk/alerts/manual");
   } finally {
     globalThis.fetch = originalFetch;
   }

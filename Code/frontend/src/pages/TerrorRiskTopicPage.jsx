@@ -20,6 +20,7 @@ import {
   getOverviewRankingItems,
   OVERVIEW_RANKING_TABS,
 } from "../utils/terrorRiskOverview";
+import { listRiskTickets } from "../api/terrorRisk";
 
 const EMPTY_TOPIC = {
   page_title: "涉恐交易风险",
@@ -59,6 +60,13 @@ export function TerrorRiskTopicPage({
     ruleType: "",
     riskLevel: "",
     memberUnit: "",
+    ticketType: "",
+    triggerSource: "",
+    dispatchStatus: "",
+    feedbackStatus: "",
+    reviewStatus: "",
+    recheckStatus: "",
+    isOverdue: "",
   });
   const [loadingTopic, setLoadingTopic] = useState(true);
   const [loadingAlerts, setLoadingAlerts] = useState(true);
@@ -106,9 +114,8 @@ export function TerrorRiskTopicPage({
 
     async function loadAlerts() {
       setLoadingAlerts(true);
-      const query = buildQueryString(filters);
       try {
-        const data = await requestJson(`/terror-risk/alerts${query}`);
+        const data = await listRiskTickets(normalizeTicketFilters(filters));
 
         if (!cancelled) {
           setAlerts(data.items);
@@ -148,7 +155,7 @@ export function TerrorRiskTopicPage({
       await onUpdate?.();
       const [topicData, alertData, rulesData] = await Promise.all([
         requestJson("/terror-risk/topic"),
-        requestJson(`/terror-risk/alerts${buildQueryString(filters)}`),
+        listRiskTickets(normalizeTicketFilters(filters)),
         requestJson("/terror-risk/rules"),
       ]);
       setTopic(topicData);
@@ -514,13 +521,11 @@ function CompactRankingPanel({ items = [], emptyLabel }) {
   );
 }
 
-function buildQueryString(filters) {
-  const params = new URLSearchParams();
-  if (filters.ruleType) params.set("rule_type", filters.ruleType);
-  if (filters.riskLevel) params.set("risk_level", filters.riskLevel);
-  if (filters.memberUnit) params.set("member_unit", filters.memberUnit);
-  const query = params.toString();
-  return query ? `?${query}` : "";
+function normalizeTicketFilters(filters) {
+  return {
+    ...filters,
+    isOverdue: filters.isOverdue === "" ? undefined : filters.isOverdue === "true",
+  };
 }
 
 function mapJobStatus(status) {

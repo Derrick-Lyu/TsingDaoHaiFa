@@ -1,7 +1,13 @@
 import { Suspense, lazy, useState } from "react";
 
 import { requestJson } from "./api/client";
-import { assignAlertReviewer } from "./api/terrorRisk";
+import {
+  assignAlertReviewer,
+  saveAlertAck,
+  saveAlertFeedback,
+  saveAlertRecheck,
+  saveAlertReview as submitAlertReview,
+} from "./api/terrorRisk";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
 
 const AlertDetailPage = lazy(() =>
@@ -33,7 +39,7 @@ const PRIMARY_TABS = [
 
 const TOPIC_NAV_ITEMS = [
   { label: "专题概览", value: "overview" },
-  { label: "预警记录", value: "alerts" },
+  { label: "风险单据", value: "alerts" },
   { label: "典型案例", value: "cases" },
   { label: "黑名单配置", value: "blacklist" },
   { label: "规则配置", value: "rules" },
@@ -167,10 +173,7 @@ export default function App() {
   };
 
   const saveAlertReview = async (alertId, payload) => {
-    return requestJson(`/terror-risk/alerts/${alertId}/review`, {
-      method: "POST",
-      body: payload,
-    });
+    return submitAlertReview(alertId, payload);
   };
 
   const assignReviewer = async (alertId, reviewerName) => {
@@ -216,6 +219,9 @@ export default function App() {
             alertId={selectedAlertId}
             onSaveReview={saveAlertReview}
             onAssignReviewer={assignReviewer}
+            onSaveFeedback={saveAlertFeedback}
+            onSaveRecheck={saveAlertRecheck}
+            onSaveAck={saveAlertAck}
             onBack={() => setFundSafetyView("topic")}
           />
         </Suspense>

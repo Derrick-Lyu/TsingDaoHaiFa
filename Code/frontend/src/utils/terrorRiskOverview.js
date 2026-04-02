@@ -387,28 +387,56 @@ function normalizeRiskLevel(level) {
 function getWatchlistStatusLabel(alert) {
   const assignmentStatus = String(alert?.assignment_status ?? alert?.assignmentStatus ?? "").toLowerCase();
   const reviewStatus = String(alert?.review_status ?? alert?.reviewStatus ?? "").toLowerCase();
+  const recheckStatus = String(alert?.recheck_status ?? alert?.recheckStatus ?? "").toLowerCase();
+  const feedbackStatus = String(alert?.feedback_status ?? alert?.feedbackStatus ?? "").toLowerCase();
+  const ticketType = String(alert?.ticket_type ?? alert?.ticketType ?? "").toLowerCase();
 
-  if (reviewStatus === "reviewed") {
+  if (ticketType === "risk_tip") {
+    return Number(alert?.ack_records?.length ?? 0) > 0 ? "已阅知" : "待阅知";
+  }
+  if (recheckStatus === "passed") {
     return "已复核";
   }
-  if (assignmentStatus === "assigned") {
+  if (reviewStatus === "approved") {
     return "待复核";
   }
+  if (feedbackStatus === "submitted") {
+    return "待审核";
+  }
+  if (assignmentStatus === "assigned") {
+    return "待反馈";
+  }
   if (assignmentStatus === "unassigned") {
-    return "待分派";
+    return "待派发";
   }
   return normalizeRiskLevel(alert?.risk_level) === "high" ? "高风险" : "关注";
 }
 
 function getAssignmentPriority(alert) {
+  const ticketType = String(alert?.ticket_type ?? alert?.ticketType ?? "").toLowerCase();
+  const feedbackStatus = String(alert?.feedback_status ?? alert?.feedbackStatus ?? "").toLowerCase();
+  const reviewStatus = String(alert?.review_status ?? alert?.reviewStatus ?? "").toLowerCase();
+  const recheckStatus = String(alert?.recheck_status ?? alert?.recheckStatus ?? "").toLowerCase();
   const assignmentStatus = String(alert?.assignment_status ?? alert?.assignmentStatus ?? "").toLowerCase();
+  if (ticketType === "risk_tip") {
+    return Number(alert?.ack_records?.length ?? 0) > 0 ? 3 : 1;
+  }
   if (assignmentStatus === "unassigned") {
     return 0;
   }
-  if (assignmentStatus === "assigned") {
+  if (feedbackStatus === "pending") {
     return 1;
   }
-  return 2;
+  if (reviewStatus === "pending") {
+    return 2;
+  }
+  if (recheckStatus === "pending") {
+    return 3;
+  }
+  if (assignmentStatus === "assigned") {
+    return 4;
+  }
+  return 5;
 }
 
 function compareAmount(left, right) {

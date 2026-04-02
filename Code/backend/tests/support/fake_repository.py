@@ -7,6 +7,22 @@ from app.engine.terror_risk import detect_terror_risk_alerts, select_typical_cas
 
 SNAPSHOT_DATE = "2026-03-31"
 
+TICKET_TYPE_LABELS = {
+    "warning_notice": "风险预警单",
+    "risk_tip": "风险提示单",
+    "supervision": "风险督办单",
+}
+
+TRIGGER_SOURCE_LABELS = {
+    "model_threshold": "模型阈值预警",
+    "audit_rectification": "审计整改跟踪",
+    "leader_instruction": "领导指定",
+    "typical_event": "典型事件提醒",
+    "trend_change": "风险趋势变化",
+    "three_consecutive_warnings": "连续三次预警",
+    "rectification_overdue": "整改逾期",
+}
+
 
 def _build_rules() -> list[dict[str, object]]:
     return [
@@ -240,6 +256,14 @@ def _format_amount_yuan(amount_value: float) -> str:
     return f"{amount_value / 10000:.2f}万元"
 
 
+def _ticket_type_label(ticket_type: str | None) -> str:
+    return TICKET_TYPE_LABELS.get(str(ticket_type or ""), "风险预警单")
+
+
+def _trigger_source_label(trigger_source: str | None) -> str:
+    return TRIGGER_SOURCE_LABELS.get(str(trigger_source or ""), "模型阈值预警")
+
+
 class FakePostgresRepository:
     def __init__(self) -> None:
         self.blacklist = _build_blacklist()
@@ -272,6 +296,27 @@ class FakePostgresRepository:
 
     def _apply_default_review_assignments(self) -> None:
         for index, alert in enumerate(self.alerts):
+            self._ensure_alert_defaults(alert)
+            if index == 0:
+                alert["ticket_type"] = "warning_notice"
+                alert["trigger_source"] = "leader_instruction"
+                alert["ticket_title"] = "领导指定预警单"
+                alert["ticket_reason"] = "领导要求跟踪重点风险指标"
+                alert["ticket_content"] = "请相关单位尽快反馈。"
+            elif index == 1:
+                alert["ticket_type"] = "risk_tip"
+                alert["trigger_source"] = "typical_event"
+                alert["ticket_title"] = "典型风险事件提示"
+                alert["ticket_reason"] = "对个别单位典型风险事件进行普遍提醒"
+                alert["ticket_content"] = "请相关单位阅知并开展自查。"
+            elif index == 2:
+                alert["ticket_type"] = "supervision"
+                alert["trigger_source"] = "three_consecutive_warnings"
+                alert["ticket_title"] = "连续三次预警督办单"
+                alert["ticket_reason"] = "监控模型连续三次预警"
+                alert["ticket_content"] = "请成员单位反馈整改落实情况。"
+                alert["continuous_warning_count"] = 3
+                alert["deadline_at"] = f"{SNAPSHOT_DATE}T18:00:00+08:00"
             default_review = {
                 "review_status": "pending",
                 "reviewer_name": "",
@@ -299,6 +344,92 @@ class FakePostgresRepository:
 
             alert["review"] = review
             alert["review_status"] = review["review_status"]
+            alert["dispatch_status"] = "dispatched" if review["assignment_status"] == "assigned" else "pending"
+            alert["flow_logs"] = alert.get("flow_logs", [])
+
+    def _ensure_alert_defaults(self, alert: dict[str, object]) -> dict[str, object]:
+        alert.setdefault("ticket_type", "warning_notice")
+        alert.setdefault("trigger_source", "model_threshold")
+        alert.setdefault("ticket_title", str(alert.get("rule_name", "风险预警单")))
+        alert.setdefault("ticket_reason", str(alert.get("alert_summary", "")))
+        alert.setdefault("ticket_content", str(alert.get("alert_summary", "")))
+        alert.setdefault("dispatch_status", "pending")
+        alert.setdefault("feedback_status", "pending")
+        alert.setdefault("recheck_status", "pending")
+        alert.setdefault("deadline_at", None)
+        alert.setdefault("is_overdue", False)
+        alert.setdefault("continuous_warning_count", 0)
+        alert.setdefault("source_ref_type", "detection_job")
+        alert.setdefault("source_ref_id", self.latest_job.get("job_no"))
+        alert.setdefault("feedback", {
+            "feedback_status": "pending",
+            "feedback_result": "",
+            "feedback_comment": "",
+            "operator_name": "",
+            "feedback_at": None,
+        })
+        alert.setdefault("recheck", {
+            "recheck_status": "pending",
+            "recheck_result": "",
+            "recheck_comment": "",
+            "operator_name": "",
+            "rechecked_at": None,
+        })
+        alert.setdefault("ack_records", [])
+        alert.setdefault("flow_logs", [])
+        return alert
+
+    def _serialize_alert_list_item(self, item: dict[str, object]) -> dict[str, object]:
+        review = item.get("review", {})
+        return {
+            "id": item["id"],
+            "alert_no": item["alert_no"],
+            "ticket_type": item["ticket_type"],
+            "ticket_type_label": _ticket_type_label(str(item["ticket_type"])),
+            "trigger_source": item["trigger_source"],
+            "trigger_source_label": _trigger_source_label(str(item["trigger_source"])),
+            "ticket_title": item["ticket_title"],
+            "rule_code": item["rule_code"],
+            "rule_name": item["rule_name"],
+            "risk_level": item["risk_level"],
+            "member_unit_code": item["member_unit_code"],
+            "member_unit_name": item["member_unit_name"],
+            "payer_name": item["payer_name"],
+            "payee_name": item["payee_name"],
+            "transaction_date": item["transaction_date"],
+            "matched_amount": item["matched_amount"],
+            "dispatch_status": item["dispatch_status"],
+            "feedback_status": item["feedback_status"],
+            "review_status": item["review_status"],
+            "recheck_status": item["recheck_status"],
+            "assignment_status": review.get("assignment_status", "unassigned"),
+            "assigned_reviewer_name": review.get("assigned_reviewer_name", ""),
+            "assigned_at": review.get("assigned_at"),
+            "deadline_at": item["deadline_at"],
+            "is_overdue": bool(item["is_overdue"]),
+            "continuous_warning_count": int(item["continuous_warning_count"]),
+            "evidence_count": item["evidence_count"],
+            "alert_summary": item["alert_summary"],
+        }
+
+    def _append_flow_log(
+        self,
+        alert: dict[str, object],
+        *,
+        action_type: str,
+        action_result: str,
+        action_comment: str = "",
+        operator_name: str = "",
+    ) -> None:
+        alert.setdefault("flow_logs", []).append(
+            {
+                "action_type": action_type,
+                "action_result": action_result,
+                "action_comment": action_comment,
+                "operator_name": operator_name,
+                "created_at": f"{SNAPSHOT_DATE}T12:00:00+08:00",
+            }
+        )
 
     def get_overview(self) -> dict[str, object]:
         summary_blocks = self.get_fund_safety_summary()["summary_blocks"]
@@ -468,8 +599,16 @@ class FakePostgresRepository:
         return len(self.transactions) != before
 
     def save_alerts(self, alerts: list[dict[str, object]], latest_job: dict[str, object]) -> dict[str, object]:
-        self.alerts = deepcopy(alerts)
+        preserved_manual = [
+            deepcopy(alert)
+            for alert in self.alerts
+            if str(alert.get("source_ref_type")) == "manual"
+        ]
+        refreshed = deepcopy(alerts)
         self.latest_job = deepcopy(latest_job)
+        self.alerts = refreshed
+        self._apply_default_review_assignments()
+        self.alerts.extend(preserved_manual)
         return deepcopy(self.latest_job)
 
     def list_terror_alerts(
@@ -478,6 +617,13 @@ class FakePostgresRepository:
         rule_type: str | None = None,
         risk_level: str | None = None,
         member_unit: str | None = None,
+        ticket_type: str | None = None,
+        trigger_source: str | None = None,
+        dispatch_status: str | None = None,
+        feedback_status: str | None = None,
+        review_status: str | None = None,
+        recheck_status: str | None = None,
+        is_overdue: bool | None = None,
     ) -> dict[str, object]:
         items = deepcopy(self.alerts)
         if rule_type:
@@ -491,45 +637,129 @@ class FakePostgresRepository:
                 if member_unit.lower() in str(item["member_unit_name"]).lower()
                 or member_unit.lower() in str(item["member_unit_code"]).lower()
             ]
-        serialized_items = []
-        for item in items:
-            review = item.get("review", {})
-            serialized_items.append(
-                {
-                    "id": item["id"],
-                    "alert_no": item["alert_no"],
-                    "rule_code": item["rule_code"],
-                    "rule_name": item["rule_name"],
-                    "risk_level": item["risk_level"],
-                    "member_unit_code": item["member_unit_code"],
-                    "member_unit_name": item["member_unit_name"],
-                    "payer_name": item["payer_name"],
-                    "payee_name": item["payee_name"],
-                    "transaction_date": item["transaction_date"],
-                    "matched_amount": item["matched_amount"],
-                    "review_status": item["review_status"],
-                    "assignment_status": review.get("assignment_status", "unassigned"),
-                    "assigned_reviewer_name": review.get("assigned_reviewer_name", ""),
-                    "assigned_at": review.get("assigned_at"),
-                    "evidence_count": item["evidence_count"],
-                    "alert_summary": item["alert_summary"],
-                }
-            )
+        if ticket_type:
+            items = [item for item in items if item["ticket_type"] == ticket_type]
+        if trigger_source:
+            items = [item for item in items if item["trigger_source"] == trigger_source]
+        if dispatch_status:
+            items = [item for item in items if item["dispatch_status"] == dispatch_status]
+        if feedback_status:
+            items = [item for item in items if item["feedback_status"] == feedback_status]
+        if review_status:
+            items = [item for item in items if item["review_status"] == review_status]
+        if recheck_status:
+            items = [item for item in items if item["recheck_status"] == recheck_status]
+        if is_overdue is not None:
+            items = [item for item in items if bool(item["is_overdue"]) is is_overdue]
+        serialized_items = [self._serialize_alert_list_item(item) for item in items]
         return {"total": len(serialized_items), "items": serialized_items}
 
     def get_terror_alert(self, alert_id: str) -> dict[str, object] | None:
-        return next((deepcopy(alert) for alert in self.alerts if alert["id"] == alert_id), None)
+        for alert in self.alerts:
+            if alert["id"] == alert_id:
+                current = deepcopy(alert)
+                self._ensure_alert_defaults(current)
+                current["ticket_type_label"] = _ticket_type_label(str(current["ticket_type"]))
+                current["trigger_source_label"] = _trigger_source_label(str(current["trigger_source"]))
+                return current
+        return None
+
+    def create_manual_alert(self, payload: dict[str, object]) -> dict[str, object]:
+        ticket_type = str(payload.get("ticket_type", "warning_notice"))
+        ticket_id = f"alert-{uuid4()}"
+        review_status = "pending"
+        alert = {
+            "id": ticket_id,
+            "alert_no": f"RT-{len(self.alerts) + 1:03d}",
+            "ticket_type": ticket_type,
+            "trigger_source": str(payload.get("trigger_source", "leader_instruction")),
+            "ticket_title": str(payload.get("ticket_title", _ticket_type_label(ticket_type))),
+            "ticket_reason": str(payload.get("ticket_reason", "")),
+            "ticket_content": str(payload.get("ticket_content", "")),
+            "rule_code": str(payload.get("rule_code", "manual_ticket")),
+            "rule_name": str(payload.get("rule_name", _ticket_type_label(ticket_type))),
+            "risk_level": str(payload.get("risk_level", "warn")),
+            "alert_status": "open",
+            "dispatch_status": "pending",
+            "feedback_status": "pending",
+            "review_status": review_status,
+            "recheck_status": "pending",
+            "member_unit_code": payload.get("member_unit_code"),
+            "member_unit_name": str(payload["member_unit_name"]),
+            "payer_name": payload.get("payer_name"),
+            "payer_account": payload.get("payer_account"),
+            "payee_name": payload.get("payee_name"),
+            "payee_account": payload.get("payee_account"),
+            "transaction_date": payload.get("transaction_date"),
+            "matched_amount": str(payload.get("matched_amount", "0.00万元")),
+            "matched_amount_value": float(payload.get("matched_amount_value", 0.0)),
+            "matched_count": int(payload.get("matched_count", 0)),
+            "deadline_at": payload.get("deadline_at"),
+            "is_overdue": bool(payload.get("is_overdue", False)),
+            "continuous_warning_count": int(payload.get("continuous_warning_count", 0)),
+            "source_ref_type": "manual",
+            "source_ref_id": ticket_id,
+            "evidence_count": int(payload.get("evidence_count", 0)),
+            "latest_evidence_summary": payload.get("latest_evidence_summary"),
+            "alert_summary": str(payload.get("ticket_content", payload.get("ticket_reason", ""))),
+            "evidences": [],
+            "related_transactions": [],
+            "review": {
+                "review_status": review_status,
+                "reviewer_name": "",
+                "review_result": "",
+                "review_comment": "",
+                "reviewed_at": None,
+                "assignment_status": "unassigned",
+                "assigned_reviewer_name": "",
+                "assigned_at": None,
+            },
+            "feedback": {
+                "feedback_status": "pending",
+                "feedback_result": "",
+                "feedback_comment": "",
+                "operator_name": "",
+                "feedback_at": None,
+            },
+            "recheck": {
+                "recheck_status": "pending",
+                "recheck_result": "",
+                "recheck_comment": "",
+                "operator_name": "",
+                "rechecked_at": None,
+            },
+            "ack_records": [],
+            "flow_logs": [],
+        }
+        self._append_flow_log(
+            alert,
+            action_type="manual_create",
+            action_result=ticket_type,
+            action_comment=str(payload.get("ticket_reason", "")),
+            operator_name="system",
+        )
+        self.alerts.insert(0, alert)
+        return self.get_terror_alert(ticket_id)
 
     def assign_alert_reviewer(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
         for alert in self.alerts:
             if alert["id"] == alert_id:
+                self._ensure_alert_defaults(alert)
                 alert["review"] = {
                     **alert["review"],
                     "assignment_status": "assigned",
                     "assigned_reviewer_name": str(payload["assignedReviewerName"]),
                     "assigned_at": f"{SNAPSHOT_DATE}T12:00:00+08:00",
                 }
-                return deepcopy(alert)
+                alert["dispatch_status"] = "dispatched"
+                self._append_flow_log(
+                    alert,
+                    action_type="dispatch",
+                    action_result="assigned",
+                    action_comment="已派发审核人",
+                    operator_name=str(payload["assignedReviewerName"]),
+                )
+                return self.get_terror_alert(alert_id)
         return None
 
     def save_review(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
@@ -539,7 +769,79 @@ class FakePostgresRepository:
                     raise ValueError("Alert must be assigned before review")
                 alert["review"] = {**alert["review"], **payload, "reviewed_at": f"{SNAPSHOT_DATE}T12:00:00+08:00"}
                 alert["review_status"] = str(payload["review_status"])
-                return deepcopy(alert)
+                self._append_flow_log(
+                    alert,
+                    action_type="review",
+                    action_result=str(payload["review_status"]),
+                    action_comment=str(payload.get("review_comment", "")),
+                    operator_name=str(payload.get("reviewer_name", "")),
+                )
+                return self.get_terror_alert(alert_id)
+        return None
+
+    def save_feedback(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        for alert in self.alerts:
+            if alert["id"] == alert_id:
+                self._ensure_alert_defaults(alert)
+                alert["feedback"] = {
+                    "feedback_status": "submitted",
+                    "feedback_result": str(payload.get("feedback_result", "")),
+                    "feedback_comment": str(payload.get("feedback_comment", "")),
+                    "operator_name": str(payload.get("operator_name", "")),
+                    "feedback_at": f"{SNAPSHOT_DATE}T12:00:00+08:00",
+                }
+                alert["feedback_status"] = "submitted"
+                self._append_flow_log(
+                    alert,
+                    action_type="feedback",
+                    action_result="submitted",
+                    action_comment=str(payload.get("feedback_comment", "")),
+                    operator_name=str(payload.get("operator_name", "")),
+                )
+                return self.get_terror_alert(alert_id)
+        return None
+
+    def save_recheck(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        for alert in self.alerts:
+            if alert["id"] == alert_id:
+                self._ensure_alert_defaults(alert)
+                alert["recheck"] = {
+                    "recheck_status": str(payload.get("recheck_status", "pending")),
+                    "recheck_result": str(payload.get("recheck_result", "")),
+                    "recheck_comment": str(payload.get("recheck_comment", "")),
+                    "operator_name": str(payload.get("operator_name", "")),
+                    "rechecked_at": f"{SNAPSHOT_DATE}T12:00:00+08:00",
+                }
+                alert["recheck_status"] = alert["recheck"]["recheck_status"]
+                self._append_flow_log(
+                    alert,
+                    action_type="recheck",
+                    action_result=alert["recheck_status"],
+                    action_comment=str(payload.get("recheck_comment", "")),
+                    operator_name=str(payload.get("operator_name", "")),
+                )
+                return self.get_terror_alert(alert_id)
+        return None
+
+    def save_ack(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        for alert in self.alerts:
+            if alert["id"] == alert_id:
+                self._ensure_alert_defaults(alert)
+                record = {
+                    "ack_status": "read",
+                    "operator_name": str(payload.get("operator_name", "")),
+                    "ack_comment": str(payload.get("ack_comment", "")),
+                    "ack_at": f"{SNAPSHOT_DATE}T12:00:00+08:00",
+                }
+                alert.setdefault("ack_records", []).append(record)
+                self._append_flow_log(
+                    alert,
+                    action_type="ack",
+                    action_result="read",
+                    action_comment=record["ack_comment"],
+                    operator_name=record["operator_name"],
+                )
+                return self.get_terror_alert(alert_id)
         return None
 
     def get_terror_risk_topic(self) -> dict[str, object]:

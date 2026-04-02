@@ -9,14 +9,28 @@ const RISK_LABELS = {
 };
 
 const REVIEW_LABELS = {
-  pending: { text: "待核查", color: "#b45309", background: "#fffbeb" },
-  reviewed: { text: "已核查", color: "#0f766e", background: "#ecfeff" },
-  closed: { text: "已关闭", color: "#475569", background: "#f8fafc" },
+  pending: { text: "待审核", color: "#b45309", background: "#fffbeb" },
+  approved: { text: "已审核", color: "#0f766e", background: "#ecfeff" },
+  rejected: { text: "已退回", color: "#b42318", background: "#fff5f5" },
 };
 
 const ASSIGNMENT_LABELS = {
-  assigned: { text: "已分配", color: "#0f766e", background: "#ecfeff" },
-  unassigned: { text: "待分配", color: "#b42318", background: "#fff5f5" },
+  assigned: { text: "已派发", color: "#0f766e", background: "#ecfeff" },
+  unassigned: { text: "待派发", color: "#b42318", background: "#fff5f5" },
+};
+
+const TICKET_TYPE_LABELS = {
+  warning_notice: "风险预警单",
+  risk_tip: "风险提示单",
+  supervision: "风险督办单",
+};
+
+const FLOW_STATUS_LABELS = {
+  pending: { text: "待处理", color: "#b45309", background: "#fffbeb" },
+  submitted: { text: "已反馈", color: "#0f766e", background: "#ecfeff" },
+  completed: { text: "已完成", color: "#0f766e", background: "#ecfeff" },
+  passed: { text: "已复核", color: "#0f766e", background: "#ecfeff" },
+  returned: { text: "已退回", color: "#b42318", background: "#fff5f5" },
 };
 
 export function AlertTable({
@@ -58,8 +72,8 @@ export function AlertTable({
     >
       <div style={headerStyle}>
         <div>
-          <div style={titleStyle}>预警记录</div>
-          <div style={subtitleStyle}>可按规则类型、风险等级、成员单位筛选，点击记录查看核查详情。</div>
+          <div style={titleStyle}>风险单据</div>
+          <div style={subtitleStyle}>支持按单据类型、触发来源、流程状态和成员单位筛选，点击记录查看处理详情。</div>
         </div>
         <div style={metaStyle}>
           <span>共 {alerts.length} 条</span>
@@ -68,6 +82,15 @@ export function AlertTable({
       </div>
 
       <div style={filterGridStyle}>
+        <label style={filterFieldStyle}>
+          <span style={filterLabelStyle}>单据类型</span>
+          <select value={filters.ticketType} onChange={filterChange("ticketType")} style={selectStyle}>
+            <option value="">全部单据</option>
+            <option value="warning_notice">风险预警单</option>
+            <option value="risk_tip">风险提示单</option>
+            <option value="supervision">风险督办单</option>
+          </select>
+        </label>
         <label style={filterFieldStyle}>
           <span style={filterLabelStyle}>规则类型</span>
           <select value={filters.ruleType} onChange={filterChange("ruleType")} style={selectStyle}>
@@ -86,6 +109,27 @@ export function AlertTable({
             <option value="high">高风险</option>
             <option value="warn">预警关注</option>
             <option value="low">问题提示</option>
+          </select>
+        </label>
+        <label style={filterFieldStyle}>
+          <span style={filterLabelStyle}>触发来源</span>
+          <select value={filters.triggerSource} onChange={filterChange("triggerSource")} style={selectStyle}>
+            <option value="">全部来源</option>
+            <option value="model_threshold">模型阈值异常</option>
+            <option value="typical_event">典型事件提醒</option>
+            <option value="trend_change">趋势变化提示</option>
+            <option value="leader_instruction">领导指定</option>
+            <option value="three_consecutive_warnings">连续三次预警</option>
+            <option value="rectification_overdue">整改逾期</option>
+          </select>
+        </label>
+        <label style={filterFieldStyle}>
+          <span style={filterLabelStyle}>流程状态</span>
+          <select value={filters.reviewStatus} onChange={filterChange("reviewStatus")} style={selectStyle}>
+            <option value="">全部状态</option>
+            <option value="pending">待审核</option>
+            <option value="approved">已审核</option>
+            <option value="rejected">已退回</option>
           </select>
         </label>
         <label style={filterFieldStyle}>
@@ -118,11 +162,12 @@ export function AlertTable({
                 </span>
               </div>
 
-              <div style={cardMetaGridStyle}>
+            <div style={cardMetaGridStyle}>
+                <MetaItem label="单据类型" value={alert.ticket_type_label || TICKET_TYPE_LABELS[alert.ticket_type] || "-"} />
                 <MetaItem label="成员单位" value={alert.member_unit_name} />
-                <MetaItem label="交易对手" value={alert.payee_name || "-"} />
+                <MetaItem label="触发来源" value={alert.trigger_source_label || "-"} />
                 <MetaItem label="金额" value={formatAmountDisplay(alert.matched_amount)} />
-                <MetaItem label="审核人" value={alert.assigned_reviewer_name || "待分配"} />
+                <MetaItem label="当前处理人" value={alert.assigned_reviewer_name || "待派发"} />
                 <MetaItem label="核查状态" value={(REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending).text} />
               </div>
 
@@ -137,7 +182,7 @@ export function AlertTable({
           <table style={tableStyle}>
             <thead>
               <tr style={{ background: "#f8fafc" }}>
-                {["预警编号", "规则", "成员单位", "交易对手", "金额", "风险等级", "审核人", "分配状态", "核查状态", "证据数", "操作"].map((head) => (
+                {["单据编号", "单据类型", "触发来源", "成员单位", "金额", "风险等级", "派发", "反馈", "审核", "复核", "操作"].map((head) => (
                   <th key={head} style={thStyle}>
                     {head}
                   </th>
@@ -149,6 +194,8 @@ export function AlertTable({
                 const riskTone = RISK_LABELS[alert.risk_level] || RISK_LABELS.low;
                 const reviewTone = REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending;
                 const assignmentTone = ASSIGNMENT_LABELS[alert.assignment_status] || ASSIGNMENT_LABELS.unassigned;
+                const feedbackTone = FLOW_STATUS_LABELS[alert.feedback_status] || FLOW_STATUS_LABELS.pending;
+                const recheckTone = FLOW_STATUS_LABELS[alert.recheck_status] || FLOW_STATUS_LABELS.pending;
                 const selected = selectedAlertId === alert.id;
 
                 return (
@@ -164,26 +211,33 @@ export function AlertTable({
                       <div style={alertNoStyle}>{alert.alert_no}</div>
                     </td>
                     <td style={cellStyle}>
-                      <div style={ruleNameStyle}>{alert.rule_name}</div>
+                      <div style={ruleNameStyle}>{alert.ticket_type_label || TICKET_TYPE_LABELS[alert.ticket_type] || "-"}</div>
+                      <div style={secondaryStyle}>{alert.ticket_title || alert.rule_name}</div>
+                    </td>
+                    <td style={cellStyle}>
+                      <div style={ruleNameStyle}>{alert.trigger_source_label || "-"}</div>
                       <div style={secondaryStyle}>{alert.rule_code}</div>
                     </td>
                     <td style={cellStyle}>
                       <div style={ruleNameStyle}>{alert.member_unit_name}</div>
                       <div style={secondaryStyle}>{alert.member_unit_code || "-"}</div>
                     </td>
-                    <td style={cellStyle}>{alert.payee_name || "-"}</td>
                     <td style={cellStyle}>{formatAmountDisplay(alert.matched_amount)}</td>
                     <td style={cellStyle}>
                       <span style={badgeStyle(riskTone.background, riskTone.color)}>{riskTone.text}</span>
                     </td>
-                    <td style={cellStyle}>{alert.assigned_reviewer_name || "待分配"}</td>
                     <td style={cellStyle}>
                       <span style={badgeStyle(assignmentTone.background, assignmentTone.color)}>{assignmentTone.text}</span>
                     </td>
                     <td style={cellStyle}>
+                      <span style={badgeStyle(feedbackTone.background, feedbackTone.color)}>{feedbackTone.text}</span>
+                    </td>
+                    <td style={cellStyle}>
                       <span style={badgeStyle(reviewTone.background, reviewTone.color)}>{reviewTone.text}</span>
                     </td>
-                    <td style={cellStyle}>{alert.evidence_count}</td>
+                    <td style={cellStyle}>
+                      <span style={badgeStyle(recheckTone.background, recheckTone.color)}>{recheckTone.text}</span>
+                    </td>
                     <td style={cellStyle}>
                       <span style={actionTextStyle}>查看</span>
                     </td>
@@ -194,7 +248,7 @@ export function AlertTable({
               {!alerts.length && (
                 <tr>
                   <td colSpan={11} style={{ padding: 36, textAlign: "center", color: "#6b7280" }}>
-                    暂无符合条件的预警记录
+                    暂无符合条件的风险单据
                   </td>
                 </tr>
               )}
@@ -216,7 +270,7 @@ function MetaItem({ label, value }) {
 }
 
 function EmptyState() {
-  return <div style={emptyStateStyle}>暂无符合条件的预警记录</div>;
+  return <div style={emptyStateStyle}>暂无符合条件的风险单据</div>;
 }
 
 const headerStyle = {

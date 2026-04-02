@@ -27,12 +27,26 @@ def list_terror_alerts_data(
     rule_type: str | None = None,
     risk_level: str | None = None,
     member_unit: str | None = None,
+    ticket_type: str | None = None,
+    trigger_source: str | None = None,
+    dispatch_status: str | None = None,
+    feedback_status: str | None = None,
+    review_status: str | None = None,
+    recheck_status: str | None = None,
+    is_overdue: bool | None = None,
 ) -> dict[str, object]:
     repository = get_repository()
     return repository.list_terror_alerts(
         rule_type=rule_type,
         risk_level=risk_level,
         member_unit=member_unit,
+        ticket_type=ticket_type,
+        trigger_source=trigger_source,
+        dispatch_status=dispatch_status,
+        feedback_status=feedback_status,
+        review_status=review_status,
+        recheck_status=recheck_status,
+        is_overdue=is_overdue,
     )
 
 
@@ -110,6 +124,16 @@ def save_alert_review_data(alert_id: str, payload: dict[str, object]) -> dict[st
     return alert
 
 
+def create_manual_alert_data(payload: dict[str, object]) -> dict[str, object]:
+    ticket_type = str(payload.get("ticket_type", "")).strip()
+    member_unit_name = str(payload.get("member_unit_name", "")).strip()
+    if not ticket_type:
+        raise HTTPException(status_code=400, detail="ticket_type is required")
+    if not member_unit_name:
+        raise HTTPException(status_code=400, detail="member_unit_name is required")
+    return get_repository().create_manual_alert(payload)
+
+
 def assign_alert_reviewer_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
     assigned_reviewer_name = str(payload.get("assignedReviewerName", "")).strip()
     if not assigned_reviewer_name:
@@ -119,6 +143,40 @@ def assign_alert_reviewer_data(alert_id: str, payload: dict[str, object]) -> dic
         alert_id,
         {"assignedReviewerName": assigned_reviewer_name},
     )
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
+
+
+def dispatch_alert_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    return assign_alert_reviewer_data(alert_id, payload)
+
+
+def save_alert_feedback_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    operator_name = str(payload.get("operator_name", "")).strip()
+    if not operator_name:
+        raise HTTPException(status_code=400, detail="operator_name is required")
+    alert = get_repository().save_feedback(alert_id, payload)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
+
+
+def save_alert_recheck_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    operator_name = str(payload.get("operator_name", "")).strip()
+    if not operator_name:
+        raise HTTPException(status_code=400, detail="operator_name is required")
+    alert = get_repository().save_recheck(alert_id, payload)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return alert
+
+
+def save_alert_ack_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:
+    operator_name = str(payload.get("operator_name", "")).strip()
+    if not operator_name:
+        raise HTTPException(status_code=400, detail="operator_name is required")
+    alert = get_repository().save_ack(alert_id, payload)
     if alert is None:
         raise HTTPException(status_code=404, detail="Alert not found")
     return alert

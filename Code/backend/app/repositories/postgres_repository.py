@@ -6,6 +6,20 @@ import json
 from app.engine.terror_risk import select_typical_case_alerts
 
 SNAPSHOT_DATE = "2026-03-31"
+TICKET_TYPE_LABELS = {
+    "warning_notice": "风险预警单",
+    "risk_tip": "风险提示单",
+    "supervision": "风险督办单",
+}
+TRIGGER_SOURCE_LABELS = {
+    "model_threshold": "模型阈值预警",
+    "audit_rectification": "审计整改跟踪",
+    "leader_instruction": "领导指定",
+    "typical_event": "典型事件提醒",
+    "trend_change": "风险趋势变化",
+    "three_consecutive_warnings": "连续三次预警",
+    "rectification_overdue": "整改逾期",
+}
 
 
 class PostgresRepository:
@@ -19,6 +33,46 @@ class PostgresRepository:
 
         with psycopg.connect(self.database_url, row_factory=dict_row) as conn:
             yield conn
+
+    def _ticket_type_label(self, ticket_type: str | None) -> str:
+        return TICKET_TYPE_LABELS.get(str(ticket_type or ""), "风险预警单")
+
+    def _trigger_source_label(self, trigger_source: str | None) -> str:
+        return TRIGGER_SOURCE_LABELS.get(str(trigger_source or ""), "模型阈值预警")
+
+    def _ensure_ticket_payload(self, extra_payload: dict[str, object] | None) -> dict[str, object]:
+        payload = dict(extra_payload or {})
+        payload.setdefault("ticket_type", "warning_notice")
+        payload.setdefault("trigger_source", "model_threshold")
+        payload.setdefault("ticket_title", "")
+        payload.setdefault("ticket_reason", "")
+        payload.setdefault("ticket_content", "")
+        payload.setdefault("dispatch_status", "pending")
+        payload.setdefault("feedback_status", "pending")
+        payload.setdefault("recheck_status", "pending")
+        payload.setdefault("deadline_at", None)
+        payload.setdefault("is_overdue", False)
+        payload.setdefault("continuous_warning_count", 0)
+        payload.setdefault("source_ref_type", "detection_job")
+        payload.setdefault("source_ref_id", None)
+        payload.setdefault("feedback", {
+            "feedback_status": "pending",
+            "feedback_result": "",
+            "feedback_comment": "",
+            "operator_name": "",
+            "feedback_at": None,
+        })
+        payload.setdefault("recheck", {
+            "recheck_status": "pending",
+            "recheck_result": "",
+            "recheck_comment": "",
+            "operator_name": "",
+            "rechecked_at": None,
+        })
+        payload.setdefault("ack_records", [])
+        payload.setdefault("flow_logs", [])
+        payload.setdefault("related_transactions", [])
+        return payload
 
     def get_overview(self) -> dict[str, object]:
         summary_blocks = self.get_fund_safety_summary()["summary_blocks"]
@@ -97,7 +151,7 @@ class PostgresRepository:
                     "topic_name": row["topic_name"],
                     "secondary_topic_name": row["secondary_topic_name"],
                     "summary_title": row["summary_title"],
-                    "core_metrics": self._json_to_dict(row["core_metrics"]),
+                    "core_metrics": self._core_metrics_to_dict(row["core_metrics"]),
                     "risk_conclusion": row["risk_conclusion"],
                     "risk_level": row["risk_level"],
                     "is_clickable": row["is_clickable"],
@@ -399,6 +453,35 @@ class PostgresRepository:
                 "SELECT id, rule_code FROM terror_rules"
             ).fetchall()
             rule_id_by_code = {row["rule_code"]: str(row["id"]) for row in rule_rows}
+            preserved_manual_rows = conn.execute(
+                """
+                SELECT a.id, a.alert_no, a.extra_payload, ar.review_status, ar.assignment_status,
+                       ar.assigned_reviewer_name, ar.assigned_at, ar.reviewer_name, ar.review_result,
+                       ar.review_comment, ar.reviewed_at
+                FROM terror_alerts a
+                LEFT JOIN terror_alert_reviews ar ON ar.alert_id = a.id
+                """
+            ).fetchall()
+            preserved_manual = []
+            for row in preserved_manual_rows:
+                payload = self._ensure_ticket_payload(self._json_to_object(row["extra_payload"]))
+                if payload.get("source_ref_type") == "manual":
+                    preserved_manual.append(
+                        {
+                            "alert_no": row["alert_no"],
+                            "extra_payload": payload,
+                            "review": {
+                                "review_status": row["review_status"] or "pending",
+                                "assignment_status": row["assignment_status"] or "unassigned",
+                                "assigned_reviewer_name": row["assigned_reviewer_name"],
+                                "assigned_at": row["assigned_at"],
+                                "reviewer_name": row["reviewer_name"],
+                                "review_result": row["review_result"],
+                                "review_comment": row["review_comment"],
+                                "reviewed_at": row["reviewed_at"],
+                            },
+                        }
+                    )
             job_row = conn.execute(
                 """
                 INSERT INTO terror_detection_jobs (
@@ -425,6 +508,9 @@ class PostgresRepository:
             conn.execute("DELETE FROM terror_alert_evidences")
             conn.execute("DELETE FROM terror_alerts")
             for alert in alerts:
+                extra_payload = self._ensure_ticket_payload(
+                    {"related_transactions": alert["related_transactions"]}
+                )
                 alert_row = conn.execute(
                     """
                     INSERT INTO terror_alerts (
@@ -460,7 +546,7 @@ class PostgresRepository:
                         alert["evidence_count"],
                         alert["latest_evidence_summary"],
                         alert["alert_summary"],
-                        json.dumps({"related_transactions": alert["related_transactions"]}),
+                        json.dumps(extra_payload),
                     ),
                 ).fetchone()
                 for evidence in alert["evidences"]:
@@ -499,6 +585,56 @@ class PostgresRepository:
                         alert["review"]["review_comment"],
                     ),
                 )
+            for item in preserved_manual:
+                alert_row = conn.execute(
+                    """
+                    INSERT INTO terror_alerts (
+                      alert_no, job_id, rule_id, rule_code, rule_name, risk_level, alert_status, review_status,
+                      member_unit_code, member_unit_name, payer_name, payer_account, payee_name, payee_account,
+                      transaction_date, matched_amount, matched_count, evidence_count, latest_evidence_summary,
+                      alert_summary, extra_payload
+                    )
+                    VALUES (
+                      %s, %s::uuid, NULL, %s, %s, %s, 'open', %s,
+                      NULL, %s, NULL, NULL, NULL, NULL, NULL, %s, %s, %s, NULL, %s, %s::jsonb
+                    )
+                    RETURNING id
+                    """,
+                    (
+                        item["alert_no"],
+                        str(job_row["id"]),
+                        "manual_ticket",
+                        item["extra_payload"].get("ticket_title") or "手工单据",
+                        "warn",
+                        item["review"]["review_status"],
+                        item["extra_payload"].get("ticket_title") or "手工单据",
+                        0,
+                        0,
+                        0,
+                        item["extra_payload"].get("ticket_content") or item["extra_payload"].get("ticket_reason") or "",
+                        json.dumps(item["extra_payload"]),
+                    ),
+                ).fetchone()
+                conn.execute(
+                    """
+                    INSERT INTO terror_alert_reviews (
+                      alert_id, review_status, assignment_status, assigned_reviewer_name, assigned_at,
+                      reviewer_name, review_result, review_comment, reviewed_at
+                    )
+                    VALUES (%s::uuid, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        str(alert_row["id"]),
+                        item["review"]["review_status"],
+                        item["review"]["assignment_status"],
+                        item["review"]["assigned_reviewer_name"],
+                        item["review"]["assigned_at"],
+                        item["review"]["reviewer_name"],
+                        item["review"]["review_result"],
+                        item["review"]["review_comment"],
+                        item["review"]["reviewed_at"],
+                    ),
+                )
             self._refresh_summary_from_alerts(conn, alerts, latest_job)
             conn.commit()
         return latest_job
@@ -509,6 +645,13 @@ class PostgresRepository:
         rule_type: str | None = None,
         risk_level: str | None = None,
         member_unit: str | None = None,
+        ticket_type: str | None = None,
+        trigger_source: str | None = None,
+        dispatch_status: str | None = None,
+        feedback_status: str | None = None,
+        review_status: str | None = None,
+        recheck_status: str | None = None,
+        is_overdue: bool | None = None,
     ) -> dict[str, object]:
         clauses = []
         params: list[object] = []
@@ -528,7 +671,7 @@ class PostgresRepository:
                 SELECT a.id, a.alert_no, a.rule_code, a.rule_name, a.risk_level, a.member_unit_code,
                        a.member_unit_name, a.payer_name, a.payee_name, a.transaction_date, a.matched_amount,
                        a.review_status, ar.assignment_status, ar.assigned_reviewer_name, ar.assigned_at,
-                       a.evidence_count, a.alert_summary
+                       a.evidence_count, a.alert_summary, a.extra_payload
                 FROM terror_alerts a
                 LEFT JOIN terror_alert_reviews ar ON ar.alert_id = a.id
                 {where_sql}
@@ -536,10 +679,17 @@ class PostgresRepository:
                 """,
                 params,
             ).fetchall()
-        items = [
-            {
+        items = []
+        for row in rows:
+            payload = self._ensure_ticket_payload(self._json_to_object(row["extra_payload"]))
+            item = {
                 "id": str(row["id"]),
                 "alert_no": row["alert_no"],
+                "ticket_type": payload["ticket_type"],
+                "ticket_type_label": self._ticket_type_label(str(payload["ticket_type"])),
+                "trigger_source": payload["trigger_source"],
+                "trigger_source_label": self._trigger_source_label(str(payload["trigger_source"])),
+                "ticket_title": payload["ticket_title"],
                 "rule_code": row["rule_code"],
                 "rule_name": row["rule_name"],
                 "risk_level": row["risk_level"],
@@ -549,15 +699,34 @@ class PostgresRepository:
                 "payee_name": row["payee_name"],
                 "transaction_date": str(row["transaction_date"]) if row["transaction_date"] else None,
                 "matched_amount": f"{float(row['matched_amount']) / 10000:.2f}万元",
+                "dispatch_status": payload["dispatch_status"],
+                "feedback_status": payload["feedback_status"],
                 "review_status": row["review_status"],
+                "recheck_status": payload["recheck_status"],
                 "assignment_status": row["assignment_status"] or "unassigned",
                 "assigned_reviewer_name": row["assigned_reviewer_name"],
                 "assigned_at": row["assigned_at"].isoformat() if row["assigned_at"] else None,
+                "deadline_at": payload["deadline_at"],
+                "is_overdue": bool(payload["is_overdue"]),
+                "continuous_warning_count": int(payload["continuous_warning_count"]),
                 "evidence_count": row["evidence_count"],
                 "alert_summary": row["alert_summary"],
             }
-            for row in rows
-        ]
+            if ticket_type and item["ticket_type"] != ticket_type:
+                continue
+            if trigger_source and item["trigger_source"] != trigger_source:
+                continue
+            if dispatch_status and item["dispatch_status"] != dispatch_status:
+                continue
+            if feedback_status and item["feedback_status"] != feedback_status:
+                continue
+            if review_status and item["review_status"] != review_status:
+                continue
+            if recheck_status and item["recheck_status"] != recheck_status:
+                continue
+            if is_overdue is not None and item["is_overdue"] is not is_overdue:
+                continue
+            items.append(item)
         return {"total": len(items), "items": items}
 
     def get_terror_alert(self, alert_id: str) -> dict[str, object] | None:
@@ -593,15 +762,25 @@ class PostgresRepository:
                 """,
                 (alert_id,),
             ).fetchone()
-        extra_payload = alert["extra_payload"] or {}
+        extra_payload = self._ensure_ticket_payload(self._json_to_object(alert["extra_payload"]))
         return {
             "id": str(alert["id"]),
             "alert_no": alert["alert_no"],
+            "ticket_type": extra_payload.get("ticket_type", "warning_notice"),
+            "ticket_type_label": self._ticket_type_label(str(extra_payload.get("ticket_type"))),
+            "trigger_source": extra_payload.get("trigger_source"),
+            "trigger_source_label": self._trigger_source_label(str(extra_payload.get("trigger_source"))),
+            "ticket_title": extra_payload.get("ticket_title"),
+            "ticket_reason": extra_payload.get("ticket_reason"),
+            "ticket_content": extra_payload.get("ticket_content"),
             "rule_code": alert["rule_code"],
             "rule_name": alert["rule_name"],
             "risk_level": alert["risk_level"],
             "alert_status": alert["alert_status"],
+            "dispatch_status": extra_payload.get("dispatch_status", "pending"),
+            "feedback_status": extra_payload.get("feedback_status", "pending"),
             "review_status": alert["review_status"],
+            "recheck_status": extra_payload.get("recheck_status", "pending"),
             "member_unit_code": alert["member_unit_code"],
             "member_unit_name": alert["member_unit_name"],
             "payer_name": alert["payer_name"],
@@ -611,6 +790,11 @@ class PostgresRepository:
             "transaction_date": str(alert["transaction_date"]) if alert["transaction_date"] else None,
             "matched_amount": f"{float(alert['matched_amount']) / 10000:.2f}万元",
             "matched_count": alert["matched_count"],
+            "deadline_at": extra_payload.get("deadline_at"),
+            "is_overdue": bool(extra_payload.get("is_overdue", False)),
+            "continuous_warning_count": int(extra_payload.get("continuous_warning_count", 0)),
+            "source_ref_type": extra_payload.get("source_ref_type"),
+            "source_ref_id": extra_payload.get("source_ref_id"),
             "evidence_count": alert["evidence_count"],
             "latest_evidence_summary": alert["latest_evidence_summary"],
             "alert_summary": alert["alert_summary"],
@@ -634,6 +818,22 @@ class PostgresRepository:
                 "review_comment": review["review_comment"] if review else "",
                 "reviewed_at": review["reviewed_at"].isoformat() if review and review["reviewed_at"] else None,
             },
+            "feedback": extra_payload.get("feedback", {
+                "feedback_status": "pending",
+                "feedback_result": "",
+                "feedback_comment": "",
+                "operator_name": "",
+                "feedback_at": None,
+            }),
+            "recheck": extra_payload.get("recheck", {
+                "recheck_status": "pending",
+                "recheck_result": "",
+                "recheck_comment": "",
+                "operator_name": "",
+                "rechecked_at": None,
+            }),
+            "ack_records": extra_payload.get("ack_records", []),
+            "flow_logs": extra_payload.get("flow_logs", []),
             "related_transactions": extra_payload.get("related_transactions", []),
         }
 
@@ -657,7 +857,111 @@ class PostgresRepository:
             conn.commit()
         if not result:
             return None
+        self._append_flow_log(
+            alert_id,
+            action_type="dispatch",
+            action_result="assigned",
+            action_comment="已派发审核人",
+            operator_name=str(payload["assignedReviewerName"]),
+        )
+        self._update_ticket_payload(
+            alert_id,
+            {"dispatch_status": "dispatched"},
+        )
         return self.get_terror_alert(alert_id)
+
+    def create_manual_alert(self, payload: dict[str, object]) -> dict[str, object]:
+        extra_payload = self._ensure_ticket_payload(
+            {
+                "ticket_type": payload.get("ticket_type", "warning_notice"),
+                "trigger_source": payload.get("trigger_source", "leader_instruction"),
+                "ticket_title": payload.get("ticket_title", ""),
+                "ticket_reason": payload.get("ticket_reason", ""),
+                "ticket_content": payload.get("ticket_content", ""),
+                "dispatch_status": "pending",
+                "feedback_status": "pending",
+                "recheck_status": "pending",
+                "deadline_at": payload.get("deadline_at"),
+                "is_overdue": payload.get("is_overdue", False),
+                "continuous_warning_count": payload.get("continuous_warning_count", 0),
+                "source_ref_type": "manual",
+                "source_ref_id": None,
+                "related_transactions": [],
+            }
+        )
+        with self._connection() as conn:
+            row = conn.execute(
+                """
+                INSERT INTO terror_alerts (
+                  alert_no, job_id, rule_id, rule_code, rule_name, risk_level, alert_status, review_status,
+                  member_unit_code, member_unit_name, payer_name, payer_account, payee_name, payee_account,
+                  transaction_date, matched_amount, matched_count, evidence_count, latest_evidence_summary,
+                  alert_summary, extra_payload
+                )
+                VALUES (
+                  CONCAT('RT-', to_char(now(), 'YYYYMMDDHH24MISSMS')),
+                  (
+                    SELECT id
+                    FROM terror_detection_jobs
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                  ),
+                  (
+                    SELECT id
+                    FROM terror_rules
+                    WHERE rule_code = %(rule_code)s
+                    ORDER BY sort_order, created_at
+                    LIMIT 1
+                  ),
+                  %(rule_code)s,
+                  %(rule_name)s,
+                  %(risk_level)s,
+                  'open',
+                  'pending',
+                  %(member_unit_code)s,
+                  %(member_unit_name)s,
+                  NULL,
+                  NULL,
+                  NULL,
+                  NULL,
+                  NULL,
+                  0,
+                  0,
+                  0,
+                  NULL,
+                  %(alert_summary)s,
+                  %(extra_payload)s::jsonb
+                )
+                RETURNING id
+                """,
+                {
+                    "rule_code": payload.get("rule_code", "blacklist_hit"),
+                    "rule_name": payload.get("ticket_title") or self._ticket_type_label(str(payload.get("ticket_type"))),
+                    "risk_level": payload.get("risk_level", "warn"),
+                    "member_unit_code": payload.get("member_unit_code"),
+                    "member_unit_name": payload["member_unit_name"],
+                    "alert_summary": payload.get("ticket_content") or payload.get("ticket_reason") or "",
+                    "extra_payload": json.dumps(extra_payload),
+                },
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO terror_alert_reviews (
+                  alert_id, review_status, assignment_status, created_by, updated_by
+                )
+                VALUES (%s::uuid, 'pending', 'unassigned', 'api', 'api')
+                """,
+                (str(row["id"]),),
+            )
+            conn.commit()
+        self._append_flow_log(
+            str(row["id"]),
+            action_type="manual_create",
+            action_result=str(extra_payload["ticket_type"]),
+            action_comment=str(extra_payload["ticket_reason"]),
+            operator_name="system",
+        )
+        return self.get_terror_alert(str(row["id"]))
 
     def save_review(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
         with self._connection() as conn:
@@ -688,7 +992,132 @@ class PostgresRepository:
             conn.commit()
         if not result:
             return None
+        self._append_flow_log(
+            alert_id,
+            action_type="review",
+            action_result=str(payload.get("review_status", "pending")),
+            action_comment=str(payload.get("review_comment", "")),
+            operator_name=str(payload.get("reviewer_name", "")),
+        )
         return self.get_terror_alert(alert_id)
+
+    def save_feedback(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        current = self.get_terror_alert(alert_id)
+        if current is None:
+            return None
+        feedback = {
+            "feedback_status": str(payload.get("feedback_status", "submitted")),
+            "feedback_result": str(payload.get("feedback_result", "")),
+            "feedback_comment": str(payload.get("feedback_comment", "")),
+            "operator_name": str(payload.get("operator_name", "")),
+            "feedback_at": "now",
+        }
+        self._update_ticket_payload(alert_id, {"feedback": feedback, "feedback_status": feedback["feedback_status"]})
+        self._append_flow_log(
+            alert_id,
+            action_type="feedback",
+            action_result=feedback["feedback_status"],
+            action_comment=feedback["feedback_comment"],
+            operator_name=feedback["operator_name"],
+        )
+        return self.get_terror_alert(alert_id)
+
+    def save_recheck(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        current = self.get_terror_alert(alert_id)
+        if current is None:
+            return None
+        recheck = {
+            "recheck_status": str(payload.get("recheck_status", "pending")),
+            "recheck_result": str(payload.get("recheck_result", "")),
+            "recheck_comment": str(payload.get("recheck_comment", "")),
+            "operator_name": str(payload.get("operator_name", "")),
+            "rechecked_at": "now",
+        }
+        self._update_ticket_payload(alert_id, {"recheck": recheck, "recheck_status": recheck["recheck_status"]})
+        self._append_flow_log(
+            alert_id,
+            action_type="recheck",
+            action_result=recheck["recheck_status"],
+            action_comment=recheck["recheck_comment"],
+            operator_name=recheck["operator_name"],
+        )
+        return self.get_terror_alert(alert_id)
+
+    def save_ack(self, alert_id: str, payload: dict[str, object]) -> dict[str, object] | None:
+        current = self.get_terror_alert(alert_id)
+        if current is None:
+            return None
+        ack_records = list(current.get("ack_records", []))
+        ack_record = {
+            "ack_status": "read",
+            "operator_name": str(payload.get("operator_name", "")),
+            "ack_comment": str(payload.get("ack_comment", "")),
+            "ack_at": "now",
+        }
+        ack_records.append(ack_record)
+        self._update_ticket_payload(alert_id, {"ack_records": ack_records})
+        self._append_flow_log(
+            alert_id,
+            action_type="ack",
+            action_result="read",
+            action_comment=ack_record["ack_comment"],
+            operator_name=ack_record["operator_name"],
+        )
+        return self.get_terror_alert(alert_id)
+
+    def _update_ticket_payload(self, alert_id: str, updates: dict[str, object]) -> None:
+        with self._connection() as conn:
+            row = conn.execute(
+                "SELECT extra_payload FROM terror_alerts WHERE id = %s::uuid",
+                (alert_id,),
+            ).fetchone()
+            if not row:
+                return
+            payload = self._ensure_ticket_payload(self._json_to_object(row["extra_payload"]))
+            payload.update(updates)
+            conn.execute(
+                """
+                UPDATE terror_alerts
+                SET extra_payload = %s::jsonb
+                WHERE id = %s::uuid
+                """,
+                (json.dumps(payload), alert_id),
+            )
+            conn.commit()
+
+    def _append_flow_log(
+        self,
+        alert_id: str,
+        *,
+        action_type: str,
+        action_result: str,
+        action_comment: str = "",
+        operator_name: str = "",
+    ) -> None:
+        with self._connection() as conn:
+            row = conn.execute(
+                "SELECT extra_payload FROM terror_alerts WHERE id = %s::uuid",
+                (alert_id,),
+            ).fetchone()
+            if not row:
+                return
+            payload = self._ensure_ticket_payload(self._json_to_object(row["extra_payload"]))
+            flow_logs = list(payload.get("flow_logs", []))
+            flow_logs.append(
+                {
+                    "action_type": action_type,
+                    "action_result": action_result,
+                    "action_comment": action_comment,
+                    "operator_name": operator_name,
+                    "created_at": "now",
+                }
+            )
+            payload["flow_logs"] = flow_logs
+            conn.execute(
+                "UPDATE terror_alerts SET extra_payload = %s::jsonb WHERE id = %s::uuid",
+                (json.dumps(payload), alert_id),
+            )
+            conn.commit()
 
     def get_terror_risk_topic(self) -> dict[str, object]:
         alerts_payload = self.list_terror_alerts()["items"]
@@ -795,7 +1224,19 @@ class PostgresRepository:
         )
 
     @staticmethod
-    def _json_to_dict(core_metrics: object) -> dict[str, str]:
+    def _json_to_object(value: object) -> dict[str, object]:
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                decoded = json.loads(value)
+            except json.JSONDecodeError:
+                return {}
+            return decoded if isinstance(decoded, dict) else {}
+        return {}
+
+    @staticmethod
+    def _core_metrics_to_dict(core_metrics: object) -> dict[str, str]:
         if isinstance(core_metrics, dict):
             return {str(key): str(value) for key, value in core_metrics.items()}
         if isinstance(core_metrics, list):

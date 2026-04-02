@@ -9,13 +9,22 @@ export function AlertDetailPage({
   onBack,
   onSaveReview,
   onAssignReviewer,
+  onSaveFeedback,
+  onSaveRecheck,
+  onSaveAck,
 }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(() => buildReviewDraft(null));
   const [assignmentDraft, setAssignmentDraft] = useState(() => buildAssignmentDraft(null));
+  const [feedbackDraft, setFeedbackDraft] = useState(() => buildFeedbackDraft(null));
+  const [recheckDraft, setRecheckDraft] = useState(() => buildRecheckDraft(null));
+  const [ackDraft, setAckDraft] = useState(() => buildAckDraft());
   const [saveState, setSaveState] = useState("idle");
   const [assignState, setAssignState] = useState("idle");
+  const [feedbackState, setFeedbackState] = useState("idle");
+  const [recheckState, setRecheckState] = useState("idle");
+  const [ackState, setAckState] = useState("idle");
   const [loadError, setLoadError] = useState("");
 
   const fetchDetail = useCallback(async () => {
@@ -32,6 +41,9 @@ export function AlertDetailPage({
         setDetail(data);
         setDraft(buildReviewDraft(data.review));
         setAssignmentDraft(buildAssignmentDraft(data.review));
+        setFeedbackDraft(buildFeedbackDraft(data.feedback));
+        setRecheckDraft(buildRecheckDraft(data.recheck));
+        setAckDraft(buildAckDraft());
         setLoading(false);
       }
     } catch {
@@ -39,6 +51,9 @@ export function AlertDetailPage({
         setDetail(null);
         setDraft(buildReviewDraft(null));
         setAssignmentDraft(buildAssignmentDraft(null));
+        setFeedbackDraft(buildFeedbackDraft(null));
+        setRecheckDraft(buildRecheckDraft(null));
+        setAckDraft(buildAckDraft());
         setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
         setLoading(false);
       }
@@ -56,6 +71,9 @@ export function AlertDetailPage({
           setDetail(data);
           setDraft(buildReviewDraft(data.review));
           setAssignmentDraft(buildAssignmentDraft(data.review));
+          setFeedbackDraft(buildFeedbackDraft(data.feedback));
+          setRecheckDraft(buildRecheckDraft(data.recheck));
+          setAckDraft(buildAckDraft());
           setLoadError("");
           setLoading(false);
         }
@@ -64,6 +82,9 @@ export function AlertDetailPage({
           setDetail(null);
           setDraft(buildReviewDraft(null));
           setAssignmentDraft(buildAssignmentDraft(null));
+          setFeedbackDraft(buildFeedbackDraft(null));
+          setRecheckDraft(buildRecheckDraft(null));
+          setAckDraft(buildAckDraft());
           setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
           setLoading(false);
         }
@@ -79,9 +100,13 @@ export function AlertDetailPage({
 
   const evidenceSections = useMemo(() => detail?.evidences || [], [detail]);
   const relatedTransactions = detail?.related_transactions || [];
+  const ticketTypeLabel = getTicketTypeLabel(detail?.ticket_type);
+  const reviewLabel = getReviewLabel(detail?.review?.review_status);
+  const isRiskTip = detail?.ticket_type === "risk_tip";
+  const isSupervision = detail?.ticket_type === "supervision";
 
   const handleSave = async () => {
-    if (detail.review.assignment_status !== "assigned") {
+    if (detail.review.assignment_status !== "assigned" || isRiskTip) {
       setSaveState("error");
       return;
     }
@@ -139,21 +164,22 @@ export function AlertDetailPage({
           style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}
         >
           <div>
-            <div style={eyebrowStyle}>风险核查详情</div>
+            <div style={eyebrowStyle}>{ticketTypeLabel}详情</div>
             <h2 style={{ margin: "10px 0 0", fontSize: 30, color: "#0f172a", lineHeight: 1.25 }}>
-              {detail.rule_name}
+              {detail.ticket_title || detail.rule_name}
             </h2>
             <div style={{ marginTop: 10, color: "#405066", maxWidth: 920, lineHeight: 1.75, fontSize: 15 }}>
-              {detail.alert_summary}
+              {detail.ticket_content || detail.alert_summary}
             </div>
             <div style={heroMetaRowStyle}>
               <span style={heroBadgeStyle.primary}>{detail.alert_no}</span>
+              <span style={heroBadgeStyle.secondary}>{ticketTypeLabel}</span>
               <span style={heroBadgeStyle.secondary}>
                 {detail.risk_level === "high" ? "高风险" : "预警关注"}
               </span>
-              <span style={heroBadgeStyle.secondary}>{detail.review.review_status === "reviewed" ? "已核查" : "待核查"}</span>
+              <span style={heroBadgeStyle.secondary}>{reviewLabel}</span>
               <span style={assignmentStatusStyle(detail.review.assignment_status)}>
-                {detail.review.assignment_status === "assigned" ? "已分配" : "待分配"}
+                {detail.review.assignment_status === "assigned" ? "已派发" : "待派发"}
               </span>
             </div>
           </div>
@@ -167,10 +193,11 @@ export function AlertDetailPage({
         <div style={metaGridStyle}>
           {[
             ["成员单位", detail.member_unit_name],
-            ["交易对手", detail.payee_name],
+            ["触发来源", detail.trigger_source_label || detail.trigger_source || "-"],
             ["交易日期", detail.transaction_date],
             ["风险等级", detail.risk_level === "high" ? "高风险" : "预警关注"],
             ["涉金额", formatAmountDisplay(detail.matched_amount)],
+            ["截止时间", detail.deadline_at || "未设置"],
             ["证据数", `${detail.evidence_count}`],
           ].map(([label, value]) => (
             <div key={label} style={metaCardStyle}>
@@ -185,7 +212,7 @@ export function AlertDetailPage({
 
       <div style={contentGridStyle} className="alert-detail-grid">
         <section style={panelStyle}>
-          <div style={panelTitleStyle}>命中规则与解释</div>
+          <div style={panelTitleStyle}>触发依据与命中规则</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>
             {detail.latest_evidence_summary}
           </div>
@@ -194,13 +221,9 @@ export function AlertDetailPage({
           </div>
           <div style={ruleSummaryGridStyle}>
             <div style={ruleSummaryCardStyle}>
-              <div style={ruleSummaryLabelStyle}>核查状态</div>
+              <div style={ruleSummaryLabelStyle}>审核状态</div>
               <div style={ruleSummaryValueStyle}>
-                {detail.review.review_status === "reviewed"
-                  ? "已核查"
-                  : detail.review.review_status === "closed"
-                    ? "已关闭"
-                    : "待核查"}
+                {reviewLabel}
               </div>
             </div>
           </div>
@@ -299,14 +322,14 @@ export function AlertDetailPage({
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
-                    审核分配
+                    单据派发
                   </div>
                   <div style={{ fontSize: 13, color: "#556070", lineHeight: 1.7 }}>
-                    先将当前风险记录分配给具体审核人员，再进入人工核查。
+                    将当前单据派发给具体处理人，再进入后续流程。
                   </div>
                 </div>
                 <span style={assignmentStatusStyle(detail.review.assignment_status)}>
-                  {detail.review.assignment_status === "assigned" ? "已分配" : "待分配"}
+                  {detail.review.assignment_status === "assigned" ? "已派发" : "待派发"}
                 </span>
               </div>
 
@@ -321,10 +344,10 @@ export function AlertDetailPage({
                   />
                 </label>
                 <div style={assignmentMetaCardStyle}>
-                  <div style={assignmentMetaLabelStyle}>当前审核人</div>
-                  <div style={assignmentMetaValueStyle}>{detail.review.assigned_reviewer_name || "待分配"}</div>
+                  <div style={assignmentMetaLabelStyle}>当前处理人</div>
+                  <div style={assignmentMetaValueStyle}>{detail.review.assigned_reviewer_name || "待派发"}</div>
                   <div style={assignmentMetaHintStyle}>
-                    {detail.review.assigned_at ? `分配时间 ${detail.review.assigned_at}` : "尚未完成分配"}
+                    {detail.review.assigned_at ? `派发时间 ${detail.review.assigned_at}` : "尚未完成派发"}
                   </div>
                 </div>
               </div>
@@ -332,38 +355,36 @@ export function AlertDetailPage({
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
                 <div style={{ fontSize: 12, color: assignState === "error" ? "#b42318" : "#64748b" }}>
                   {assignState === "error"
-                    ? "分配失败，请检查审核人员名称后重试。"
+                    ? "派发失败，请检查处理人名称后重试。"
                     : detail.review.assigned_at
-                      ? `当前记录已分配给 ${detail.review.assigned_reviewer_name || "审核人员"}`
-                      : "当前记录尚未分配审核人员"}
+                      ? `当前单据已派发给 ${detail.review.assigned_reviewer_name || "处理人"}`
+                      : "当前单据尚未派发处理人"}
                 </div>
                 <button type="button" onClick={handleAssign} style={secondaryButtonStyle}>
-                  {assignState === "saving" ? "分配中..." : assignState === "saved" ? "已分配" : "分配审核人"}
+                  {assignState === "saving" ? "派发中..." : assignState === "saved" ? "已派发" : "派发处理人"}
                 </button>
               </div>
             </div>
 
+            {!isRiskTip && (
+              <>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
-                  核查结论提交
+                  审核结论提交
                 </div>
                 <div style={{ fontSize: 13, color: "#556070", lineHeight: 1.7 }}>
-                  填写核查结果并提交，作为本条风险的最终处置记录。
+                  填写审核结果并提交，作为当前单据的处置记录。
                 </div>
               </div>
               <span style={reviewStatusStyle(detail.review.review_status)}>
-                {detail.review.review_status === "reviewed"
-                  ? "已核查"
-                  : detail.review.review_status === "closed"
-                    ? "已关闭"
-                    : "待核查"}
+                {reviewLabel}
               </span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 14 }}>
               <label style={fieldLabelStyle}>
-                <span style={fieldTitleStyle}>核查人</span>
+                <span style={fieldTitleStyle}>审核人</span>
                 <input
                   value={draft.reviewer_name}
                   onChange={(event) => setDraft((prev) => ({ ...prev, reviewer_name: event.target.value }))}
@@ -372,26 +393,26 @@ export function AlertDetailPage({
                 />
               </label>
               <label style={fieldLabelStyle}>
-                <span style={fieldTitleStyle}>核查状态</span>
+                <span style={fieldTitleStyle}>审核状态</span>
                 <select
                   value={draft.review_status}
                   onChange={(event) => setDraft((prev) => ({ ...prev, review_status: event.target.value }))}
                   style={inputStyle}
                 >
-                  <option value="pending">待核查</option>
-                  <option value="reviewed">已核查</option>
-                  <option value="closed">已关闭</option>
+                  <option value="pending">待审核</option>
+                  <option value="approved">已审核</option>
+                  <option value="rejected">已退回</option>
                 </select>
               </label>
             </div>
 
             <label style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-              <span style={fieldTitleStyle}>核查结论</span>
+              <span style={fieldTitleStyle}>审核结论</span>
               <textarea
                 value={draft.review_result}
                 onChange={(event) => setDraft((prev) => ({ ...prev, review_result: event.target.value }))}
                 rows={3}
-                placeholder="请输入核查结论"
+                placeholder="请输入审核结论"
                 style={textareaStyle}
               />
             </label>
@@ -411,11 +432,11 @@ export function AlertDetailPage({
               <div style={{ fontSize: 12, color: saveState === "error" ? "#b42318" : "#64748b" }}>
                 {saveState === "error"
                   ? detail.review.assignment_status !== "assigned"
-                    ? "请先完成审核分配，再提交核查结论。"
-                    : "提交失败，核查结果尚未写入数据库。"
+                    ? "请先完成单据派发，再提交审核结论。"
+                    : "提交失败，审核结果尚未写入数据库。"
                   : detail.review.reviewed_at
                     ? `已于 ${detail.review.reviewed_at} 保存`
-                    : "当前尚未保存核查结果"}
+                    : "当前尚未保存审核结果"}
               </div>
               <button
                 type="button"
@@ -423,8 +444,36 @@ export function AlertDetailPage({
                 style={saveButtonStyle(detail.review.assignment_status !== "assigned")}
                 disabled={detail.review.assignment_status !== "assigned" || saveState === "saving"}
               >
-                {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : saveState === "error" ? "重试提交" : "提交核查结论"}
+                {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : saveState === "error" ? "重试提交" : "提交审核结论"}
               </button>
+            </div>
+              </>
+            )}
+
+            <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
+              <div style={assignmentMetaCardStyle}>
+                <div style={assignmentMetaLabelStyle}>反馈状态</div>
+                <div style={assignmentMetaValueStyle}>{getFlowLabel(detail.feedback?.feedback_status, "待反馈")}</div>
+                <div style={assignmentMetaHintStyle}>{detail.feedback?.feedback_result || "暂无反馈记录"}</div>
+              </div>
+              <div style={assignmentMetaCardStyle}>
+                <div style={assignmentMetaLabelStyle}>{isRiskTip ? "阅知记录" : "复核状态"}</div>
+                <div style={assignmentMetaValueStyle}>
+                  {isRiskTip ? `${detail.ack_records?.length || 0} 条` : getFlowLabel(detail.recheck?.recheck_status, "待复核")}
+                </div>
+                <div style={assignmentMetaHintStyle}>
+                  {isRiskTip
+                    ? (detail.ack_records?.[detail.ack_records.length - 1]?.operator_name || "暂无阅知记录")
+                    : (detail.recheck?.recheck_result || "暂无复核记录")}
+                </div>
+              </div>
+              {isSupervision && (
+                <div style={assignmentMetaCardStyle}>
+                  <div style={assignmentMetaLabelStyle}>督办时限</div>
+                  <div style={assignmentMetaValueStyle}>{detail.deadline_at || "未设置"}</div>
+                  <div style={assignmentMetaHintStyle}>{detail.is_overdue ? "当前已逾期" : "当前未逾期"}</div>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -446,6 +495,26 @@ function buildAssignmentDraft(review) {
   return {
     assignedReviewerName: review?.assigned_reviewer_name || "",
   };
+}
+
+function getTicketTypeLabel(ticketType) {
+  if (ticketType === "risk_tip") return "风险提示单";
+  if (ticketType === "supervision") return "风险督办单";
+  return "风险预警单";
+}
+
+function getReviewLabel(status) {
+  if (status === "approved") return "已审核";
+  if (status === "rejected") return "已退回";
+  return "待审核";
+}
+
+function getFlowLabel(status, fallback) {
+  if (status === "submitted") return "已反馈";
+  if (status === "completed") return "已完成";
+  if (status === "passed") return "已复核";
+  if (status === "returned") return "已退回";
+  return fallback;
 }
 
 function pageShellStyle(embedded) {
@@ -634,13 +703,13 @@ function smallBadgeStyle(level) {
 }
 
 function reviewStatusStyle(status) {
-  const isClosed = status === "closed";
-  const isReviewed = status === "reviewed";
+  const isRejected = status === "rejected";
+  const isApproved = status === "approved";
   return {
     padding: "6px 10px",
     borderRadius: 999,
-    background: isReviewed ? "#e8f5ef" : isClosed ? "#eef2f7" : "#fff4e5",
-    color: isReviewed ? "#0f7a3e" : isClosed ? "#516072" : "#b45309",
+    background: isApproved ? "#e8f5ef" : isRejected ? "#fff5f5" : "#fff4e5",
+    color: isApproved ? "#0f7a3e" : isRejected ? "#b42318" : "#b45309",
     fontSize: 12,
     fontWeight: 800,
     whiteSpace: "nowrap",
