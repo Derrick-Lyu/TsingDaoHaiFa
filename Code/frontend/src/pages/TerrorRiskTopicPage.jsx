@@ -302,8 +302,8 @@ export function TerrorRiskTopicPage({
       <div style={insightGridStyle}>
         <section style={insightPanelStyle}>
           <div style={panelHeaderStyle}>
-            <div style={panelTitleStyle}>监管闭环</div>
-            <span style={sectionMetaPillStyle}>流程穿透</span>
+            <div style={panelTitleStyle}>未完成事项跟踪</div>
+            <span style={sectionMetaPillStyle}>优先看待办，不看已完成</span>
           </div>
           {dashboard.supervisionFunnel.length ? (
             <div style={funnelListStyle}>

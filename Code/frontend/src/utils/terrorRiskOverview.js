@@ -234,38 +234,81 @@ function normalizeSupervisionFunnel(topic, alerts, latestJob) {
   }
 
   const matchedCount = toNumber(latestJob.matched_count) || alerts.length;
-  const assignedCount = alerts.filter((item) => String(item?.assignment_status) === "assigned").length;
-  const reviewedCount = alerts.filter((item) => String(item?.review_status) === "reviewed").length;
-  const highRiskCount = alerts.filter((item) => normalizeRiskLevel(item?.risk_level) === "high").length;
+  const pendingDispatchCount = alerts.filter((item) => {
+    const assignmentStatus = String(item?.assignment_status ?? item?.assignmentStatus ?? "").toLowerCase();
+    return assignmentStatus !== "assigned";
+  }).length;
+  const pendingFeedbackCount = alerts.filter((item) => {
+    const ticketType = String(item?.ticket_type ?? item?.ticketType ?? "").toLowerCase();
+    const assignmentStatus = String(item?.assignment_status ?? item?.assignmentStatus ?? "").toLowerCase();
+    const feedbackStatus = String(item?.feedback_status ?? item?.feedbackStatus ?? "").toLowerCase();
+    const ackCount = Number(item?.ack_records?.length ?? 0);
+    if (assignmentStatus !== "assigned") {
+      return false;
+    }
+    if (ticketType === "risk_tip") {
+      return ackCount === 0;
+    }
+    return feedbackStatus === "pending";
+  }).length;
+  const pendingReviewCount = alerts.filter((item) => {
+    const ticketType = String(item?.ticket_type ?? item?.ticketType ?? "").toLowerCase();
+    const feedbackStatus = String(item?.feedback_status ?? item?.feedbackStatus ?? "").toLowerCase();
+    const reviewStatus = String(item?.review_status ?? item?.reviewStatus ?? "").toLowerCase();
+    const recheckStatus = String(item?.recheck_status ?? item?.recheckStatus ?? "").toLowerCase();
+    if (ticketType === "risk_tip") {
+      return false;
+    }
+    if (feedbackStatus === "submitted") {
+      return true;
+    }
+    if (reviewStatus === "approved" && recheckStatus !== "passed") {
+      return true;
+    }
+    return false;
+  }).length;
+  const unresolvedHighRiskCount = alerts.filter((item) => {
+    const ticketType = String(item?.ticket_type ?? item?.ticketType ?? "").toLowerCase();
+    const reviewStatus = String(item?.review_status ?? item?.reviewStatus ?? "").toLowerCase();
+    const recheckStatus = String(item?.recheck_status ?? item?.recheckStatus ?? "").toLowerCase();
+    const ackCount = Number(item?.ack_records?.length ?? 0);
+    if (normalizeRiskLevel(item?.risk_level) !== "high") {
+      return false;
+    }
+    if (ticketType === "risk_tip") {
+      return ackCount === 0;
+    }
+    return !(reviewStatus === "approved" && recheckStatus === "passed");
+  }).length;
 
   return [
     {
-      key: "matched",
-      label: "识别命中",
-      value: matchedCount,
-      note: "进入监管链路的预警总量",
-      status: matchedCount > 0 ? "attention" : "normal",
+      key: "pending_dispatch",
+      label: "待派发事项",
+      value: pendingDispatchCount,
+      note: `已识别 ${matchedCount} 条，其中待明确跟进人的事项`,
+      status: pendingDispatchCount > 0 ? "attention" : "normal",
     },
     {
-      key: "assigned",
-      label: "已分派",
-      value: assignedCount,
-      note: `待分派 ${Math.max(matchedCount - assignedCount, 0)} 条`,
-      status: assignedCount >= matchedCount ? "normal" : "attention",
+      key: "pending_feedback",
+      label: "待反馈事项",
+      value: pendingFeedbackCount,
+      note: "已派发但尚未提交反馈或尚未完成阅知的事项",
+      status: pendingFeedbackCount > 0 ? "warning" : "normal",
     },
     {
-      key: "reviewed",
-      label: "已复核",
-      value: reviewedCount,
-      note: `待复核 ${Math.max(assignedCount - reviewedCount, 0)} 条`,
-      status: reviewedCount >= assignedCount ? "normal" : "warning",
+      key: "pending_review",
+      label: "待审核复核",
+      value: pendingReviewCount,
+      note: "已提交反馈但尚未完成审核或复核的事项",
+      status: pendingReviewCount > 0 ? "warning" : "normal",
     },
     {
-      key: "watch",
-      label: "待督办",
-      value: Math.max(matchedCount - reviewedCount, 0),
-      note: `其中高风险 ${highRiskCount} 条`,
-      status: highRiskCount > 0 ? "high" : "warning",
+      key: "high_risk_watch",
+      label: "高风险待督办",
+      value: unresolvedHighRiskCount,
+      note: "尚未完成闭环、需要持续盯办的高风险事项",
+      status: unresolvedHighRiskCount > 0 ? "high" : "normal",
     },
   ];
 }
