@@ -30,7 +30,11 @@ def detect_terror_risk_alerts(
     blacklist: list[dict[str, object]],
     snapshot_date: str,
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
-    enabled_rules = {rule["ruleCode"]: rule for rule in rules if rule.get("enabled")}
+    enabled_rules = {
+        rule["ruleCode"]: rule
+        for rule in rules
+        if rule.get("enabled") and str(rule.get("ruleCategory", "terror_risk")) == "terror_risk"
+    }
     _validate_case_domain_mapping(enabled_rules)
 
     alerts: list[dict[str, object]] = []
@@ -99,11 +103,16 @@ def _matched_amount_value(alert: dict[str, object]) -> float:
 
 
 def _alert_sort_key(alert: dict[str, object]) -> tuple[object, ...]:
+    transaction_date = str(alert.get("transaction_date") or "")
+    try:
+        transaction_ordinal = date.fromisoformat(transaction_date).toordinal()
+    except ValueError:
+        transaction_ordinal = 0
     return (
         RISK_LEVEL_PRIORITY.get(str(alert.get("risk_level")), 99),
         -int(alert.get("matched_count", 0)),
         -_matched_amount_value(alert),
-        -date.fromisoformat(str(alert.get("transaction_date"))).toordinal(),
+        -transaction_ordinal,
         str(alert.get("alert_no", "")),
     )
 

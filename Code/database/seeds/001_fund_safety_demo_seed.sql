@@ -290,6 +290,104 @@ INSERT INTO terror_rules (
   'demo',
   TIMESTAMP '2026-03-31 09:00:00',
   TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-threshold-review'),
+  'post_review_threshold_notice',
+  '模型阈值回顾预警规则',
+  'risk_ticket_workflow',
+  '针对模型阈值异常事项形成事后预警回顾和跟踪说明。',
+  'high',
+  TRUE,
+  4,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-leader-warning'),
+  'leader_attention_notice',
+  '领导批示预警规则',
+  'risk_ticket_workflow',
+  '根据领导批示事项发起风险预警单并跟踪处置进展。',
+  'warn',
+  TRUE,
+  5,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-audit-rectification'),
+  'audit_rectification_notice',
+  '审计整改预警规则',
+  'risk_ticket_workflow',
+  '针对审计整改问题开展后续预警跟踪与反馈。',
+  'warn',
+  TRUE,
+  6,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-trend-tip'),
+  'trend_change_notice',
+  '风险趋势提示规则',
+  'risk_ticket_workflow',
+  '针对二道防线风险管理要求或内外部风险趋势变化发起提示单。',
+  'warn',
+  TRUE,
+  7,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-typical-event'),
+  'typical_event_notice',
+  '典型事件提示规则',
+  'risk_ticket_workflow',
+  '对典型风险事件开展系统内普遍提醒和复盘提示。',
+  'warn',
+  TRUE,
+  8,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-three-warnings'),
+  'three_consecutive_warnings',
+  '连续三次预警督办规则',
+  'risk_ticket_workflow',
+  '特定监控模型连续三次预警后自动转入督办跟踪。',
+  'high',
+  TRUE,
+  9,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-rectification-overdue'),
+  'rectification_overdue_notice',
+  '整改逾期督办规则',
+  'risk_ticket_workflow',
+  '针对内外部审计整改逾期事项发起督办单并跟踪落实情况。',
+  'high',
+  TRUE,
+  10,
+  'demo',
+  'demo',
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -355,6 +453,97 @@ INSERT INTO terror_rule_params (
   '元',
   TRUE,
   3,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-threshold-review-enabled'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-threshold-review'),
+  'enabled',
+  '规则启用',
+  'true',
+  'boolean',
+  NULL,
+  TRUE,
+  1,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-leader-warning-enabled'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-leader-warning'),
+  'enabled',
+  '规则启用',
+  'true',
+  'boolean',
+  NULL,
+  TRUE,
+  1,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-audit-rectification-enabled'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-audit-rectification'),
+  'enabled',
+  '规则启用',
+  'true',
+  'boolean',
+  NULL,
+  TRUE,
+  1,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-trend-tip-enabled'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-trend-tip'),
+  'enabled',
+  '规则启用',
+  'true',
+  'boolean',
+  NULL,
+  TRUE,
+  1,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-typical-event-enabled'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-typical-event'),
+  'enabled',
+  '规则启用',
+  'true',
+  'boolean',
+  NULL,
+  TRUE,
+  1,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-three-warnings-threshold'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-three-warnings'),
+  'warning_threshold',
+  '连续预警次数阈值',
+  '3',
+  'number',
+  '次',
+  TRUE,
+  1,
+  TIMESTAMP '2026-03-31 09:00:00',
+  TIMESTAMP '2026-03-31 09:00:00'
+),
+(
+  uuid_generate_v5(uuid_ns_url(), 'terror-param-rectification-overdue-enabled'),
+  uuid_generate_v5(uuid_ns_url(), 'terror-rule-rectification-overdue'),
+  'enabled',
+  '规则启用',
+  'true',
+  'boolean',
+  NULL,
+  TRUE,
+  1,
   TIMESTAMP '2026-03-31 09:00:00',
   TIMESTAMP '2026-03-31 09:00:00'
 ),
@@ -802,7 +991,7 @@ INSERT INTO terror_detection_jobs (
   jsonb_build_object(
     'note', 'Seed snapshot for the three risk ticket types',
     'ticket_type_count', 3,
-    'manual_ticket_count', 7
+    'manual_ticket_count', 27
   ),
   NULL,
   TIMESTAMP '2026-04-03 09:15:00',
@@ -869,8 +1058,8 @@ INSERT INTO terror_alerts (
   'passed',
   'pending',
   '模型阈值异常预警单',
-  '风险监控指标超过正常阈值并命中黑名单，需同步提醒相关部门核查。',
-  '请财务管理部、业务部门和风控条线核实工程款支付合理性，并将整改反馈纳入闭环。',
+  '基于近期风险监控结果形成事后回顾说明，需同步提示相关部门关注风险表现和管理改进点。',
+  '本单据用于回顾说明风险事项的表现、成因和后续改进安排，并形成反馈审核闭环。',
   'monitoring_model',
   'MODEL-WARN-001',
   FALSE,
@@ -894,8 +1083,8 @@ INSERT INTO terror_alerts (
     'ticket_type', 'warning_notice',
     'trigger_source', 'model_threshold',
     'ticket_title', '模型阈值异常预警单',
-    'ticket_reason', '风险监控指标超过正常阈值并命中黑名单，需同步提醒相关部门核查。',
-    'ticket_content', '请财务管理部、业务部门和风控条线核实工程款支付合理性，并将整改反馈纳入闭环。',
+    'ticket_reason', '基于近期风险监控结果形成事后回顾说明，需同步提示相关部门关注风险表现和管理改进点。',
+    'ticket_content', '本单据用于回顾说明风险事项的表现、成因和后续改进安排，并形成反馈审核闭环。',
     'dispatch_status', 'dispatched',
     'feedback_status', 'completed',
     'recheck_status', 'passed',
@@ -1041,8 +1230,8 @@ INSERT INTO terror_alerts (
   'pending',
   'pending',
   '连续三次预警督办单',
-  '特定风控监控模型连续三次预警，需升级为督办并跟踪整改。',
-  '请责任单位限期反馈整改进展，风控条线按督办要求复核落实情况并记录逾期状态。',
+  '基于连续三次预警结果形成督办回顾单，需持续跟踪风险事项的整改进展和管理责任。',
+  '本单据用于说明连续预警的演变过程、整改进度和后续督办要求，并保留逾期跟踪记录。',
   'monitoring_model',
   'MODEL-SUP-001',
   TRUE,
@@ -1066,8 +1255,8 @@ INSERT INTO terror_alerts (
     'ticket_type', 'supervision',
     'trigger_source', 'three_consecutive_warnings',
     'ticket_title', '连续三次预警督办单',
-    'ticket_reason', '特定风控监控模型连续三次预警，需升级为督办并跟踪整改。',
-    'ticket_content', '请责任单位限期反馈整改进展，风控条线按督办要求复核落实情况并记录逾期状态。',
+    'ticket_reason', '基于连续三次预警结果形成督办回顾单，需持续跟踪风险事项的整改进展和管理责任。',
+    'ticket_content', '本单据用于说明连续预警的演变过程、整改进度和后续督办要求，并保留逾期跟踪记录。',
     'dispatch_status', 'dispatched',
     'feedback_status', 'pending',
     'recheck_status', 'pending',
@@ -1118,8 +1307,8 @@ INSERT INTO terror_alerts (
   'pending',
   'pending',
   '审计整改跟踪预警单',
-  '内外部审计发现问题需纳入预警单跟踪整改进展。',
-  '请责任单位补充整改说明及佐证材料，审计问题整改通知和反馈结果需留痕。',
+  '基于审计整改跟踪情况形成预警回顾单，用于说明问题背景、整改安排和阶段反馈。',
+  '本单据用于记录审计问题的回顾说明、整改反馈和后续审核过程，不针对单笔业务作否决处理。',
   'audit_issue',
   'AUDIT-RECT-001',
   FALSE,
@@ -1143,8 +1332,8 @@ INSERT INTO terror_alerts (
     'ticket_type', 'warning_notice',
     'trigger_source', 'audit_rectification',
     'ticket_title', '审计整改跟踪预警单',
-    'ticket_reason', '内外部审计发现问题需纳入预警单跟踪整改进展。',
-    'ticket_content', '请责任单位补充整改说明及佐证材料，审计问题整改通知和反馈结果需留痕。',
+    'ticket_reason', '基于审计整改跟踪情况形成预警回顾单，用于说明问题背景、整改安排和阶段反馈。',
+    'ticket_content', '本单据用于记录审计问题的回顾说明、整改反馈和后续审核过程，不针对单笔业务作否决处理。',
     'dispatch_status', 'dispatched',
     'feedback_status', 'submitted',
     'recheck_status', 'pending',
@@ -1192,7 +1381,7 @@ INSERT INTO terror_alerts (
   uuid_generate_v5(uuid_ns_url(), 'terror-ticket-job-seed-20260403'),
   uuid_generate_v5(uuid_ns_url(), 'terror-rule-blacklist'),
   'leader_attention_notice',
-  '领导指定预警规则',
+  '领导批示预警单',
   'warn',
   'open',
   'rejected',
@@ -1202,9 +1391,9 @@ INSERT INTO terror_alerts (
   'returned',
   'pending',
   'pending',
-  '领导指定风险预警单',
-  '公司相关领导根据风险指标情况要求专项排查。',
-  '请成员单位补充业务背景和审批链路，当前反馈不充分，已退回重报。',
+  '领导批示预警单',
+  '根据领导批示形成专项风险回顾单，用于补充说明风险背景、影响范围和管理建议。',
+  '本单据用于归集相关说明材料、补充回顾分析并形成审核复核意见，不直接否决原有业务事项。',
   'leader_instruction',
   'LEADER-WARN-001',
   TRUE,
@@ -1227,9 +1416,9 @@ INSERT INTO terror_alerts (
   jsonb_build_object(
     'ticket_type', 'warning_notice',
     'trigger_source', 'leader_instruction',
-    'ticket_title', '领导指定风险预警单',
-    'ticket_reason', '公司相关领导根据风险指标情况要求专项排查。',
-    'ticket_content', '请成员单位补充业务背景和审批链路，当前反馈不充分，已退回重报。',
+    'ticket_title', '领导批示预警单',
+    'ticket_reason', '根据领导批示形成专项风险回顾单，用于补充说明风险背景、影响范围和管理建议。',
+    'ticket_content', '本单据用于归集相关说明材料、补充回顾分析并形成审核复核意见，不直接否决原有业务事项。',
     'dispatch_status', 'dispatched',
     'feedback_status', 'returned',
     'recheck_status', 'pending',
@@ -1254,7 +1443,7 @@ INSERT INTO terror_alerts (
     ),
     'ack_records', '[]'::jsonb,
     'flow_logs', jsonb_build_array(
-      jsonb_build_object('action_type', 'dispatch', 'action_result', 'completed', 'action_comment', '领导指定预警单已派发。', 'operator_name', '系统', 'created_at', '2026-04-03T12:30:00+08:00'),
+      jsonb_build_object('action_type', 'dispatch', 'action_result', 'completed', 'action_comment', '领导批示预警单已派发。', 'operator_name', '系统', 'created_at', '2026-04-03T12:30:00+08:00'),
       jsonb_build_object('action_type', 'feedback', 'action_result', 'returned', 'action_comment', '反馈材料不完整，退回补充。', 'operator_name', '海发集团风控专员C', 'created_at', '2026-04-03T14:20:00+08:00'),
       jsonb_build_object('action_type', 'review', 'action_result', 'rejected', 'action_comment', '补充完整后重新提交。', 'operator_name', '海发集团风控专员C', 'created_at', '2026-04-03T14:25:00+08:00')
     ),
@@ -1289,8 +1478,8 @@ INSERT INTO terror_alerts (
   'pending',
   'pending',
   '典型风险事件提示单',
-  '针对个别单位典型风险事件进行系统内普遍提醒。',
-  '请各单位结合近期案例开展自查，重点关注长期闲置账户异常支付。',
+  '针对近期典型风险事件形成系统内提示单，用于总结案例表现和共性风险特征。',
+  '本单据用于开展案例复盘和横向提醒，提示各单位关注类似风险表现和管理启示。',
   'typical_event',
   'TIP-EVENT-001',
   FALSE,
@@ -1314,8 +1503,8 @@ INSERT INTO terror_alerts (
     'ticket_type', 'risk_tip',
     'trigger_source', 'typical_event',
     'ticket_title', '典型风险事件提示单',
-    'ticket_reason', '针对个别单位典型风险事件进行系统内普遍提醒。',
-    'ticket_content', '请各单位结合近期案例开展自查，重点关注长期闲置账户异常支付。',
+    'ticket_reason', '针对近期典型风险事件形成系统内提示单，用于总结案例表现和共性风险特征。',
+    'ticket_content', '本单据用于开展案例复盘和横向提醒，提示各单位关注类似风险表现和管理启示。',
     'dispatch_status', 'dispatched',
     'feedback_status', 'pending',
     'recheck_status', 'pending',
@@ -1364,8 +1553,8 @@ INSERT INTO terror_alerts (
   'returned',
   'pending',
   '整改逾期督办单',
-  '审计问题整改逾期，需形成督办通报并持续跟踪落实。',
-  '请责任单位补充逾期原因、最新整改计划及落实情况，复核结果暂未通过。',
+  '基于整改逾期情况形成督办回顾单，用于说明逾期原因、当前进展和后续督办重点。',
+  '本单据用于持续跟踪整改落实情况、记录复核意见并说明逾期事项的管理安排。',
   'audit_issue',
   'AUDIT-OVERDUE-001',
   FALSE,
@@ -1389,8 +1578,8 @@ INSERT INTO terror_alerts (
     'ticket_type', 'supervision',
     'trigger_source', 'rectification_overdue',
     'ticket_title', '整改逾期督办单',
-    'ticket_reason', '审计问题整改逾期，需形成督办通报并持续跟踪落实。',
-    'ticket_content', '请责任单位补充逾期原因、最新整改计划及落实情况，复核结果暂未通过。',
+    'ticket_reason', '基于整改逾期情况形成督办回顾单，用于说明逾期原因、当前进展和后续督办重点。',
+    'ticket_content', '本单据用于持续跟踪整改落实情况、记录复核意见并说明逾期事项的管理安排。',
     'dispatch_status', 'dispatched',
     'feedback_status', 'completed',
     'recheck_status', 'returned',
@@ -1803,7 +1992,7 @@ INSERT INTO terror_ticket_flow_logs (
   uuid_generate_v5(uuid_ns_url(), 'risk-ticket-warning-leader-1'),
   'dispatch',
   'completed',
-  '领导指定预警单已下发。',
+  '领导批示预警单已下发。',
   '系统',
   'system',
   '[]'::jsonb,
@@ -1876,6 +2065,662 @@ INSERT INTO terror_ticket_flow_logs (
   TIMESTAMP '2026-04-03 17:20:00',
   TIMESTAMP '2026-04-03 17:20:00'
 )
+ON CONFLICT (id) DO NOTHING;
+
+WITH extra_tickets AS (
+  SELECT
+    gs AS seq,
+    uuid_generate_v5(uuid_ns_url(), format('risk-ticket-extra-%s', gs)) AS id,
+    format('RT-20260403-%s', lpad((gs + 7)::text, 3, '0')) AS alert_no,
+    uuid_generate_v5(uuid_ns_url(), 'terror-ticket-job-seed-20260403') AS job_id,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN uuid_generate_v5(uuid_ns_url(), 'terror-rule-frequency')
+        WHEN 2 THEN uuid_generate_v5(uuid_ns_url(), 'terror-rule-blacklist')
+        ELSE uuid_generate_v5(uuid_ns_url(), 'terror-rule-blacklist')
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN uuid_generate_v5(uuid_ns_url(), 'terror-rule-dormant')
+        ELSE uuid_generate_v5(uuid_ns_url(), 'terror-rule-frequency')
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN uuid_generate_v5(uuid_ns_url(), 'terror-rule-frequency')
+        ELSE uuid_generate_v5(uuid_ns_url(), 'terror-rule-dormant')
+      END
+    END AS rule_id,
+    CASE
+      WHEN gs <= 8 THEN 'warning_notice'
+      WHEN gs <= 14 THEN 'risk_tip'
+      ELSE 'supervision'
+    END AS ticket_type,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN 'audit_rectification'
+        WHEN 2 THEN 'leader_instruction'
+        ELSE 'model_threshold'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN 'typical_event'
+        ELSE 'trend_change'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN 'rectification_overdue'
+        ELSE 'three_consecutive_warnings'
+      END
+    END AS trigger_source,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN 'post_review_audit_notice'
+        WHEN 2 THEN 'post_review_leader_notice'
+        ELSE 'post_review_threshold_notice'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN 'typical_event_notice'
+        ELSE 'trend_change_notice'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN 'rectification_overdue_notice'
+        ELSE 'three_consecutive_warnings'
+      END
+    END AS rule_code,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN '审计整改回顾预警单'
+        WHEN 2 THEN '领导批示预警单'
+        ELSE '模型阈值回顾预警单'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN '典型事件提示单'
+        ELSE '风险趋势提示单'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN '整改逾期督办单'
+        ELSE '连续预警督办单'
+      END
+    END AS ticket_title,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN '审计整改回顾预警单'
+        WHEN 2 THEN '领导批示预警单'
+        ELSE '模型阈值回顾预警单'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN '典型事件提示单'
+        ELSE '风险趋势提示单'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN '整改逾期督办单'
+        ELSE '连续预警督办单'
+      END
+    END AS rule_name,
+    CASE
+      WHEN gs <= 8 THEN CASE WHEN gs % 2 = 0 THEN 'warn' ELSE 'high' END
+      WHEN gs <= 14 THEN 'low'
+      ELSE 'high'
+    END AS risk_level,
+    'open' AS alert_status,
+    CASE
+      WHEN gs <= 8 THEN CASE (gs % 3)
+        WHEN 0 THEN 'rejected'
+        WHEN 1 THEN 'pending'
+        ELSE 'approved'
+      END
+      WHEN gs <= 14 THEN 'pending'
+      ELSE CASE (gs % 3)
+        WHEN 1 THEN 'pending'
+        ELSE 'approved'
+      END
+    END AS review_status,
+    'dispatched' AS dispatch_status,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN 'pending'
+      ELSE CASE (gs % 4)
+        WHEN 0 THEN 'returned'
+        WHEN 1 THEN 'pending'
+        WHEN 2 THEN 'submitted'
+        ELSE 'completed'
+      END
+    END AS feedback_status,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN 'pending'
+      ELSE CASE (gs % 3)
+        WHEN 0 THEN 'returned'
+        WHEN 1 THEN 'pending'
+        ELSE 'passed'
+      END
+    END AS recheck_status,
+    CASE
+      WHEN gs > 8 AND gs <= 14 AND gs % 3 <> 0 THEN 'read'
+      ELSE 'pending'
+    END AS ack_status,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN '基于近期审计整改跟踪情况形成的事后风险回顾单，用于说明问题表现、原因分析和整改计划。'
+        WHEN 2 THEN '根据领导批示对相关风险线索形成事后回顾说明，提示责任单位补充背景、成因和管理建议。'
+        ELSE '基于监控模型识别结果形成的事后风险回顾单，用于说明风险特征、影响范围和后续管理动作。'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN '围绕近期典型风险事件形成提示单，用于总结案例表现、共性特征和管理启示。'
+        ELSE '围绕最新风险趋势变化形成提示单，用于向成员单位说明趋势影响和关注重点。'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN '围绕整改逾期事项形成督办单，用于总结逾期原因、当前进度和后续督办要求。'
+        ELSE '围绕连续预警事项形成督办单，用于复盘风险演变过程并持续跟踪落实情况。'
+      END
+    END AS ticket_reason,
+    CASE
+      WHEN gs <= 8 THEN '本单据用于形成风险事项的事后说明、回顾和总结，派发相关单位补充反馈并形成审核复核记录。'
+      WHEN gs <= 14 THEN '本单据用于进行风险提示的派发与阅知留痕，便于成员单位开展事后学习和横向提醒。'
+      ELSE '本单据用于督办风险事项的整改反馈、审核复核和逾期跟踪，形成持续跟进记录。'
+    END AS ticket_content,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN 'audit_issue'
+        WHEN 2 THEN 'leader_instruction'
+        ELSE 'monitoring_model'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN 'typical_event'
+        ELSE 'trend_notice'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN 'audit_issue'
+        ELSE 'monitoring_model'
+      END
+    END AS source_ref_type,
+    format('EXTRA-SRC-%s', lpad(gs::text, 3, '0')) AS source_ref_id,
+    CASE WHEN gs <= 8 AND ((gs - 1) % 3) = 2 THEN TRUE ELSE FALSE END AS leader_instruction_flag,
+    CASE WHEN gs > 14 AND gs % 2 = 1 THEN 3 ELSE 0 END AS continuous_warning_count,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN NULL
+      ELSE TIMESTAMP '2026-04-10 18:00:00' + (gs || ' hours')::interval
+    END AS deadline_at,
+    CASE
+      WHEN gs <= 8 AND (gs % 4) = 3 THEN TIMESTAMP '2026-04-05 18:00:00' + (gs || ' hours')::interval
+      ELSE NULL
+    END AS completed_at,
+    CASE WHEN gs > 14 AND gs % 2 = 0 THEN TRUE ELSE FALSE END AS is_overdue,
+    CASE (gs % 4)
+      WHEN 1 THEN 'HF-PARK-001'
+      WHEN 2 THEN 'HF-CAP-002'
+      WHEN 3 THEN 'HF-SVC-002'
+      ELSE 'HF-CTI-001'
+    END AS member_unit_code,
+    CASE (gs % 4)
+      WHEN 1 THEN '青岛海发园区运营有限公司'
+      WHEN 2 THEN '青岛海发资本管理有限公司'
+      WHEN 3 THEN '青岛海发产业服务有限公司'
+      ELSE '青岛海发产城投资有限公司'
+    END AS member_unit_name,
+    CASE WHEN gs <= 14 AND gs > 8 THEN NULL ELSE CASE (gs % 4)
+      WHEN 1 THEN '青岛海发园区运营有限公司'
+      WHEN 2 THEN '青岛海发资本管理有限公司'
+      WHEN 3 THEN '青岛海发产业服务有限公司'
+      ELSE '青岛海发产城投资有限公司'
+    END END AS payer_name,
+    CASE WHEN gs <= 14 AND gs > 8 THEN NULL ELSE CASE (gs % 4)
+      WHEN 1 THEN '622202600010'
+      WHEN 2 THEN '622202600011'
+      WHEN 3 THEN '622202600012'
+      ELSE '622202600013'
+    END END AS payer_account,
+    CASE WHEN gs <= 14 AND gs > 8 THEN NULL ELSE CASE (gs % 4)
+      WHEN 1 THEN '青岛西海岸某工程建设有限公司'
+      WHEN 2 THEN '青岛某基金服务有限公司'
+      WHEN 3 THEN '青岛某供应链结算服务有限公司'
+      ELSE '青岛某园区配套服务有限公司'
+    END END AS payee_name,
+    CASE WHEN gs <= 14 AND gs > 8 THEN NULL ELSE CASE (gs % 4)
+      WHEN 1 THEN '942700000201'
+      WHEN 2 THEN '942700000202'
+      WHEN 3 THEN '942700000203'
+      ELSE '942700000301'
+    END END AS payee_account,
+    CASE WHEN gs <= 14 AND gs > 8 THEN NULL ELSE DATE '2026-03-01' + gs END AS transaction_date,
+    CASE WHEN gs <= 14 AND gs > 8 THEN 0 ELSE 420000 + (gs * 35000) END AS matched_amount,
+    CASE WHEN gs <= 14 AND gs > 8 THEN 0 ELSE 1 + (gs % 3) END AS matched_count,
+    1 AS evidence_count,
+    CASE
+      WHEN gs <= 8 THEN '围绕近期风险监测结果形成回顾说明，已提炼主要异常特征和影响范围。'
+      WHEN gs <= 14 THEN '围绕趋势变化或典型事件形成提示说明，便于成员单位统一阅知。'
+      ELSE '围绕连续预警或整改逾期情况形成督办回顾，需持续跟踪落实情况。'
+    END AS latest_evidence_summary,
+    CASE
+      WHEN gs <= 8 THEN '该单据用于对已识别风险事项进行事后回顾、原因说明和改进安排。'
+      WHEN gs <= 14 THEN '该单据用于对风险趋势或典型事件进行总结提示和横向提醒。'
+      ELSE '该单据用于对重点风险事项进行督办跟踪、整改说明和复核记录。'
+    END AS alert_summary,
+    CASE WHEN gs <= 14 AND gs > 8 THEN '集团风险联络人' ELSE format('风控专员%s', gs) END AS assigned_reviewer_name,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS assigned_at,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN NULL
+      WHEN gs % 3 = 1 THEN NULL
+      ELSE format('风控专员%s', gs)
+    END AS reviewer_name,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN ''
+      WHEN gs % 3 = 0 THEN '建议补充风险说明后再归档。'
+      WHEN gs % 3 = 2 THEN '审核确认该事项已形成完整风险回顾。'
+      ELSE ''
+    END AS review_result,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN ''
+      WHEN gs % 3 = 0 THEN '请补充影响范围、原因分析和后续安排。'
+      WHEN gs % 3 = 2 THEN '审核意见已记录，可进入下一步复核。'
+      ELSE ''
+    END AS review_comment,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR gs % 3 = 1 THEN NULL
+      ELSE TIMESTAMP '2026-04-04 15:00:00' + (gs || ' hours')::interval
+    END AS reviewed_at,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN ''
+      WHEN (gs % 4) = 0 THEN '已退回补充回顾材料'
+      WHEN (gs % 4) = 2 THEN '已提交阶段性回顾说明'
+      WHEN (gs % 4) = 3 THEN '已完成补充说明和改进总结'
+      ELSE ''
+    END AS feedback_result,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN ''
+      WHEN (gs % 4) = 0 THEN '请补充风险成因、影响范围和后续计划。'
+      WHEN (gs % 4) = 2 THEN '责任单位已提交阶段性回顾材料。'
+      WHEN (gs % 4) = 3 THEN '责任单位已形成完整的风险回顾和改进说明。'
+      ELSE ''
+    END AS feedback_comment,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR (gs % 4) = 1 THEN ''
+      ELSE CASE (gs % 4)
+        WHEN 1 THEN ''
+        WHEN 2 THEN CASE (gs % 4)
+          WHEN 1 THEN '青岛海发园区运营有限公司'
+          WHEN 2 THEN '青岛海发资本管理有限公司'
+          WHEN 3 THEN '青岛海发产业服务有限公司'
+          ELSE '青岛海发产城投资有限公司'
+        END
+        WHEN 3 THEN CASE (gs % 4)
+          WHEN 1 THEN '青岛海发园区运营有限公司'
+          WHEN 2 THEN '青岛海发资本管理有限公司'
+          WHEN 3 THEN '青岛海发产业服务有限公司'
+          ELSE '青岛海发产城投资有限公司'
+        END
+        ELSE format('风控专员%s', gs)
+      END
+    END AS feedback_operator_name,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR (gs % 4) = 1 THEN NULL
+      ELSE TIMESTAMP '2026-04-04 13:00:00' + (gs || ' hours')::interval
+    END AS feedback_at,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR (gs % 3) = 1 THEN ''
+      WHEN (gs % 3) = 2 THEN '复核确认说明完整'
+      ELSE '需补充复核说明'
+    END AS recheck_result,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR (gs % 3) = 1 THEN ''
+      WHEN (gs % 3) = 2 THEN '复核后确认可以作为阶段总结归档。'
+      ELSE '请补充后续跟踪结果和制度改进说明。'
+    END AS recheck_comment,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR (gs % 3) = 1 THEN ''
+      ELSE '海发集团风控复核人'
+    END AS recheck_operator_name,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR (gs % 3) = 1 THEN NULL
+      ELSE TIMESTAMP '2026-04-04 17:00:00' + (gs || ' hours')::interval
+    END AS rechecked_at,
+    CASE WHEN gs > 8 AND gs <= 14 AND gs % 3 <> 0 THEN '集团本部风险联系人' ELSE '' END AS ack_operator_name,
+    CASE WHEN gs > 8 AND gs <= 14 AND gs % 3 <> 0 THEN '已阅知并纳入近期风险提示学习。' ELSE '' END AS ack_comment,
+    CASE WHEN gs > 8 AND gs <= 14 AND gs % 3 <> 0 THEN TIMESTAMP '2026-04-04 11:00:00' + (gs || ' hours')::interval ELSE NULL END AS ack_at,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS created_at,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS updated_at
+  FROM generate_series(1, 20) AS t(gs)
+)
+INSERT INTO terror_alerts (
+  id,
+  alert_no,
+  job_id,
+  rule_id,
+  rule_code,
+  rule_name,
+  risk_level,
+  alert_status,
+  review_status,
+  ticket_type,
+  trigger_source,
+  dispatch_status,
+  feedback_status,
+  recheck_status,
+  ack_status,
+  ticket_title,
+  ticket_reason,
+  ticket_content,
+  source_ref_type,
+  source_ref_id,
+  leader_instruction_flag,
+  continuous_warning_count,
+  deadline_at,
+  completed_at,
+  is_overdue,
+  member_unit_code,
+  member_unit_name,
+  payer_name,
+  payer_account,
+  payee_name,
+  payee_account,
+  transaction_date,
+  matched_amount,
+  matched_count,
+  evidence_count,
+  latest_evidence_summary,
+  alert_summary,
+  extra_payload,
+  created_at,
+  updated_at
+)
+SELECT
+  id,
+  alert_no,
+  job_id,
+  rule_id,
+  rule_code,
+  rule_name,
+  risk_level,
+  alert_status,
+  review_status,
+  ticket_type,
+  trigger_source,
+  dispatch_status,
+  feedback_status,
+  recheck_status,
+  ack_status,
+  ticket_title,
+  ticket_reason,
+  ticket_content,
+  source_ref_type,
+  source_ref_id,
+  leader_instruction_flag,
+  continuous_warning_count,
+  deadline_at,
+  completed_at,
+  is_overdue,
+  member_unit_code,
+  member_unit_name,
+  payer_name,
+  payer_account,
+  payee_name,
+  payee_account,
+  transaction_date,
+  matched_amount,
+  matched_count,
+  evidence_count,
+  latest_evidence_summary,
+  alert_summary,
+  jsonb_build_object(
+    'ticket_type', ticket_type,
+    'trigger_source', trigger_source,
+    'ticket_title', ticket_title,
+    'ticket_reason', ticket_reason,
+    'ticket_content', ticket_content,
+    'dispatch_status', dispatch_status,
+    'feedback_status', feedback_status,
+    'recheck_status', recheck_status,
+    'deadline_at', deadline_at,
+    'is_overdue', is_overdue,
+    'continuous_warning_count', continuous_warning_count,
+    'source_ref_type', source_ref_type,
+    'source_ref_id', source_ref_id,
+    'feedback', jsonb_build_object(
+      'feedback_status', feedback_status,
+      'feedback_result', feedback_result,
+      'feedback_comment', feedback_comment,
+      'operator_name', feedback_operator_name,
+      'feedback_at', feedback_at
+    ),
+    'recheck', jsonb_build_object(
+      'recheck_status', recheck_status,
+      'recheck_result', recheck_result,
+      'recheck_comment', recheck_comment,
+      'operator_name', recheck_operator_name,
+      'rechecked_at', rechecked_at
+    ),
+    'ack_records', CASE
+      WHEN ack_operator_name <> '' THEN jsonb_build_array(
+        jsonb_build_object(
+          'ack_status', 'read',
+          'operator_name', ack_operator_name,
+          'ack_comment', ack_comment,
+          'ack_at', ack_at
+        )
+      )
+      ELSE '[]'::jsonb
+    END,
+    'flow_logs',
+      jsonb_build_array(
+        jsonb_build_object(
+          'action_type', 'dispatch',
+          'action_result', 'completed',
+          'action_comment', '已完成单据派发，进入后续回顾说明流程。',
+          'operator_name', '系统',
+          'created_at', created_at
+        )
+      )
+      || CASE
+        WHEN ack_operator_name <> '' THEN jsonb_build_array(
+          jsonb_build_object(
+            'action_type', 'ack',
+            'action_result', 'read',
+            'action_comment', ack_comment,
+            'operator_name', ack_operator_name,
+            'created_at', ack_at
+          )
+        )
+        ELSE '[]'::jsonb
+      END
+      || CASE
+        WHEN feedback_status <> 'pending' AND ticket_type <> 'risk_tip' THEN jsonb_build_array(
+          jsonb_build_object(
+            'action_type', 'feedback',
+            'action_result', feedback_status,
+            'action_comment', feedback_comment,
+            'operator_name', feedback_operator_name,
+            'created_at', feedback_at
+          )
+        )
+        ELSE '[]'::jsonb
+      END
+      || CASE
+        WHEN review_status <> 'pending' AND ticket_type <> 'risk_tip' THEN jsonb_build_array(
+          jsonb_build_object(
+            'action_type', 'review',
+            'action_result', review_status,
+            'action_comment', review_comment,
+            'operator_name', reviewer_name,
+            'created_at', reviewed_at
+          )
+        )
+        ELSE '[]'::jsonb
+      END
+      || CASE
+        WHEN recheck_status <> 'pending' AND ticket_type <> 'risk_tip' THEN jsonb_build_array(
+          jsonb_build_object(
+            'action_type', 'recheck',
+            'action_result', recheck_status,
+            'action_comment', recheck_comment,
+            'operator_name', recheck_operator_name,
+            'created_at', rechecked_at
+          )
+        )
+        ELSE '[]'::jsonb
+      END
+      || CASE
+        WHEN is_overdue THEN jsonb_build_array(
+          jsonb_build_object(
+            'action_type', 'overdue',
+            'action_result', 'triggered',
+            'action_comment', '已记录逾期情况，继续纳入督办跟踪。',
+            'operator_name', '系统',
+            'created_at', deadline_at
+          )
+        )
+        ELSE '[]'::jsonb
+      END,
+    'related_transactions', CASE
+      WHEN transaction_date IS NULL THEN '[]'::jsonb
+      ELSE jsonb_build_array(
+        jsonb_build_object(
+          'transaction_no', format('TX-EXTRA-%s', lpad(seq::text, 3, '0')),
+          'transaction_date', transaction_date,
+          'amount', matched_amount,
+          'payer_name', payer_name,
+          'payee_name', payee_name,
+          'business_scenario', '风险事项回顾说明'
+        )
+      )
+    END
+  ),
+  created_at,
+  updated_at
+FROM extra_tickets
+ON CONFLICT (id) DO NOTHING;
+
+WITH extra_tickets AS (
+  SELECT
+    gs AS seq,
+    uuid_generate_v5(uuid_ns_url(), format('risk-ticket-extra-%s', gs)) AS alert_id,
+    CASE
+      WHEN gs <= 8 THEN CASE (gs % 3)
+        WHEN 0 THEN 'rejected'
+        WHEN 1 THEN 'pending'
+        ELSE 'approved'
+      END
+      WHEN gs <= 14 THEN 'pending'
+      ELSE CASE (gs % 3)
+        WHEN 1 THEN 'pending'
+        ELSE 'approved'
+      END
+    END AS review_status,
+    CASE WHEN gs <= 14 AND gs > 8 THEN 'assigned' ELSE 'assigned' END AS assignment_status,
+    CASE WHEN gs <= 14 AND gs > 8 THEN '集团风险联络人' ELSE format('风控专员%s', gs) END AS assigned_reviewer_name,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS assigned_at,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR gs % 3 = 1 THEN NULL
+      ELSE format('风控专员%s', gs)
+    END AS reviewer_name,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN NULL
+      WHEN gs % 3 = 0 THEN '建议补充回顾说明后归档。'
+      WHEN gs % 3 = 2 THEN '审核确认该事项回顾内容完整。'
+      ELSE NULL
+    END AS review_result,
+    CASE
+      WHEN gs <= 14 AND gs > 8 THEN NULL
+      WHEN gs % 3 = 0 THEN '请补充复盘材料、影响范围和改进安排。'
+      WHEN gs % 3 = 2 THEN '审核意见已确认，可转入下一步复核。'
+      ELSE NULL
+    END AS review_comment,
+    CASE
+      WHEN gs <= 14 AND gs > 8 OR gs % 3 = 1 THEN NULL
+      ELSE TIMESTAMP '2026-04-04 15:00:00' + (gs || ' hours')::interval
+    END AS reviewed_at,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS created_at,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS updated_at
+  FROM generate_series(1, 20) AS t(gs)
+)
+INSERT INTO terror_alert_reviews (
+  id,
+  alert_id,
+  review_status,
+  reviewer_name,
+  review_result,
+  review_comment,
+  reviewed_at,
+  assignment_status,
+  assigned_reviewer_name,
+  assigned_at,
+  created_by,
+  updated_by,
+  created_at,
+  updated_at
+)
+SELECT
+  uuid_generate_v5(uuid_ns_url(), format('risk-ticket-extra-review-%s', seq)),
+  alert_id,
+  review_status,
+  reviewer_name,
+  review_result,
+  review_comment,
+  reviewed_at,
+  assignment_status,
+  assigned_reviewer_name,
+  assigned_at,
+  'demo',
+  'demo',
+  created_at,
+  updated_at
+FROM extra_tickets
+ON CONFLICT (id) DO NOTHING;
+
+WITH extra_tickets AS (
+  SELECT
+    gs AS seq,
+    uuid_generate_v5(uuid_ns_url(), format('risk-ticket-extra-%s', gs)) AS alert_id,
+    CASE
+      WHEN gs <= 8 THEN 'warning_notice'
+      WHEN gs <= 14 THEN 'risk_tip'
+      ELSE 'supervision'
+    END AS ticket_type,
+    CASE
+      WHEN gs <= 8 THEN CASE ((gs - 1) % 3)
+        WHEN 1 THEN 'audit_rectification'
+        WHEN 2 THEN 'leader_instruction'
+        ELSE 'model_threshold'
+      END
+      WHEN gs <= 14 THEN CASE (gs % 2)
+        WHEN 0 THEN 'typical_event'
+        ELSE 'trend_change'
+      END
+      ELSE CASE (gs % 2)
+        WHEN 0 THEN 'rectification_overdue'
+        ELSE 'three_consecutive_warnings'
+      END
+    END AS trigger_source,
+    TIMESTAMP '2026-04-04 09:00:00' + (gs || ' hours')::interval AS created_at
+  FROM generate_series(1, 20) AS t(gs)
+)
+INSERT INTO terror_alert_evidences (
+  id,
+  alert_id,
+  evidence_type,
+  evidence_title,
+  evidence_detail,
+  evidence_payload,
+  evidence_order,
+  created_at,
+  updated_at
+)
+SELECT
+  uuid_generate_v5(uuid_ns_url(), format('risk-ticket-extra-evidence-%s', seq)),
+  alert_id,
+  trigger_source,
+  CASE
+    WHEN ticket_type = 'warning_notice' THEN '风险事项回顾依据'
+    WHEN ticket_type = 'risk_tip' THEN '提示事项来源'
+    ELSE '督办事项依据'
+  END,
+  CASE
+    WHEN ticket_type = 'warning_notice' THEN '结合近期识别结果和管理反馈，形成事后风险回顾与说明。'
+    WHEN ticket_type = 'risk_tip' THEN '结合近期风险趋势或典型事件，形成提示与阅知说明。'
+    ELSE '结合连续预警或整改逾期情况，形成督办跟踪与整改回顾。'
+  END,
+  jsonb_build_object(
+    'ticket_type', ticket_type,
+    'trigger_source', trigger_source,
+    'note', '示例数据用于演示不同单据类型的回顾说明与跟踪流程'
+  ),
+  1,
+  created_at,
+  created_at
+FROM extra_tickets
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;

@@ -16,7 +16,7 @@ TICKET_TYPE_LABELS = {
 TRIGGER_SOURCE_LABELS = {
     "model_threshold": "模型阈值预警",
     "audit_rectification": "审计整改跟踪",
-    "leader_instruction": "领导指定",
+    "leader_instruction": "领导批示",
     "typical_event": "典型事件提醒",
     "trend_change": "风险趋势变化",
     "three_consecutive_warnings": "连续三次预警",
@@ -123,6 +123,146 @@ def _build_rules() -> list[dict[str, object]]:
                     "unit": "元",
                     "editable": True,
                 },
+            ],
+        },
+        {
+            "id": "rule-threshold-review",
+            "ruleCode": "post_review_threshold_notice",
+            "ruleName": "模型阈值回顾预警规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "针对模型阈值异常事项形成事后预警回顾和跟踪说明。",
+            "riskLevel": "high",
+            "enabled": True,
+            "sortOrder": 4,
+            "params": [
+                {
+                    "paramKey": "enabled",
+                    "paramLabel": "规则启用",
+                    "paramValue": "true",
+                    "valueType": "boolean",
+                    "unit": "",
+                    "editable": True,
+                }
+            ],
+        },
+        {
+            "id": "rule-leader-warning",
+            "ruleCode": "leader_attention_notice",
+            "ruleName": "领导批示预警规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "根据领导批示事项发起风险预警单并跟踪处置进展。",
+            "riskLevel": "warn",
+            "enabled": True,
+            "sortOrder": 5,
+            "params": [
+                {
+                    "paramKey": "enabled",
+                    "paramLabel": "规则启用",
+                    "paramValue": "true",
+                    "valueType": "boolean",
+                    "unit": "",
+                    "editable": True,
+                }
+            ],
+        },
+        {
+            "id": "rule-audit-rectification",
+            "ruleCode": "audit_rectification_notice",
+            "ruleName": "审计整改预警规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "针对审计整改问题开展后续预警跟踪与反馈。",
+            "riskLevel": "warn",
+            "enabled": True,
+            "sortOrder": 6,
+            "params": [
+                {
+                    "paramKey": "enabled",
+                    "paramLabel": "规则启用",
+                    "paramValue": "true",
+                    "valueType": "boolean",
+                    "unit": "",
+                    "editable": True,
+                }
+            ],
+        },
+        {
+            "id": "rule-trend-tip",
+            "ruleCode": "trend_change_notice",
+            "ruleName": "风险趋势提示规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "针对二道防线风险管理要求或内外部风险趋势变化发起提示单。",
+            "riskLevel": "warn",
+            "enabled": True,
+            "sortOrder": 7,
+            "params": [
+                {
+                    "paramKey": "enabled",
+                    "paramLabel": "规则启用",
+                    "paramValue": "true",
+                    "valueType": "boolean",
+                    "unit": "",
+                    "editable": True,
+                }
+            ],
+        },
+        {
+            "id": "rule-typical-event",
+            "ruleCode": "typical_event_notice",
+            "ruleName": "典型事件提示规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "对典型风险事件开展系统内普遍提醒和复盘提示。",
+            "riskLevel": "warn",
+            "enabled": True,
+            "sortOrder": 8,
+            "params": [
+                {
+                    "paramKey": "enabled",
+                    "paramLabel": "规则启用",
+                    "paramValue": "true",
+                    "valueType": "boolean",
+                    "unit": "",
+                    "editable": True,
+                }
+            ],
+        },
+        {
+            "id": "rule-three-warnings",
+            "ruleCode": "three_consecutive_warnings",
+            "ruleName": "连续三次预警督办规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "特定监控模型连续三次预警后自动转入督办跟踪。",
+            "riskLevel": "high",
+            "enabled": True,
+            "sortOrder": 9,
+            "params": [
+                {
+                    "paramKey": "warning_threshold",
+                    "paramLabel": "连续预警次数阈值",
+                    "paramValue": "3",
+                    "valueType": "number",
+                    "unit": "次",
+                    "editable": True,
+                }
+            ],
+        },
+        {
+            "id": "rule-rectification-overdue",
+            "ruleCode": "rectification_overdue_notice",
+            "ruleName": "整改逾期督办规则",
+            "ruleCategory": "risk_ticket_workflow",
+            "ruleDescription": "针对内外部审计整改逾期事项发起督办单并跟踪落实情况。",
+            "riskLevel": "high",
+            "enabled": True,
+            "sortOrder": 10,
+            "params": [
+                {
+                    "paramKey": "enabled",
+                    "paramLabel": "规则启用",
+                    "paramValue": "true",
+                    "valueType": "boolean",
+                    "unit": "",
+                    "editable": True,
+                }
             ],
         },
     ]
@@ -286,7 +426,7 @@ class FakePostgresRepository:
     def _run_detection(self) -> None:
         alerts, latest_job = detect_terror_risk_alerts(
             transactions=self.transactions,
-            rules=self.rules,
+            rules=[rule for rule in self.rules if str(rule.get("ruleCategory")) == "terror_risk"],
             blacklist=self.blacklist,
             snapshot_date=SNAPSHOT_DATE,
         )
@@ -300,7 +440,7 @@ class FakePostgresRepository:
             if index == 0:
                 alert["ticket_type"] = "warning_notice"
                 alert["trigger_source"] = "leader_instruction"
-                alert["ticket_title"] = "领导指定预警单"
+                alert["ticket_title"] = "领导批示预警单"
                 alert["ticket_reason"] = "领导要求跟踪重点风险指标"
                 alert["ticket_content"] = "请相关单位尽快反馈。"
             elif index == 1:
@@ -346,6 +486,87 @@ class FakePostgresRepository:
             alert["review_status"] = review["review_status"]
             alert["dispatch_status"] = "dispatched" if review["assignment_status"] == "assigned" else "pending"
             alert["flow_logs"] = alert.get("flow_logs", [])
+        if not any(alert["rule_code"] == "leader_attention_notice" for alert in self.alerts):
+            self.alerts.append(
+                {
+                    "id": "workflow-ticket-leader-001",
+                    "alert_no": "RT-20260403-LEADER-001",
+                    "ticket_type": "warning_notice",
+                    "trigger_source": "leader_instruction",
+                    "ticket_title": "领导批示预警单",
+                    "ticket_reason": "围绕近期重点风险指标波动开展事后复盘并形成预警跟踪。",
+                    "ticket_content": "请相关单位结合指标变化情况补充说明成因、处置安排和后续防控措施。",
+                    "rule_code": "leader_attention_notice",
+                    "rule_name": "领导批示预警规则",
+                    "risk_level": "warn",
+                    "alert_status": "open",
+                    "dispatch_status": "dispatched",
+                    "feedback_status": "submitted",
+                    "review_status": "pending",
+                    "recheck_status": "pending",
+                    "member_unit_code": "HF-HQ-001",
+                    "member_unit_name": "集团本部",
+                    "payer_name": None,
+                    "payer_account": None,
+                    "payee_name": None,
+                    "payee_account": None,
+                    "transaction_date": None,
+                    "matched_amount": "0.00万元",
+                    "matched_amount_value": 0.0,
+                    "matched_count": 0,
+                    "deadline_at": f"{SNAPSHOT_DATE}T18:00:00+08:00",
+                    "is_overdue": False,
+                    "continuous_warning_count": 0,
+                    "source_ref_type": "leader_instruction",
+                    "source_ref_id": "workflow-leader-001",
+                    "evidence_count": 0,
+                    "latest_evidence_summary": None,
+                    "alert_summary": "领导批示预警单回顾事项",
+                    "evidences": [],
+                    "related_transactions": [],
+                    "review": {
+                        "review_status": "pending",
+                        "reviewer_name": "",
+                        "review_result": "",
+                        "review_comment": "",
+                        "reviewed_at": None,
+                        "assignment_status": "assigned",
+                        "assigned_reviewer_name": "风险管理部负责人",
+                        "assigned_at": f"{SNAPSHOT_DATE}T09:30:00+08:00",
+                    },
+                    "feedback": {
+                        "feedback_status": "submitted",
+                        "feedback_result": "已补充情况说明",
+                        "feedback_comment": "已形成指标异动复盘说明。",
+                        "operator_name": "集团风险联络员",
+                        "feedback_at": f"{SNAPSHOT_DATE}T14:20:00+08:00",
+                    },
+                    "recheck": {
+                        "recheck_status": "pending",
+                        "recheck_result": "",
+                        "recheck_comment": "",
+                        "operator_name": "",
+                        "rechecked_at": None,
+                    },
+                    "ack_records": [],
+                    "flow_logs": [
+                        {
+                            "action_type": "dispatch",
+                            "action_result": "已派发",
+                            "action_comment": "按领导批示转风险管理部牵头跟踪。",
+                            "operator_name": "系统管理员",
+                            "created_at": f"{SNAPSHOT_DATE}T09:30:00+08:00",
+                        },
+                        {
+                            "action_type": "feedback",
+                            "action_result": "已反馈",
+                            "action_comment": "已补充事后说明和后续措施。",
+                            "operator_name": "集团风险联络员",
+                            "created_at": f"{SNAPSHOT_DATE}T14:20:00+08:00",
+                        },
+                    ],
+                }
+            )
 
     def _ensure_alert_defaults(self, alert: dict[str, object]) -> dict[str, object]:
         alert.setdefault("ticket_type", "warning_notice")
@@ -437,14 +658,14 @@ class FakePostgresRepository:
             "page_title": "风险总览",
             "snapshot_date": SNAPSHOT_DATE,
             "risk_cards": [
-                {"title": "金融风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "往来款风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "循环贸易风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "资金风险", "high": sum(1 for alert in self.alerts if alert["risk_level"] == "high"), "warn": len(self.alerts), "hint": 2},
-                {"title": "存货风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "固定资产风险", "high": 0, "warn": 1, "hint": 2},
-                {"title": "债务风险", "high": 0, "warn": 2, "hint": 1},
-                {"title": "税务风险", "high": 0, "warn": 1, "hint": 2},
+                {"title": "金融风险", "high": 5, "warn": 4, "hint": 3},
+                {"title": "往来款风险", "high": 1, "warn": 3, "hint": 2},
+                {"title": "循环贸易风险", "high": 4, "warn": 3, "hint": 2},
+                {"title": "资金风险", "high": 2, "warn": len(self.alerts), "hint": 2},
+                {"title": "存货风险", "high": 3, "warn": 2, "hint": 2},
+                {"title": "固定资产风险", "high": 1, "warn": 1, "hint": 2},
+                {"title": "债务风险", "high": 1, "warn": 2, "hint": 1},
+                {"title": "税务风险", "high": 1, "warn": 1, "hint": 2},
             ],
             "recent_risks": [
                 {"org": block["secondary_topic_name"], "event": block["risk_conclusion"]}
@@ -599,16 +820,16 @@ class FakePostgresRepository:
         return len(self.transactions) != before
 
     def save_alerts(self, alerts: list[dict[str, object]], latest_job: dict[str, object]) -> dict[str, object]:
-        preserved_manual = [
+        preserved_non_detection = [
             deepcopy(alert)
             for alert in self.alerts
-            if str(alert.get("source_ref_type")) == "manual"
+            if str(alert.get("source_ref_type")) != "detection_job"
         ]
         refreshed = deepcopy(alerts)
         self.latest_job = deepcopy(latest_job)
         self.alerts = refreshed
         self._apply_default_review_assignments()
-        self.alerts.extend(preserved_manual)
+        self.alerts.extend(preserved_non_detection)
         return deepcopy(self.latest_job)
 
     def list_terror_alerts(

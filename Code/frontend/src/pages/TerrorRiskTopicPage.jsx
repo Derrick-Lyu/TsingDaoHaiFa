@@ -248,7 +248,7 @@ export function TerrorRiskTopicPage({
       <div style={insightGridStyle}>
         <section style={insightPanelStyle}>
           <div style={panelHeaderStyle}>
-            <div style={panelTitleStyle}>风险趋势</div>
+            <div style={panelTitleStyle}>当月风险事件分布</div>
             <span style={sectionMetaPillStyle}>
               {topic.trend?.length || dashboard.trend.length || 0} 个时间点
             </span>
@@ -270,7 +270,7 @@ export function TerrorRiskTopicPage({
 
         <section style={insightPanelStyle}>
           <div style={panelHeaderStyle}>
-            <div style={panelTitleStyle}>规则命中拆解</div>
+            <div style={panelTitleStyle}>风险规则命中分布</div>
             <span style={sectionMetaPillStyle}>{dashboard.ruleBreakdown.length || 0} 个规则</span>
           </div>
           {dashboard.ruleBreakdown.length ? (
@@ -376,7 +376,7 @@ export function TerrorRiskTopicPage({
       <div style={insightGridStyle}>
         <section style={insightPanelStyle}>
           <div style={panelHeaderStyle}>
-            <div style={panelTitleStyle}>命中概览</div>
+            <div style={panelTitleStyle}>风险命中对象排行</div>
             <div style={overviewTabsStyle}>
               {OVERVIEW_RANKING_TABS.map((tab) => (
                 <button
@@ -390,7 +390,7 @@ export function TerrorRiskTopicPage({
               ))}
             </div>
           </div>
-          <CompactRankingPanel items={overviewRankingItems} emptyLabel="暂无命中排行数据" />
+          <CompactRankingPanel items={overviewRankingItems} emptyLabel="暂无风险命中对象排行数据" />
         </section>
 
         <section style={insightPanelStyle}>

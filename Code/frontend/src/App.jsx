@@ -48,7 +48,7 @@ const TOPIC_NAV_ITEMS = [
 
 function ShellHeader({ activeTab, onChangeTab }) {
   const title = activeTab === "overview" ? "穿透式监管管理驾驶舱" : "资金安全监管专题";
-  const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与核查闭环";
+  const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与确认闭环";
 
   return (
     <header style={headerStyle} className="app-header">
@@ -214,7 +214,7 @@ export default function App() {
 
     if (fundSafetyView === "detail") {
       pageContent = (
-        <Suspense fallback={<PageLoadingState label="正在加载风险核查详情..." />}>
+        <Suspense fallback={<PageLoadingState label="正在加载风险确认详情..." />}>
           <AlertDetailPage
             alertId={selectedAlertId}
             onSaveReview={saveAlertReview}

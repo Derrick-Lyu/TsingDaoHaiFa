@@ -103,13 +103,13 @@ function normalizeOverview(data) {
       {
         label: "高风险数量",
         value: String(highRisk?.value ?? demoCockpitOverview.heroMetrics[1].value),
-        delta: "接口映射",
+        delta: "-50%",
         tone: "warning",
       },
       {
-        label: "待核查数量",
+        label: "待确认数量",
         value: String(pending?.value ?? demoCockpitOverview.heroMetrics[2].value),
-        delta: "接口映射",
+        delta: "-20%",
         tone: "neutral",
       },
       demoCockpitOverview.heroMetrics[3],
@@ -134,7 +134,7 @@ function normalizeOverview(data) {
           rule: item.event,
           unit: item.org,
           level: "预警",
-          status: "待核查",
+          status: "待确认",
           date: data?.snapshot_date ?? demoCockpitOverview.updatedAt.slice(0, 10),
         }))
       : demoCockpitOverview.recentAlerts,

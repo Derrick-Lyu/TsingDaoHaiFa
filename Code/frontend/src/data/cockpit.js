@@ -5,14 +5,14 @@ export const demoCockpitOverview = {
     eyebrow: "穿透式监管管理驾驶舱",
     title: "青岛海发集团全级次风险预警与监管闭环总览",
     description:
-      "覆盖集团总部、成员单位与下属项目公司，统一展示预警暴露、核查推进、整改追责与专题穿透入口。",
+      "覆盖集团总部、成员单位与下属项目公司，统一展示预警暴露、确认推进、整改追责与专题穿透入口。",
     primaryActionLabel: "进入资金安全专题",
     secondaryNote: "当前为演示模式，首页数据统一使用 demo fallback。",
   },
   heroMetrics: [
     { label: "全级次预警总数", value: "1,248", delta: "+18", tone: "critical" },
     { label: "高风险数量", value: "89", delta: "7 家成员单位", tone: "warning" },
-    { label: "待核查数量", value: "156", delta: "48 小时内需处置", tone: "neutral" },
+    { label: "待确认数量", value: "156", delta: "48 小时内需处置", tone: "neutral" },
     { label: "整改完成率", value: "94.2%", delta: "+2.6%", tone: "positive" },
   ],
   riskDistribution: [
@@ -40,10 +40,10 @@ export const demoCockpitOverview = {
   ],
   processStages: [
     { name: "预警", total: 1248, aging: "当日自动生成" },
-    { name: "核查", total: 892, aging: "平均 1.6 天" },
+    { name: "确认", total: 892, aging: "平均 1.6 天" },
     { name: "派单", total: 514, aging: "平均 0.8 天" },
     { name: "整改", total: 372, aging: "平均 4.2 天" },
-    { name: "销号", total: 351, aging: "平均 1.1 天" },
+    { name: "完成", total: 351, aging: "平均 1.1 天" },
   ],
   processEvents: [
     { unit: "海发资本", event: "大额对外投资交易预警已派单至财务部", status: "待整改" },
@@ -161,7 +161,7 @@ export const demoCockpitOverview = {
     overdueCount: 6,
     scoreDeductions: [
       { unit: "海发资本", points: 12, reason: "整改超期 2 项" },
-      { unit: "海发供应链", points: 9, reason: "核查闭环不完整" },
+      { unit: "海发供应链", points: 9, reason: "确认闭环不完整" },
       { unit: "海发文旅", points: 5, reason: "账户权限复核滞后" },
     ],
   },
@@ -173,7 +173,7 @@ export const demoCockpitOverview = {
     { title: "客户账户间划拨专题", metric: "5 起异常链路", note: "跨主体调拨识别", accent: "critical" },
   ],
   recentAlerts: [
-    { id: "AL-202604-001", rule: "黑名单命中规则", unit: "青岛海发资本", level: "高风险", status: "待核查", date: "2026-04-02" },
+    { id: "AL-202604-001", rule: "黑名单命中规则", unit: "青岛海发资本", level: "高风险", status: "待确认", date: "2026-04-02" },
     { id: "AL-202604-002", rule: "大额投资审批缺失", unit: "海发城市更新", level: "高风险", status: "整改中", date: "2026-04-02" },
     { id: "AL-202604-003", rule: "客户账户异常划拨", unit: "海发供应链", level: "预警", status: "待整改", date: "2026-04-01" },
     { id: "AL-202604-004", rule: "久悬账户余额异常", unit: "海发文旅", level: "预警", status: "待验收", date: "2026-03-31" },

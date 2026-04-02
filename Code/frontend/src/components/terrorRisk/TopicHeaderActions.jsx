@@ -38,7 +38,7 @@ export function TopicHeaderActions({
           涉恐交易专题
         </div>
         <h2 style={{ margin: 0, fontSize: 28, color: "#111827" }}>
-          识别结果与核查闭环
+          识别结果与确认闭环
         </h2>
         <div
           style={{
@@ -48,7 +48,7 @@ export function TopicHeaderActions({
             maxWidth: 920,
           }}
         >
-          聚焦资金支付链路中的命中结果、典型案例和核查明细。
+          聚焦资金支付链路中的命中结果、典型案例和确认明细。
         </div>
       </div>
 

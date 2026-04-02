@@ -54,7 +54,7 @@ export function AlertDetailPage({
         setFeedbackDraft(buildFeedbackDraft(null));
         setRecheckDraft(buildRecheckDraft(null));
         setAckDraft(buildAckDraft());
-        setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
+        setLoadError("确认详情加载失败，当前未显示演示兜底数据。");
         setLoading(false);
       }
     }
@@ -85,7 +85,7 @@ export function AlertDetailPage({
           setFeedbackDraft(buildFeedbackDraft(null));
           setRecheckDraft(buildRecheckDraft(null));
           setAckDraft(buildAckDraft());
-          setLoadError("核查详情加载失败，当前未显示演示兜底数据。");
+          setLoadError("确认详情加载失败，当前未显示演示兜底数据。");
           setLoading(false);
         }
       }
@@ -100,6 +100,8 @@ export function AlertDetailPage({
 
   const evidenceSections = useMemo(() => detail?.evidences || [], [detail]);
   const relatedTransactions = detail?.related_transactions || [];
+  const ackRecords = detail?.ack_records || [];
+  const flowLogs = detail?.flow_logs || [];
   const ticketTypeLabel = getTicketTypeLabel(detail?.ticket_type);
   const reviewLabel = getReviewLabel(detail?.review?.review_status);
   const isRiskTip = detail?.ticket_type === "risk_tip";
@@ -139,10 +141,55 @@ export function AlertDetailPage({
     }, 1600);
   };
 
+  const handleFeedback = async () => {
+    setFeedbackState("saving");
+    try {
+      await onSaveFeedback?.(detail.id, feedbackDraft);
+      await loadDetail();
+      setFeedbackState("saved");
+    } catch {
+      setFeedbackState("error");
+      return;
+    }
+    window.setTimeout(() => {
+      setFeedbackState("idle");
+    }, 1600);
+  };
+
+  const handleRecheck = async () => {
+    setRecheckState("saving");
+    try {
+      await onSaveRecheck?.(detail.id, recheckDraft);
+      await loadDetail();
+      setRecheckState("saved");
+    } catch {
+      setRecheckState("error");
+      return;
+    }
+    window.setTimeout(() => {
+      setRecheckState("idle");
+    }, 1600);
+  };
+
+  const handleAck = async () => {
+    setAckState("saving");
+    try {
+      await onSaveAck?.(detail.id, ackDraft);
+      await loadDetail();
+      setAckState("saved");
+    } catch {
+      setAckState("error");
+      return;
+    }
+    window.setTimeout(() => {
+      setAckState("idle");
+    }, 1600);
+  };
+
   if (loading) {
     return (
       <div style={pageShellStyle(embedded)}>
-        <div style={{ color: "#667085" }}>正在加载核查详情...</div>
+        <div style={{ color: "#667085" }}>正在加载确认详情...</div>
       </div>
     );
   }
@@ -150,7 +197,7 @@ export function AlertDetailPage({
   if (!detail) {
     return (
       <div style={pageShellStyle(embedded)}>
-        <div style={{ color: "#b42318" }}>{loadError || "未找到核查详情数据。"}</div>
+        <div style={{ color: "#b42318" }}>{loadError || "未找到确认详情数据。"}</div>
       </div>
     );
   }
@@ -217,7 +264,7 @@ export function AlertDetailPage({
             {detail.latest_evidence_summary}
           </div>
           <div style={{ fontSize: 13, color: "#4b5563", lineHeight: 1.8, marginBottom: 14 }}>
-            规则名称：{detail.rule_name}。适用于当前支付链路的风险识别与核查。
+            规则名称：{detail.rule_name}。适用于当前支付链路的风险识别与确认。
           </div>
           <div style={ruleSummaryGridStyle}>
             <div style={ruleSummaryCardStyle}>
@@ -318,162 +365,396 @@ export function AlertDetailPage({
           </section>
 
           <section style={reviewPanelStyle}>
-            <div style={assignmentPanelStyle}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
-                    单据派发
-                  </div>
-                  <div style={{ fontSize: 13, color: "#556070", lineHeight: 1.7 }}>
-                    将当前单据派发给具体处理人，再进入后续流程。
-                  </div>
-                </div>
-                <span style={assignmentStatusStyle(detail.review.assignment_status)}>
-                  {detail.review.assignment_status === "assigned" ? "已派发" : "待派发"}
-                </span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 14 }}>
-                <label style={fieldLabelStyle}>
-                  <span style={fieldTitleStyle}>审核人员</span>
-                  <input
-                    value={assignmentDraft.assignedReviewerName}
-                    onChange={(event) => setAssignmentDraft({ assignedReviewerName: event.target.value })}
-                    placeholder="例如：风控专员A"
-                    style={inputStyle}
-                  />
-                </label>
-                <div style={assignmentMetaCardStyle}>
-                  <div style={assignmentMetaLabelStyle}>当前处理人</div>
-                  <div style={assignmentMetaValueStyle}>{detail.review.assigned_reviewer_name || "待派发"}</div>
-                  <div style={assignmentMetaHintStyle}>
-                    {detail.review.assigned_at ? `派发时间 ${detail.review.assigned_at}` : "尚未完成派发"}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 12, color: assignState === "error" ? "#b42318" : "#64748b" }}>
-                  {assignState === "error"
-                    ? "派发失败，请检查处理人名称后重试。"
-                    : detail.review.assigned_at
-                      ? `当前单据已派发给 ${detail.review.assigned_reviewer_name || "处理人"}`
-                      : "当前单据尚未派发处理人"}
-                </div>
-                <button type="button" onClick={handleAssign} style={secondaryButtonStyle}>
-                  {assignState === "saving" ? "派发中..." : assignState === "saved" ? "已派发" : "派发处理人"}
-                </button>
-              </div>
-            </div>
-
-            {!isRiskTip && (
-              <>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={workflowHeaderStyle}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: "#111827", marginBottom: 6 }}>
-                  审核结论提交
+                <div style={panelTitleStyle}>
+                  {isRiskTip ? "风险提示单阅知流程" : isSupervision ? "风险督办单整改与跟踪" : "风险预警单处置流程"}
                 </div>
-                <div style={{ fontSize: 13, color: "#556070", lineHeight: 1.7 }}>
-                  填写审核结果并提交，作为当前单据的处置记录。
-                </div>
-              </div>
-              <span style={reviewStatusStyle(detail.review.review_status)}>
-                {reviewLabel}
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginTop: 14 }}>
-              <label style={fieldLabelStyle}>
-                <span style={fieldTitleStyle}>审核人</span>
-                <input
-                  value={draft.reviewer_name}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, reviewer_name: event.target.value }))}
-                  placeholder="例如：风控专员A"
-                  style={inputStyle}
-                />
-              </label>
-              <label style={fieldLabelStyle}>
-                <span style={fieldTitleStyle}>审核状态</span>
-                <select
-                  value={draft.review_status}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, review_status: event.target.value }))}
-                  style={inputStyle}
-                >
-                  <option value="pending">待审核</option>
-                  <option value="approved">已审核</option>
-                  <option value="rejected">已退回</option>
-                </select>
-              </label>
-            </div>
-
-            <label style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-              <span style={fieldTitleStyle}>审核结论</span>
-              <textarea
-                value={draft.review_result}
-                onChange={(event) => setDraft((prev) => ({ ...prev, review_result: event.target.value }))}
-                rows={3}
-                placeholder="请输入审核结论"
-                style={textareaStyle}
-              />
-            </label>
-
-            <label style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-              <span style={fieldTitleStyle}>备注</span>
-              <textarea
-                value={draft.review_comment}
-                onChange={(event) => setDraft((prev) => ({ ...prev, review_comment: event.target.value }))}
-                rows={3}
-                placeholder="请输入处置建议或补充说明"
-                style={textareaStyle}
-              />
-            </label>
-
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 12, color: saveState === "error" ? "#b42318" : "#64748b" }}>
-                {saveState === "error"
-                  ? detail.review.assignment_status !== "assigned"
-                    ? "请先完成单据派发，再提交审核结论。"
-                    : "提交失败，审核结果尚未写入数据库。"
-                  : detail.review.reviewed_at
-                    ? `已于 ${detail.review.reviewed_at} 保存`
-                    : "当前尚未保存审核结果"}
-              </div>
-              <button
-                type="button"
-                onClick={handleSave}
-                style={saveButtonStyle(detail.review.assignment_status !== "assigned")}
-                disabled={detail.review.assignment_status !== "assigned" || saveState === "saving"}
-              >
-                {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : saveState === "error" ? "重试提交" : "提交审核结论"}
-              </button>
-            </div>
-              </>
-            )}
-
-            <div style={{ marginTop: 18, display: "grid", gap: 12 }}>
-              <div style={assignmentMetaCardStyle}>
-                <div style={assignmentMetaLabelStyle}>反馈状态</div>
-                <div style={assignmentMetaValueStyle}>{getFlowLabel(detail.feedback?.feedback_status, "待反馈")}</div>
-                <div style={assignmentMetaHintStyle}>{detail.feedback?.feedback_result || "暂无反馈记录"}</div>
-              </div>
-              <div style={assignmentMetaCardStyle}>
-                <div style={assignmentMetaLabelStyle}>{isRiskTip ? "阅知记录" : "复核状态"}</div>
-                <div style={assignmentMetaValueStyle}>
-                  {isRiskTip ? `${detail.ack_records?.length || 0} 条` : getFlowLabel(detail.recheck?.recheck_status, "待复核")}
-                </div>
-                <div style={assignmentMetaHintStyle}>
+                <div style={workflowSubtitleStyle}>
                   {isRiskTip
-                    ? (detail.ack_records?.[detail.ack_records.length - 1]?.operator_name || "暂无阅知记录")
-                    : (detail.recheck?.recheck_result || "暂无复核记录")}
+                    ? "围绕提示单的派发与阅知留痕，形成面向成员单位的风险提示回顾。"
+                    : isSupervision
+                      ? "围绕整改反馈、审核、复核和逾期跟踪，形成督办事项的闭环说明。"
+                      : "围绕派发、反馈、审核和复核，形成预警事项的复盘说明和处置结论。"}
                 </div>
               </div>
-              {isSupervision && (
-                <div style={assignmentMetaCardStyle}>
-                  <div style={assignmentMetaLabelStyle}>督办时限</div>
-                  <div style={assignmentMetaValueStyle}>{detail.deadline_at || "未设置"}</div>
-                  <div style={assignmentMetaHintStyle}>{detail.is_overdue ? "当前已逾期" : "当前未逾期"}</div>
+              <span style={heroBadgeStyle.secondary}>{ticketTypeLabel}</span>
+            </div>
+
+            <div style={workflowStackStyle}>
+              <div style={workflowCardStyle}>
+                <div style={workflowCardHeaderStyle}>
+                  <div>
+                    <div style={workflowCardTitleStyle}>1. 派发</div>
+                    <div style={workflowCardDescriptionStyle}>将当前单据派发给具体处理人，明确后续说明和跟踪责任。</div>
+                  </div>
+                  <span style={assignmentStatusStyle(detail.review.assignment_status)}>
+                    {detail.review.assignment_status === "assigned" ? "已派发" : "待派发"}
+                  </span>
+                </div>
+                <div style={workflowFormGridStyle}>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>处理人</span>
+                    <input
+                      value={assignmentDraft.assignedReviewerName}
+                      onChange={(event) => setAssignmentDraft({ assignedReviewerName: event.target.value })}
+                      placeholder="例如：风控专员A"
+                      style={inputStyle}
+                    />
+                  </label>
+                  <div style={assignmentMetaCardStyle}>
+                    <div style={assignmentMetaLabelStyle}>当前处理人</div>
+                    <div style={assignmentMetaValueStyle}>{detail.review.assigned_reviewer_name || "待派发"}</div>
+                    <div style={assignmentMetaHintStyle}>
+                      {detail.review.assigned_at ? `派发时间 ${detail.review.assigned_at}` : "尚未完成派发"}
+                    </div>
+                  </div>
+                </div>
+                <div style={workflowFooterStyle}>
+                  <div style={{ fontSize: 12, color: assignState === "error" ? "#b42318" : "#64748b" }}>
+                    {assignState === "error"
+                      ? "派发失败，请检查处理人名称后重试。"
+                      : detail.review.assigned_at
+                        ? `当前单据已派发给 ${detail.review.assigned_reviewer_name || "处理人"}`
+                        : "当前单据尚未派发处理人"}
+                  </div>
+                  <button type="button" onClick={handleAssign} style={secondaryButtonStyle}>
+                    {assignState === "saving" ? "派发中..." : assignState === "saved" ? "已派发" : "派发处理人"}
+                  </button>
+                </div>
+              </div>
+
+              {!isRiskTip && (
+                <div style={workflowCardStyle}>
+                  <div style={workflowCardHeaderStyle}>
+                    <div>
+                      <div style={workflowCardTitleStyle}>2. {isSupervision ? "整改反馈" : "反馈说明"}</div>
+                      <div style={workflowCardDescriptionStyle}>
+                        {isSupervision
+                          ? "补充整改进展、原因说明和落实计划，形成督办事项的整改反馈。"
+                          : "补充风险事项的回顾说明、原因分析和后续改进措施。"}
+                      </div>
+                    </div>
+                    <span style={flowStatusStyle(detail.feedback?.feedback_status)}>
+                      {getFlowLabel(detail.feedback?.feedback_status, "待反馈")}
+                    </span>
+                  </div>
+                  <div style={workflowFormGridStyle}>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>反馈状态</span>
+                      <select
+                        value={feedbackDraft.feedback_status}
+                        onChange={(event) => setFeedbackDraft((prev) => ({ ...prev, feedback_status: event.target.value }))}
+                        style={inputStyle}
+                      >
+                        <option value="pending">待反馈</option>
+                        <option value="submitted">已反馈</option>
+                        <option value="completed">已完成</option>
+                        <option value="returned">已退回</option>
+                      </select>
+                    </label>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>反馈人</span>
+                      <input
+                        value={feedbackDraft.operator_name}
+                        onChange={(event) => setFeedbackDraft((prev) => ({ ...prev, operator_name: event.target.value }))}
+                        placeholder="例如：成员单位风控联系人"
+                        style={inputStyle}
+                      />
+                    </label>
+                  </div>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>反馈摘要</span>
+                    <textarea
+                      value={feedbackDraft.feedback_result}
+                      onChange={(event) => setFeedbackDraft((prev) => ({ ...prev, feedback_result: event.target.value }))}
+                      rows={3}
+                      placeholder={isSupervision ? "请输入整改反馈摘要" : "请输入反馈说明摘要"}
+                      style={textareaStyle}
+                    />
+                  </label>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>{isSupervision ? "整改说明" : "补充说明"}</span>
+                    <textarea
+                      value={feedbackDraft.feedback_comment}
+                      onChange={(event) => setFeedbackDraft((prev) => ({ ...prev, feedback_comment: event.target.value }))}
+                      rows={3}
+                      placeholder={isSupervision ? "请输入整改进展、原因说明和后续计划" : "请输入原因分析、回顾说明和改进计划"}
+                      style={textareaStyle}
+                    />
+                  </label>
+                  <div style={workflowFooterStyle}>
+                    <div style={{ fontSize: 12, color: feedbackState === "error" ? "#b42318" : "#64748b" }}>
+                      {feedbackState === "error"
+                        ? "反馈保存失败，请补充反馈人后重试。"
+                        : detail.feedback?.feedback_at
+                          ? `最近反馈时间 ${detail.feedback.feedback_at}`
+                          : "当前尚未形成反馈说明"}
+                    </div>
+                    <button type="button" onClick={handleFeedback} style={secondaryButtonStyle}>
+                      {feedbackState === "saving" ? "保存中..." : feedbackState === "saved" ? "已保存" : "保存反馈"}
+                    </button>
+                  </div>
                 </div>
               )}
+
+              {!isRiskTip && (
+                <div style={workflowCardStyle}>
+                  <div style={workflowCardHeaderStyle}>
+                    <div>
+                      <div style={workflowCardTitleStyle}>3. 审核</div>
+                      <div style={workflowCardDescriptionStyle}>
+                        对回顾说明、反馈材料和风险判断进行审核，形成审核意见。
+                      </div>
+                    </div>
+                    <span style={reviewStatusStyle(detail.review.review_status)}>{reviewLabel}</span>
+                  </div>
+                  <div style={workflowFormGridStyle}>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>审核人</span>
+                      <input
+                        value={draft.reviewer_name}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, reviewer_name: event.target.value }))}
+                        placeholder="例如：风控专员A"
+                        style={inputStyle}
+                      />
+                    </label>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>审核状态</span>
+                      <select
+                        value={draft.review_status}
+                        onChange={(event) => setDraft((prev) => ({ ...prev, review_status: event.target.value }))}
+                        style={inputStyle}
+                      >
+                        <option value="pending">待审核</option>
+                        <option value="approved">已审核</option>
+                        <option value="rejected">已退回</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>审核结论</span>
+                    <textarea
+                      value={draft.review_result}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, review_result: event.target.value }))}
+                      rows={3}
+                      placeholder="请输入审核结论"
+                      style={textareaStyle}
+                    />
+                  </label>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>审核意见</span>
+                    <textarea
+                      value={draft.review_comment}
+                      onChange={(event) => setDraft((prev) => ({ ...prev, review_comment: event.target.value }))}
+                      rows={3}
+                      placeholder="请输入审核意见或补充说明"
+                      style={textareaStyle}
+                    />
+                  </label>
+                  <div style={workflowFooterStyle}>
+                    <div style={{ fontSize: 12, color: saveState === "error" ? "#b42318" : "#64748b" }}>
+                      {saveState === "error"
+                        ? detail.review.assignment_status !== "assigned"
+                          ? "请先完成单据派发，再提交审核结论。"
+                          : "提交失败，审核结果尚未写入数据库。"
+                        : detail.review.reviewed_at
+                          ? `已于 ${detail.review.reviewed_at} 保存`
+                          : "当前尚未保存审核结果"}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      style={saveButtonStyle(detail.review.assignment_status !== "assigned")}
+                      disabled={detail.review.assignment_status !== "assigned" || saveState === "saving"}
+                    >
+                      {saveState === "saving" ? "提交中..." : saveState === "saved" ? "已提交" : saveState === "error" ? "重试提交" : "提交审核结论"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!isRiskTip && (
+                <div style={workflowCardStyle}>
+                  <div style={workflowCardHeaderStyle}>
+                    <div>
+                      <div style={workflowCardTitleStyle}>4. {isSupervision ? "复核与逾期跟踪" : "复核"}</div>
+                      <div style={workflowCardDescriptionStyle}>
+                        {isSupervision
+                          ? "对整改落实情况进行复核，并结合截止时间持续跟踪逾期状态。"
+                          : "对审核后的处置意见进行复核，确认风险说明闭环完成。"}
+                      </div>
+                    </div>
+                    <span style={flowStatusStyle(detail.recheck?.recheck_status)}>
+                      {getFlowLabel(detail.recheck?.recheck_status, "待复核")}
+                    </span>
+                  </div>
+                  <div style={workflowFormGridStyle}>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>复核状态</span>
+                      <select
+                        value={recheckDraft.recheck_status}
+                        onChange={(event) => setRecheckDraft((prev) => ({ ...prev, recheck_status: event.target.value }))}
+                        style={inputStyle}
+                      >
+                        <option value="pending">待复核</option>
+                        <option value="passed">已复核</option>
+                        <option value="returned">已退回</option>
+                      </select>
+                    </label>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>复核人</span>
+                      <input
+                        value={recheckDraft.operator_name}
+                        onChange={(event) => setRecheckDraft((prev) => ({ ...prev, operator_name: event.target.value }))}
+                        placeholder="例如：风控复核人"
+                        style={inputStyle}
+                      />
+                    </label>
+                  </div>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>复核结论</span>
+                    <textarea
+                      value={recheckDraft.recheck_result}
+                      onChange={(event) => setRecheckDraft((prev) => ({ ...prev, recheck_result: event.target.value }))}
+                      rows={3}
+                      placeholder="请输入复核结论"
+                      style={textareaStyle}
+                    />
+                  </label>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>复核说明</span>
+                    <textarea
+                      value={recheckDraft.recheck_comment}
+                      onChange={(event) => setRecheckDraft((prev) => ({ ...prev, recheck_comment: event.target.value }))}
+                      rows={3}
+                      placeholder={isSupervision ? "请输入复核意见和逾期跟踪说明" : "请输入复核说明"}
+                      style={textareaStyle}
+                    />
+                  </label>
+                  {isSupervision && (
+                    <div style={workflowBadgeGridStyle}>
+                      <div style={assignmentMetaCardStyle}>
+                        <div style={assignmentMetaLabelStyle}>督办时限</div>
+                        <div style={assignmentMetaValueStyle}>{detail.deadline_at || "未设置"}</div>
+                        <div style={assignmentMetaHintStyle}>{detail.is_overdue ? "当前已逾期" : "当前未逾期"}</div>
+                      </div>
+                      <div style={assignmentMetaCardStyle}>
+                        <div style={assignmentMetaLabelStyle}>连续预警次数</div>
+                        <div style={assignmentMetaValueStyle}>{detail.continuous_warning_count || 0} 次</div>
+                        <div style={assignmentMetaHintStyle}>用于督办升级说明</div>
+                      </div>
+                    </div>
+                  )}
+                  <div style={workflowFooterStyle}>
+                    <div style={{ fontSize: 12, color: recheckState === "error" ? "#b42318" : "#64748b" }}>
+                      {recheckState === "error"
+                        ? "复核保存失败，请补充复核人后重试。"
+                        : detail.recheck?.rechecked_at
+                          ? `最近复核时间 ${detail.recheck.rechecked_at}`
+                          : "当前尚未形成复核结论"}
+                    </div>
+                    <button type="button" onClick={handleRecheck} style={secondaryButtonStyle}>
+                      {recheckState === "saving" ? "保存中..." : recheckState === "saved" ? "已保存" : "保存复核"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isRiskTip && (
+                <div style={workflowCardStyle}>
+                  <div style={workflowCardHeaderStyle}>
+                    <div>
+                      <div style={workflowCardTitleStyle}>2. 阅知</div>
+                      <div style={workflowCardDescriptionStyle}>记录提示单的阅知情况，保留成员单位对风险提示的接收说明。</div>
+                    </div>
+                    <span style={flowStatusStyle(ackRecords.length ? "completed" : "pending")}>
+                      {ackRecords.length ? "已阅知" : "待阅知"}
+                    </span>
+                  </div>
+                  <div style={workflowFormGridStyle}>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>阅知人</span>
+                      <input
+                        value={ackDraft.operator_name}
+                        onChange={(event) => setAckDraft((prev) => ({ ...prev, operator_name: event.target.value }))}
+                        placeholder="例如：集团本部风险联系人"
+                        style={inputStyle}
+                      />
+                    </label>
+                    <label style={fieldLabelStyle}>
+                      <span style={fieldTitleStyle}>最新阅知</span>
+                      <div style={assignmentMetaCardStyle}>
+                        <div style={assignmentMetaValueStyle}>{ackRecords[ackRecords.length - 1]?.operator_name || "暂无阅知记录"}</div>
+                        <div style={assignmentMetaHintStyle}>
+                          {ackRecords[ackRecords.length - 1]?.ack_at || "尚未形成阅知留痕"}
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                  <label style={fieldLabelStyle}>
+                    <span style={fieldTitleStyle}>阅知说明</span>
+                    <textarea
+                      value={ackDraft.ack_comment}
+                      onChange={(event) => setAckDraft((prev) => ({ ...prev, ack_comment: event.target.value }))}
+                      rows={3}
+                      placeholder="请输入阅知说明或转发备注"
+                      style={textareaStyle}
+                    />
+                  </label>
+                  {!!ackRecords.length && (
+                    <div style={ackListStyle}>
+                      {ackRecords.slice(-3).reverse().map((item, index) => (
+                        <div key={`${item.ack_at || index}-${item.operator_name || index}`} style={ackItemStyle}>
+                          <div style={ackItemTitleStyle}>{item.operator_name || "阅知人"}</div>
+                          <div style={ackItemMetaStyle}>{item.ack_at || "未记录时间"}</div>
+                          <div style={ackItemCommentStyle}>{item.ack_comment || "无附加说明"}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={workflowFooterStyle}>
+                    <div style={{ fontSize: 12, color: ackState === "error" ? "#b42318" : "#64748b" }}>
+                      {ackState === "error"
+                        ? "阅知保存失败，请补充阅知人后重试。"
+                        : ackRecords.length
+                          ? `当前累计 ${ackRecords.length} 条阅知记录`
+                          : "当前尚未形成阅知留痕"}
+                    </div>
+                    <button type="button" onClick={handleAck} style={secondaryButtonStyle}>
+                      {ackState === "saving" ? "保存中..." : ackState === "saved" ? "已保存" : "保存阅知"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={workflowCardStyle}>
+                <div style={workflowCardHeaderStyle}>
+                  <div>
+                    <div style={workflowCardTitleStyle}>
+                      {isRiskTip ? "派发与阅知轨迹" : isSupervision ? "整改与督办轨迹" : "处置流程轨迹"}
+                    </div>
+                    <div style={workflowCardDescriptionStyle}>按时间记录当前单据的流转节点，便于回顾全过程。</div>
+                  </div>
+                  <span style={heroBadgeStyle.secondary}>{flowLogs.length} 条</span>
+                </div>
+                <div style={timelineListStyle}>
+                  {flowLogs.length ? flowLogs.map((item, index) => (
+                    <div key={`${item.created_at || index}-${item.action_type || index}`} style={timelineItemStyle}>
+                      <div style={timelineMarkerStyle}>{index + 1}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={timelineTitleStyle}>{getActionLabel(item.action_type)} · {item.action_result || "已记录"}</div>
+                        <div style={timelineMetaStyle}>
+                          {(item.operator_name || "系统")} · {item.created_at || "未记录时间"}
+                        </div>
+                        <div style={timelineCommentStyle}>{item.action_comment || "无附加说明"}</div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div style={assignmentMetaHintStyle}>当前暂无流程轨迹。</div>
+                  )}
+                </div>
+              </div>
             </div>
           </section>
         </div>
@@ -497,6 +778,31 @@ function buildAssignmentDraft(review) {
   };
 }
 
+function buildFeedbackDraft(feedback) {
+  return {
+    feedback_status: feedback?.feedback_status || "pending",
+    feedback_result: feedback?.feedback_result || "",
+    feedback_comment: feedback?.feedback_comment || "",
+    operator_name: feedback?.operator_name || "",
+  };
+}
+
+function buildRecheckDraft(recheck) {
+  return {
+    recheck_status: recheck?.recheck_status || "pending",
+    recheck_result: recheck?.recheck_result || "",
+    recheck_comment: recheck?.recheck_comment || "",
+    operator_name: recheck?.operator_name || "",
+  };
+}
+
+function buildAckDraft() {
+  return {
+    operator_name: "",
+    ack_comment: "",
+  };
+}
+
 function getTicketTypeLabel(ticketType) {
   if (ticketType === "risk_tip") return "风险提示单";
   if (ticketType === "supervision") return "风险督办单";
@@ -515,6 +821,19 @@ function getFlowLabel(status, fallback) {
   if (status === "passed") return "已复核";
   if (status === "returned") return "已退回";
   return fallback;
+}
+
+function getActionLabel(actionType) {
+  const labels = {
+    dispatch: "派发",
+    feedback: "反馈",
+    review: "审核",
+    recheck: "复核",
+    ack: "阅知",
+    overdue: "逾期跟踪",
+    manual_create: "建单",
+  };
+  return labels[actionType] || actionType || "流程";
 }
 
 function pageShellStyle(embedded) {
@@ -729,6 +1048,26 @@ function assignmentStatusStyle(status) {
   };
 }
 
+function flowStatusStyle(status) {
+  const statusMap = {
+    pending: { background: "#fff4e5", color: "#b45309" },
+    submitted: { background: "#ecfeff", color: "#0f766e" },
+    completed: { background: "#e8f5ef", color: "#0f7a3e" },
+    passed: { background: "#e8f5ef", color: "#0f7a3e" },
+    returned: { background: "#fff5f5", color: "#b42318" },
+  };
+  const tone = statusMap[status] || statusMap.pending;
+  return {
+    padding: "6px 10px",
+    borderRadius: 999,
+    background: tone.background,
+    color: tone.color,
+    fontSize: 12,
+    fontWeight: 800,
+    whiteSpace: "nowrap",
+  };
+}
+
 const heroMetaRowStyle = {
   display: "flex",
   flexWrap: "wrap",
@@ -876,6 +1215,81 @@ const transactionCardsListStyle = {
   marginTop: 2,
 };
 
+const ackListStyle = {
+  display: "grid",
+  gap: 10,
+};
+
+const ackItemStyle = {
+  padding: 12,
+  borderRadius: 14,
+  background: "white",
+  border: "1px solid #dbe5f1",
+};
+
+const ackItemTitleStyle = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: "#0f172a",
+};
+
+const ackItemMetaStyle = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#64748b",
+};
+
+const ackItemCommentStyle = {
+  marginTop: 8,
+  fontSize: 13,
+  color: "#475569",
+  lineHeight: 1.7,
+};
+
+const timelineListStyle = {
+  display: "grid",
+  gap: 12,
+};
+
+const timelineItemStyle = {
+  display: "grid",
+  gridTemplateColumns: "32px minmax(0, 1fr)",
+  gap: 12,
+  alignItems: "flex-start",
+};
+
+const timelineMarkerStyle = {
+  width: 32,
+  height: 32,
+  borderRadius: 999,
+  background: "#e8f1ff",
+  color: "#1a3a8f",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 12,
+  fontWeight: 800,
+};
+
+const timelineTitleStyle = {
+  fontSize: 14,
+  fontWeight: 800,
+  color: "#0f172a",
+};
+
+const timelineMetaStyle = {
+  marginTop: 4,
+  fontSize: 12,
+  color: "#64748b",
+};
+
+const timelineCommentStyle = {
+  marginTop: 6,
+  fontSize: 13,
+  color: "#475569",
+  lineHeight: 1.7,
+};
+
 const reviewPanelStyle = {
   padding: 20,
   borderRadius: 18,
@@ -893,6 +1307,78 @@ const assignmentPanelStyle = {
   border: "1px solid #dbe5f1",
   background: "#f8fbff",
   marginBottom: 18,
+};
+
+const workflowHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  flexWrap: "wrap",
+  alignItems: "flex-start",
+  marginBottom: 14,
+};
+
+const workflowSubtitleStyle = {
+  fontSize: 13,
+  color: "#556070",
+  lineHeight: 1.7,
+  maxWidth: 720,
+};
+
+const workflowStackStyle = {
+  display: "grid",
+  gap: 14,
+};
+
+const workflowCardStyle = {
+  padding: 16,
+  borderRadius: 16,
+  border: "1px solid #dbe5f1",
+  background: "#f8fbff",
+  display: "grid",
+  gap: 12,
+};
+
+const workflowCardHeaderStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  flexWrap: "wrap",
+  alignItems: "flex-start",
+};
+
+const workflowCardTitleStyle = {
+  fontSize: 14,
+  fontWeight: 900,
+  color: "#111827",
+  marginBottom: 6,
+};
+
+const workflowCardDescriptionStyle = {
+  fontSize: 13,
+  color: "#556070",
+  lineHeight: 1.7,
+  maxWidth: 720,
+};
+
+const workflowFormGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+};
+
+const workflowFooterStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "center",
+  flexWrap: "wrap",
+};
+
+const workflowBadgeGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
 };
 
 const assignmentMetaCardStyle = {

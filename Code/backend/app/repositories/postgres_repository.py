@@ -14,11 +14,21 @@ TICKET_TYPE_LABELS = {
 TRIGGER_SOURCE_LABELS = {
     "model_threshold": "模型阈值预警",
     "audit_rectification": "审计整改跟踪",
-    "leader_instruction": "领导指定",
+    "leader_instruction": "领导批示",
     "typical_event": "典型事件提醒",
     "trend_change": "风险趋势变化",
     "three_consecutive_warnings": "连续三次预警",
     "rectification_overdue": "整改逾期",
+}
+
+TRIGGER_SOURCE_RULE_CODES = {
+    "model_threshold": "post_review_threshold_notice",
+    "leader_instruction": "leader_attention_notice",
+    "audit_rectification": "audit_rectification_notice",
+    "trend_change": "trend_change_notice",
+    "typical_event": "typical_event_notice",
+    "three_consecutive_warnings": "three_consecutive_warnings",
+    "rectification_overdue": "rectification_overdue_notice",
 }
 
 
@@ -88,22 +98,23 @@ class PostgresRepository:
             for row in summary_blocks
             if str(row["risk_level"]).lower() in {"high", "高风险"}
         )
+        risk_cards = [
+            {"title": "金融风险", "high": 5, "warn": 4, "hint": 3},
+            {"title": "往来款风险", "high": 1, "warn": 3, "hint": 2},
+            {"title": "循环贸易风险", "high": 4, "warn": 3, "hint": 2},
+            {"title": "资金风险", "high": 2, "warn": len(summary_blocks), "hint": max(1, len(summary_blocks) // 2)},
+            {"title": "存货风险", "high": 3, "warn": 2, "hint": 2},
+            {"title": "固定资产风险", "high": 1, "warn": 2, "hint": 1},
+            {"title": "债务风险", "high": 1, "warn": 2, "hint": 1},
+            {"title": "税务风险", "high": 1, "warn": 1, "hint": 1},
+        ]
         return {
             "page_title": "风险总览",
             "snapshot_date": max(
                 (row["data_snapshot_date"] for row in summary_blocks if row["data_snapshot_date"]),
                 default="2026-03-31",
             ),
-            "risk_cards": [
-                {"title": "金融风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "往来款风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "循环贸易风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "资金风险", "high": high_count, "warn": len(summary_blocks), "hint": max(1, len(summary_blocks) // 2)},
-                {"title": "存货风险", "high": 0, "warn": 2, "hint": 3},
-                {"title": "固定资产风险", "high": 0, "warn": 1, "hint": 2},
-                {"title": "债务风险", "high": 0, "warn": 2, "hint": 1},
-                {"title": "税务风险", "high": 0, "warn": 1, "hint": 2},
-            ],
+            "risk_cards": risk_cards,
             "recent_risks": topic_rows,
             "fund_safety_focus": {
                 "page_key": "fund_safety",
@@ -453,22 +464,27 @@ class PostgresRepository:
                 "SELECT id, rule_code FROM terror_rules"
             ).fetchall()
             rule_id_by_code = {row["rule_code"]: str(row["id"]) for row in rule_rows}
-            preserved_manual_rows = conn.execute(
+            preserved_ticket_rows = conn.execute(
                 """
-                SELECT a.id, a.alert_no, a.extra_payload, ar.review_status, ar.assignment_status,
+                SELECT a.id, a.alert_no, a.rule_code, a.rule_name, a.risk_level, a.member_unit_name,
+                       a.extra_payload, ar.review_status, ar.assignment_status,
                        ar.assigned_reviewer_name, ar.assigned_at, ar.reviewer_name, ar.review_result,
                        ar.review_comment, ar.reviewed_at
                 FROM terror_alerts a
                 LEFT JOIN terror_alert_reviews ar ON ar.alert_id = a.id
                 """
             ).fetchall()
-            preserved_manual = []
-            for row in preserved_manual_rows:
+            preserved_non_detection = []
+            for row in preserved_ticket_rows:
                 payload = self._ensure_ticket_payload(self._json_to_object(row["extra_payload"]))
-                if payload.get("source_ref_type") == "manual":
-                    preserved_manual.append(
+                if payload.get("source_ref_type") != "detection_job":
+                    preserved_non_detection.append(
                         {
                             "alert_no": row["alert_no"],
+                            "rule_code": row["rule_code"],
+                            "rule_name": row["rule_name"],
+                            "risk_level": row["risk_level"] or "warn",
+                            "member_unit_name": row["member_unit_name"],
                             "extra_payload": payload,
                             "review": {
                                 "review_status": row["review_status"] or "pending",
@@ -585,7 +601,17 @@ class PostgresRepository:
                         alert["review"]["review_comment"],
                     ),
                 )
-            for item in preserved_manual:
+            for item in preserved_non_detection:
+                preserved_rule_code = item["rule_code"] or TRIGGER_SOURCE_RULE_CODES.get(
+                    str(item["extra_payload"].get("trigger_source")),
+                    "manual_ticket",
+                )
+                if preserved_rule_code not in rule_id_by_code:
+                    preserved_rule_code = TRIGGER_SOURCE_RULE_CODES.get(
+                        str(item["extra_payload"].get("trigger_source")),
+                        preserved_rule_code,
+                    )
+                preserved_rule_name = item["rule_name"] or item["extra_payload"].get("ticket_title") or "手工单据"
                 alert_row = conn.execute(
                     """
                     INSERT INTO terror_alerts (
@@ -595,7 +621,7 @@ class PostgresRepository:
                       alert_summary, extra_payload
                     )
                     VALUES (
-                      %s, %s::uuid, NULL, %s, %s, %s, 'open', %s,
+                      %s, %s::uuid, %s::uuid, %s, %s, %s, 'open', %s,
                       NULL, %s, NULL, NULL, NULL, NULL, NULL, %s, %s, %s, NULL, %s, %s::jsonb
                     )
                     RETURNING id
@@ -603,11 +629,12 @@ class PostgresRepository:
                     (
                         item["alert_no"],
                         str(job_row["id"]),
-                        "manual_ticket",
-                        item["extra_payload"].get("ticket_title") or "手工单据",
-                        "warn",
+                        rule_id_by_code.get(preserved_rule_code),
+                        preserved_rule_code,
+                        preserved_rule_name,
+                        item["risk_level"],
                         item["review"]["review_status"],
-                        item["extra_payload"].get("ticket_title") or "手工单据",
+                        item["member_unit_name"] or item["extra_payload"].get("ticket_title") or "手工单据",
                         0,
                         0,
                         0,
@@ -1136,8 +1163,12 @@ class PostgresRepository:
         top_accounts: dict[str, dict[str, object]] = {}
         trend: dict[str, int] = {}
         for item in alerts_payload:
-            trend[item["transaction_date"]] = trend.get(item["transaction_date"], 0) + 1
+            transaction_date = item.get("transaction_date")
+            if transaction_date:
+                trend[str(transaction_date)] = trend.get(str(transaction_date), 0) + 1
             for bucket, key in ((top_entities, item["member_unit_name"]), (top_accounts, item["payee_name"])):
+                if not key:
+                    continue
                 row = bucket.setdefault(key, {"name": key, "count": 0, "amount": 0.0, "risk_level": item["risk_level"]})
                 row["count"] += 1
                 row["amount"] += float(item["matched_amount"].replace("万元", ""))
@@ -1159,7 +1190,7 @@ class PostgresRepository:
             "kpis": {
                 "alert_count": str(len(alerts_payload)),
                 "high_risk_count": str(sum(1 for item in alerts_payload if item["risk_level"] == "high")),
-                "involved_units": str(len({item["member_unit_name"] for item in alerts_payload})),
+                "involved_units": str(len({item["member_unit_name"] for item in alerts_payload if item.get("member_unit_name")})),
                 "involved_amount": f"{amounts:.2f}万元",
                 "blacklist_hit_count": str(sum(1 for item in alerts_payload if item["rule_code"] == "blacklist_hit")),
             },
@@ -1178,7 +1209,9 @@ class PostgresRepository:
                     "risk_level": item["risk_level"],
                     "alert_no": item["alert_no"],
                 }
-                for item in select_typical_case_alerts(alerts_payload)
+                for item in select_typical_case_alerts(
+                    [item for item in alerts_payload if item["rule_code"] in {"blacklist_hit", "high_frequency_high_amount", "dormant_account_abnormal_payment"}]
+                )
             ],
             "latest_job": {
                 "job_no": latest_job["job_no"] if latest_job else None,

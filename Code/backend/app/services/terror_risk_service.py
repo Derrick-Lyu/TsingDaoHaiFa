@@ -4,6 +4,10 @@ from app.engine.terror_risk import detect_terror_risk_alerts
 from app.repositories.runtime_repository import get_repository
 
 
+def _detection_rules(rules: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [rule for rule in rules if str(rule.get("ruleCategory")) == "terror_risk"]
+
+
 def initialize_detection_snapshot() -> None:
     repository = get_repository()
     current = repository.list_terror_alerts()
@@ -11,7 +15,7 @@ def initialize_detection_snapshot() -> None:
         return
     alerts, latest_job = detect_terror_risk_alerts(
         transactions=repository.list_transactions(),
-        rules=repository.list_rules(),
+        rules=_detection_rules(repository.list_rules()),
         blacklist=repository.list_blacklist(),
         snapshot_date="2026-03-31",
     )
@@ -186,7 +190,7 @@ def run_detection_job() -> dict[str, object]:
     repository = get_repository()
     alerts, latest_job = detect_terror_risk_alerts(
         transactions=repository.list_transactions(),
-        rules=repository.list_rules(),
+        rules=_detection_rules(repository.list_rules()),
         blacklist=repository.list_blacklist(),
         snapshot_date="2026-03-31",
     )

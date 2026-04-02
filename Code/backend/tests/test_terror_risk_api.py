@@ -267,7 +267,7 @@ def test_dispatch_feedback_recheck_and_ack_workflow_endpoints_update_ticket_stat
         json={
             "ticket_type": "warning_notice",
             "trigger_source": "leader_instruction",
-            "ticket_title": "领导指定预警单",
+            "ticket_title": "领导批示预警单",
             "ticket_reason": "领导要求跟踪重点指标异常",
             "ticket_content": "请成员单位反馈整改进展。",
             "member_unit_name": "青岛海发资本管理有限公司",
@@ -384,6 +384,31 @@ def test_detection_job_preserves_manual_ticket_history():
     assert detail["flow_logs"]
 
 
+def test_detection_job_preserves_non_detection_rule_backed_tickets():
+    client = TestClient(app)
+
+    leader_items_before = client.get(
+        "/api/terror-risk/alerts",
+        params={"trigger_source": "leader_instruction"},
+    )
+    assert leader_items_before.status_code == 200
+    before_items = leader_items_before.json()["items"]
+    assert before_items
+
+    leader_ticket = next((item for item in before_items if item["rule_code"] == "leader_attention_notice"), None)
+    assert leader_ticket is not None
+    ticket_id = leader_ticket["id"]
+
+    job_response = client.post("/api/terror-risk/detection-jobs")
+    assert job_response.status_code == 200
+
+    after_detail = client.get(f"/api/terror-risk/alerts/{ticket_id}")
+    assert after_detail.status_code == 200
+    after_payload = after_detail.json()
+    assert after_payload["trigger_source"] == "leader_instruction"
+    assert after_payload["rule_code"] == "leader_attention_notice"
+
+
 def test_terror_risk_mutation_endpoints_update_repository_state():
     client = TestClient(app)
 
@@ -409,6 +434,15 @@ def test_terror_risk_mutation_endpoints_update_repository_state():
     rule_response = client.get("/api/terror-risk/rules")
     assert rule_response.status_code == 200
     rules = rule_response.json()
+    assert {
+        "post_review_threshold_notice",
+        "leader_attention_notice",
+        "audit_rectification_notice",
+        "trend_change_notice",
+        "typical_event_notice",
+        "three_consecutive_warnings",
+        "rectification_overdue_notice",
+    }.issubset({rule["ruleCode"] for rule in rules})
     frequency_rule = next(rule for rule in rules if rule["ruleCode"] == "high_frequency_high_amount")
     frequency_rule["enabled"] = False
     updated_rule = client.put(f"/api/terror-risk/rules/{frequency_rule['id']}", json=frequency_rule)

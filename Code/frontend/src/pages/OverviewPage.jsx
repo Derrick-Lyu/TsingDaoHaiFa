@@ -97,29 +97,6 @@ export function OverviewPage({ onOpenFundSafety }) {
 
   return (
     <div style={pageStyle} className="cockpit-page">
-      <section style={heroStyle} className="cockpit-hero">
-        <div style={heroBackdropStyle} aria-hidden="true" />
-        <div style={heroCopyStyle}>
-          <div style={eyebrowStyle}>{overview.heroBanner.eyebrow}</div>
-          <h1 style={heroTitleStyle}>{overview.heroBanner.title}</h1>
-          <p style={heroDescriptionStyle}>{overview.heroBanner.description}</p>
-          <div style={heroMetaStyle}>
-            <button type="button" onClick={onOpenFundSafety} style={primaryButtonStyle}>
-              {overview.heroBanner.primaryActionLabel}
-            </button>
-            <span style={heroNoteStyle}>{overview.heroBanner.secondaryNote}</span>
-          </div>
-        </div>
-
-        <div style={heroAsideStyle}>
-          <div style={heroAsideLabelStyle}>数据快照</div>
-          <div style={heroAsideDateStyle}>{overview.updatedAt}</div>
-          <div style={heroAsideSourceStyle}>
-            {overview.source === "demo" ? "Demo fallback" : "API + fallback"}
-          </div>
-        </div>
-      </section>
-
       <section style={metricGridStyle} className="cockpit-metric-grid">
         {overview.heroMetrics.map((metric) => {
           const tone = toneStyles[metric.tone] ?? toneStyles.neutral;
@@ -143,7 +120,7 @@ export function OverviewPage({ onOpenFundSafety }) {
       <section style={panelGridStyle} className="cockpit-panel-grid">
         <article style={panelStyle} className="cockpit-panel">
           <PanelHeading
-            title="风险预警全景"
+            title="集团风险总结"
             subtitle="全级次分布、趋势变化与高风险排行"
           />
           <div style={panelSplitStyle} className="cockpit-panel-split">
@@ -172,7 +149,12 @@ export function OverviewPage({ onOpenFundSafety }) {
                           />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`${value}`, "预警数量"]} />
+                      <Tooltip
+                        formatter={(value, _name, entry) => [
+                          `${value}`,
+                          entry?.payload?.name ?? "成员单位",
+                        ]}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -232,7 +214,7 @@ export function OverviewPage({ onOpenFundSafety }) {
                 <BarChart data={overview.highRiskRanking} layout="vertical" margin={{ left: 8, right: 8 }}>
                   <CartesianGrid horizontal={false} stroke="#eef2f7" />
                   <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="name" width={92} tickLine={false} axisLine={false} stroke="#64748b" />
+                  <YAxis type="category" dataKey="name" width={150} tickLine={false} axisLine={false} stroke="#64748b" />
                   <Tooltip />
                   <Bar dataKey="value" fill="#163d65" radius={[0, 8, 8, 0]} />
                 </BarChart>
@@ -244,7 +226,7 @@ export function OverviewPage({ onOpenFundSafety }) {
         <article style={panelStyle} className="cockpit-panel">
           <PanelHeading
             title="监管流程闭环"
-            subtitle="预警到销号的流程压降和时效观察"
+            subtitle="预警到完成的流程压降和时效观察"
           />
           <div style={funnelStyle}>
             {overview.processStages.map((stage, index) => (

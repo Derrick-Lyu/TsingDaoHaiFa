@@ -118,7 +118,7 @@ export function AlertTable({
             <option value="model_threshold">模型阈值异常</option>
             <option value="typical_event">典型事件提醒</option>
             <option value="trend_change">趋势变化提示</option>
-            <option value="leader_instruction">领导指定</option>
+            <option value="leader_instruction">领导批示</option>
             <option value="three_consecutive_warnings">连续三次预警</option>
             <option value="rectification_overdue">整改逾期</option>
           </select>
@@ -168,7 +168,7 @@ export function AlertTable({
                 <MetaItem label="触发来源" value={alert.trigger_source_label || "-"} />
                 <MetaItem label="金额" value={formatAmountDisplay(alert.matched_amount)} />
                 <MetaItem label="当前处理人" value={alert.assigned_reviewer_name || "待派发"} />
-                <MetaItem label="核查状态" value={(REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending).text} />
+                <MetaItem label="确认状态" value={(REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending).text} />
               </div>
 
               <div style={summaryStyle}>{alert.alert_summary}</div>
