@@ -90,6 +90,35 @@ test("buildTerrorRiskDashboardModel exposes drilldown filters for rule breakdown
   });
 });
 
+test("buildTerrorRiskDashboardModel trims the trailing 规则 suffix from rule breakdown labels", () => {
+  const dashboard = buildTerrorRiskDashboardModel(
+    {},
+    [
+      {
+        id: "alert-1",
+        rule_code: "blacklist_hit",
+        rule_name: "黑名单命中规则",
+        risk_level: "high",
+      },
+      {
+        id: "alert-2",
+        rule_code: "trend_change",
+        rule_name: "风险趋势提示规则",
+        risk_level: "warn",
+      },
+    ],
+    [
+      { rule_code: "blacklist_hit", rule_name: "黑名单命中规则" },
+      { rule_code: "trend_change", rule_name: "风险趋势提示规则" },
+    ],
+  );
+
+  assert.deepEqual(
+    dashboard.ruleBreakdown.map((item) => item.label),
+    ["黑名单命中", "风险趋势提示"],
+  );
+});
+
 test("buildTerrorRiskDashboardModel exposes drilldown filters for supervision funnel cards", () => {
   const dashboard = buildTerrorRiskDashboardModel(
     {},

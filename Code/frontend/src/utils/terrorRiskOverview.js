@@ -4,6 +4,7 @@ export const OVERVIEW_RANKING_TABS = [
 ];
 
 const EMPTY_DRILLDOWN_FILTERS = Object.freeze({});
+const RULE_SUFFIX_REGEX = /规则$/;
 
 export function buildTerrorRiskDashboardModel(topic, alerts = [], rules = []) {
   const normalizedTopic = topic ?? {};
@@ -181,7 +182,7 @@ function normalizeRuleBreakdown(topic, alerts, rules, latestJob) {
     const riskLevel = normalizeRiskLevel(pickString(alert, ["risk_level", "riskLevel"], []) ?? "");
     const entry = grouped.get(code) ?? {
       code,
-      label: nameByCode.get(code) ?? pickString(alert, ["rule_name", "ruleName"], []) ?? code,
+      label: sanitizeRuleLabel(nameByCode.get(code) ?? pickString(alert, ["rule_name", "ruleName"], []) ?? code),
       count: 0,
       highCount: 0,
       warnCount: 0,
@@ -218,7 +219,7 @@ function normalizeRuleBreakdown(topic, alerts, rules, latestJob) {
 function normalizeBreakdownItem(item, index, totalAlerts, latestJob, rules) {
   const count = toNumber(pickValue(item, ["count", "value"], []));
   const share = pickString(item, ["share", "shareLabel"], []) ?? (totalAlerts ? `${Math.round((count / totalAlerts) * 100)}%` : "");
-  const label = pickString(item, ["label", "name", "title"], []) ?? `规则 ${index + 1}`;
+  const label = sanitizeRuleLabel(pickString(item, ["label", "name", "title"], []) ?? `规则 ${index + 1}`);
   const ruleCode = resolveRuleCode(item, label, rules);
   return {
     key: pickString(item, ["key", "id"], []) ?? `rule-breakdown-${index}`,
@@ -231,6 +232,14 @@ function normalizeBreakdownItem(item, index, totalAlerts, latestJob, rules) {
     riskLevel: normalizeRiskLevel(pickString(item, ["riskLevel", "risk_level", "level"], []) ?? ""),
     drilldownFilters: buildRuleDrilldownFilters(ruleCode),
   };
+}
+
+function sanitizeRuleLabel(label) {
+  if (typeof label !== "string") {
+    return label;
+  }
+
+  return label.replace(RULE_SUFFIX_REGEX, "").trim();
 }
 
 function normalizeSupervisionFunnel(topic, alerts, latestJob) {

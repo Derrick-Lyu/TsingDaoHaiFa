@@ -45,6 +45,7 @@ const EMPTY_TOPIC = {
 };
 
 const EMPTY_ALERT_LIST = { total: 0, items: [] };
+const TOP_INSIGHT_BODY_HEIGHT = 348;
 
 export function TerrorRiskTopicPage({
   mode = "overview",
@@ -278,7 +279,7 @@ export function TerrorRiskTopicPage({
       </div>
 
       <div style={insightGridStyle}>
-        <section style={insightPanelStyle}>
+        <section style={compactInsightPanelStyle}>
           <div style={panelHeaderStyle}>
             <div style={panelTitleStyle}>当月风险事件分布</div>
             <span style={sectionMetaPillStyle}>
@@ -286,7 +287,7 @@ export function TerrorRiskTopicPage({
             </span>
           </div>
           <div style={trendPanelBodyStyle}>
-            <div style={{ width: "100%", height: 280 }}>
+            <div style={{ width: "100%", height: TOP_INSIGHT_BODY_HEIGHT }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dashboard.trend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7edf7" />
@@ -300,7 +301,7 @@ export function TerrorRiskTopicPage({
           </div>
         </section>
 
-        <section style={insightPanelStyle}>
+        <section style={compactInsightPanelStyle}>
           <div style={panelHeaderStyle}>
             <div style={panelTitleStyle}>风险规则命中分布</div>
             <span style={sectionMetaPillStyle}>{dashboard.ruleBreakdown.length || 0} 个规则</span>
@@ -719,8 +720,12 @@ const insightPanelStyle = {
   flexDirection: "column",
 };
 
+const compactInsightPanelStyle = {
+  ...insightPanelStyle,
+  minHeight: "auto",
+};
+
 const trendPanelBodyStyle = {
-  flex: 1,
   display: "flex",
   alignItems: "center",
 };
@@ -883,7 +888,9 @@ const executiveFocusTagStyle = {
 const breakdownListStyle = {
   display: "grid",
   gap: 12,
-  flex: 1,
+  maxHeight: TOP_INSIGHT_BODY_HEIGHT,
+  overflowY: "auto",
+  paddingRight: 4,
 };
 
 const breakdownItemStyle = {
