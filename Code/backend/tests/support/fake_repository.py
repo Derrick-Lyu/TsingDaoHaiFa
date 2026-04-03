@@ -838,6 +838,7 @@ class FakePostgresRepository:
         rule_type: str | None = None,
         risk_level: str | None = None,
         member_unit: str | None = None,
+        counterparty: str | None = None,
         ticket_type: str | None = None,
         trigger_source: str | None = None,
         dispatch_status: str | None = None,
@@ -857,6 +858,13 @@ class FakePostgresRepository:
                 for item in items
                 if member_unit.lower() in str(item["member_unit_name"]).lower()
                 or member_unit.lower() in str(item["member_unit_code"]).lower()
+            ]
+        if counterparty:
+            items = [
+                item
+                for item in items
+                if counterparty.lower() in str(item.get("payee_name") or "").lower()
+                or counterparty.lower() in str(item.get("payer_name") or "").lower()
             ]
         if ticket_type:
             items = [item for item in items if item["ticket_type"] == ticket_type]

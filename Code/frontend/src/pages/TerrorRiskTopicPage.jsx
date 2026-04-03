@@ -49,9 +49,11 @@ const EMPTY_ALERT_LIST = { total: 0, items: [] };
 export function TerrorRiskTopicPage({
   mode = "overview",
   onOpenAlertDetail,
+  onOpenAlertList,
   onOpenAllCases,
   onBackToOverview,
   onUpdate,
+  presetFilters,
 }) {
   const [topic, setTopic] = useState(EMPTY_TOPIC);
   const [alerts, setAlerts] = useState(EMPTY_ALERT_LIST.items);
@@ -60,6 +62,7 @@ export function TerrorRiskTopicPage({
     ruleType: "",
     riskLevel: "",
     memberUnit: "",
+    counterparty: "",
     ticketType: "",
     triggerSource: "",
     dispatchStatus: "",
@@ -74,6 +77,32 @@ export function TerrorRiskTopicPage({
   const [updateError, setUpdateError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [activeOverviewTab, setActiveOverviewTab] = useState("entities");
+
+  useEffect(() => {
+    if (mode !== "alerts" || !presetFilters) {
+      return;
+    }
+
+    setFilters((current) => {
+      const next = {
+        ruleType: "",
+        riskLevel: "",
+        memberUnit: "",
+        counterparty: "",
+        ticketType: "",
+        triggerSource: "",
+        dispatchStatus: "",
+        feedbackStatus: "",
+        reviewStatus: "",
+        recheckStatus: "",
+        isOverdue: "",
+        ...presetFilters,
+      };
+
+      const unchanged = Object.keys(next).every((key) => current[key] === next[key]);
+      return unchanged ? current : next;
+    });
+  }, [mode, presetFilters]);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,6 +257,9 @@ export function TerrorRiskTopicPage({
         latestState={latestState}
         snapshotDate={dashboard.snapshotDate || topic.snapshot_date}
         latestJob={dashboard.latestJob}
+        involvedUnits={topic.kpis?.involved_units || "0"}
+        blacklistHits={topic.kpis?.blacklist_hit_count || "0"}
+        highRiskAlerts={topic.kpis?.high_risk_count || "0"}
       />
 
       {loadError ? <div style={errorBannerStyle}>{loadError}</div> : null}
@@ -276,7 +308,12 @@ export function TerrorRiskTopicPage({
           {dashboard.ruleBreakdown.length ? (
             <div style={breakdownListStyle}>
               {dashboard.ruleBreakdown.map((item) => (
-                <div key={item.key} style={breakdownItemStyle}>
+                <button
+                  key={item.key}
+                  type="button"
+                  style={breakdownItemButtonStyle}
+                  onClick={() => onOpenAlertList?.(item.drilldownFilters)}
+                >
                   <div style={breakdownItemHeaderStyle}>
                     <div style={breakdownTitleWrapStyle}>
                       <div style={breakdownNameStyle}>{item.label}</div>
@@ -290,7 +327,7 @@ export function TerrorRiskTopicPage({
                     <strong style={breakdownCountStyle}>{item.count} 条</strong>
                     <span style={breakdownShareStyle}>{item.share || "-"}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
@@ -308,7 +345,12 @@ export function TerrorRiskTopicPage({
           {dashboard.supervisionFunnel.length ? (
             <div style={funnelListStyle}>
               {dashboard.supervisionFunnel.map((item, index) => (
-                <div key={item.key} style={funnelStepStyle}>
+                <button
+                  key={item.key}
+                  type="button"
+                  style={funnelStepButtonStyle}
+                  onClick={() => onOpenAlertList?.(item.drilldownFilters)}
+                >
                   <div style={funnelStepTopStyle}>
                     <div style={funnelStepIndexStyle}>{index + 1}</div>
                     <div style={funnelStepTitleWrapStyle}>
@@ -325,7 +367,7 @@ export function TerrorRiskTopicPage({
                     />
                     <span style={sectionMetaPillStyle}>{funnelStatusLabel(item.status)}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
@@ -390,7 +432,11 @@ export function TerrorRiskTopicPage({
               ))}
             </div>
           </div>
-          <CompactRankingPanel items={overviewRankingItems} emptyLabel="暂无风险命中对象排行数据" />
+          <CompactRankingPanel
+            items={overviewRankingItems}
+            emptyLabel="暂无风险命中对象排行数据"
+            onSelectItem={(item) => onOpenAlertList?.(item.drilldownFilters)}
+          />
         </section>
 
         <section style={insightPanelStyle}>
@@ -426,7 +472,7 @@ export function TerrorRiskTopicPage({
   );
 }
 
-function ExecutiveSummaryPanel({ summary, latestState, snapshotDate, latestJob }) {
+function ExecutiveSummaryPanel({ summary, latestState, snapshotDate, latestJob, involvedUnits, blacklistHits, highRiskAlerts }) {
   const tags = Array.isArray(summary?.tags) ? summary.tags : [];
   const focus = Array.isArray(summary?.focus) ? summary.focus : [];
 
@@ -450,16 +496,16 @@ function ExecutiveSummaryPanel({ summary, latestState, snapshotDate, latestJob }
 
       <div style={executiveMetaGridStyle}>
         <div style={executiveMetaItemStyle}>
-          <div style={executiveMetaLabelStyle}>本次识别处理</div>
-          <div style={executiveMetaValueStyle}>{latestJob?.transaction_count || 0} 笔</div>
+          <div style={executiveMetaLabelStyle}>涉及成员单位</div>
+          <div style={executiveMetaValueStyle}>{involvedUnits || 0} 个</div>
         </div>
         <div style={executiveMetaItemStyle}>
-          <div style={executiveMetaLabelStyle}>命中预警</div>
-          <div style={executiveMetaValueStyle}>{latestJob?.matched_count || 0} 条</div>
+          <div style={executiveMetaLabelStyle}>黑名单命中</div>
+          <div style={executiveMetaValueStyle}>{blacklistHits || 0} 条</div>
         </div>
         <div style={executiveMetaItemStyle}>
-          <div style={executiveMetaLabelStyle}>高风险命中</div>
-          <div style={executiveMetaValueStyle}>{latestJob?.high_risk_count || 0} 条</div>
+          <div style={executiveMetaLabelStyle}>高风险事项</div>
+          <div style={executiveMetaValueStyle}>{highRiskAlerts || 0} 条</div>
         </div>
       </div>
 
@@ -486,7 +532,7 @@ function MetricCard({ label, value, tone, sublabel }) {
   );
 }
 
-function CompactRankingPanel({ items = [], emptyLabel }) {
+function CompactRankingPanel({ items = [], emptyLabel, onSelectItem }) {
   if (!items.length) {
     return <div style={rankingEmptyStateStyle}>{emptyLabel}</div>;
   }
@@ -494,7 +540,12 @@ function CompactRankingPanel({ items = [], emptyLabel }) {
   return (
     <div style={rankingPanelStyle}>
       {items.map((item, index) => (
-        <div key={`${item.name}-${index}`} style={rankingCompactRowStyle}>
+        <button
+          key={`${item.name}-${index}`}
+          type="button"
+          style={rankingCompactRowButtonStyle}
+          onClick={() => onSelectItem?.(item)}
+        >
           <div style={rankingCompactHeaderStyle}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
               <span style={rankingIndexStyle}>{index + 1}</span>
@@ -515,7 +566,7 @@ function CompactRankingPanel({ items = [], emptyLabel }) {
               {item.risk_level === "high" ? "高风险" : item.risk_level === "warn" ? "预警关注" : "提示"}
             </span>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -844,6 +895,14 @@ const breakdownItemStyle = {
   gap: 12,
 };
 
+const breakdownItemButtonStyle = {
+  ...breakdownItemStyle,
+  width: "100%",
+  textAlign: "left",
+  cursor: "pointer",
+  appearance: "none",
+};
+
 const breakdownItemHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
@@ -899,6 +958,14 @@ const funnelStepStyle = {
   background: "#fbfdff",
   display: "grid",
   gap: 12,
+};
+
+const funnelStepButtonStyle = {
+  ...funnelStepStyle,
+  width: "100%",
+  textAlign: "left",
+  cursor: "pointer",
+  appearance: "none",
 };
 
 const funnelStepTopStyle = {
@@ -1051,6 +1118,14 @@ const rankingCompactRowStyle = {
   border: "1px solid #e5edf7",
   boxShadow: "0 10px 20px rgba(15,23,42,0.04)",
   minHeight: 64,
+};
+
+const rankingCompactRowButtonStyle = {
+  ...rankingCompactRowStyle,
+  width: "100%",
+  textAlign: "left",
+  cursor: "pointer",
+  appearance: "none",
 };
 
 const rankingCompactHeaderStyle = {

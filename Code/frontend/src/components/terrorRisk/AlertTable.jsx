@@ -141,6 +141,15 @@ export function AlertTable({
             style={inputStyle}
           />
         </label>
+        <label style={filterFieldStyle}>
+          <span style={filterLabelStyle}>对手方</span>
+          <input
+            value={filters.counterparty}
+            onChange={filterChange("counterparty")}
+            placeholder="输入对手方名称"
+            style={inputStyle}
+          />
+        </label>
       </div>
 
       {compact ? (

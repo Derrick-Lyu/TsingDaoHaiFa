@@ -113,6 +113,7 @@ test("listRiskTickets serializes the new workflow filters into the alerts query"
       reviewStatus: "pending",
       recheckStatus: "pending",
       memberUnit: "集团本部",
+      counterparty: "境外对手方A",
       isOverdue: true,
     });
     assert.match(capturedUrl, /ticket_type=risk_tip/);
@@ -122,6 +123,7 @@ test("listRiskTickets serializes the new workflow filters into the alerts query"
     assert.match(capturedUrl, /review_status=pending/);
     assert.match(capturedUrl, /recheck_status=pending/);
     assert.match(capturedUrl, /member_unit=%E9%9B%86%E5%9B%A2%E6%9C%AC%E9%83%A8/);
+    assert.match(capturedUrl, /counterparty=%E5%A2%83%E5%A4%96%E5%AF%B9%E6%89%8B%E6%96%B9A/);
     assert.match(capturedUrl, /is_overdue=true/);
   } finally {
     globalThis.fetch = originalFetch;

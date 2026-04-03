@@ -3,13 +3,16 @@ export const OVERVIEW_RANKING_TABS = [
   { key: "accounts", label: "对手方" },
 ];
 
+const EMPTY_DRILLDOWN_FILTERS = Object.freeze({});
+
 export function buildTerrorRiskDashboardModel(topic, alerts = [], rules = []) {
   const normalizedTopic = topic ?? {};
   const normalizedAlerts = Array.isArray(alerts) ? alerts : [];
   const normalizedRules = Array.isArray(rules) ? rules : [];
   const latestJob = normalizeLatestJob(normalizedTopic);
+  const jobTotals = normalizeJobTotals(normalizedTopic);
   const kpis = normalizeKpis(normalizedTopic);
-  const executiveSummary = normalizeExecutiveSummary(normalizedTopic, latestJob, kpis, normalizedAlerts);
+  const executiveSummary = normalizeExecutiveSummary(normalizedTopic, latestJob, jobTotals, kpis, normalizedAlerts);
   const kpiStrip = normalizeKpiStrip(normalizedTopic, kpis);
   const ruleBreakdown = normalizeRuleBreakdown(normalizedTopic, normalizedAlerts, normalizedRules, latestJob);
   const supervisionFunnel = normalizeSupervisionFunnel(normalizedTopic, normalizedAlerts, latestJob);
@@ -38,6 +41,7 @@ export function buildTerrorRiskDashboardModel(topic, alerts = [], rules = []) {
       pickValue(normalizedTopic, ["typical_cases", "typicalCases"], [["dashboard", "typical_cases"], ["dashboard", "typicalCases"]]),
     ),
     latestJob,
+    jobTotals,
     ruleBreakdown,
     supervisionFunnel,
     watchlist,
@@ -50,17 +54,25 @@ export function getOverviewRankingItems(topic, activeTab) {
       ? pickArray(topic, ["top_accounts", "topAccounts"], [["dashboard", "top_accounts"], ["dashboard", "topAccounts"]])
       : pickArray(topic, ["top_entities", "topEntities"], [["dashboard", "top_entities"], ["dashboard", "topEntities"]]);
 
-  return [...sourceItems].sort((left, right) => {
-    const riskDelta = getRiskPriority(left?.risk_level) - getRiskPriority(right?.risk_level);
-    if (riskDelta !== 0) {
-      return riskDelta;
-    }
+  return [...sourceItems]
+    .sort((left, right) => {
+      const riskDelta = getRiskPriority(left?.risk_level) - getRiskPriority(right?.risk_level);
+      if (riskDelta !== 0) {
+        return riskDelta;
+      }
 
-    return Number(right?.count || 0) - Number(left?.count || 0);
-  });
+      return Number(right?.count || 0) - Number(left?.count || 0);
+    })
+    .map((item) => ({
+      ...item,
+      drilldownFilters:
+        activeTab === "accounts"
+          ? { counterparty: item?.name ?? "" }
+          : { memberUnit: item?.name ?? "" },
+    }));
 }
 
-function normalizeExecutiveSummary(topic, latestJob, kpis, alerts) {
+function normalizeExecutiveSummary(topic, latestJob, jobTotals, kpis, alerts) {
   const supplied = pickObject(topic, ["executive_summary", "executiveSummary"], [
     ["dashboard", "executive_summary"],
     ["dashboard", "executiveSummary"],
@@ -82,8 +94,8 @@ function normalizeExecutiveSummary(topic, latestJob, kpis, alerts) {
   const blacklistHitCount = toNumber(kpis.blacklist_hit_count);
   const unitCount = toNumber(kpis.involved_units);
   const amount = kpis.involved_amount ?? "0.00万元";
-  const transactionCount = toNumber(latestJob.transaction_count);
-  const matchedCount = toNumber(latestJob.matched_count);
+  const cumulativeTransactionCount = toNumber(jobTotals.cumulative_transaction_count) || toNumber(latestJob.transaction_count);
+  const matchedCount = toNumber(kpis.alert_count) || alerts.length;
   const reviewedCount = alerts.filter((item) => String(item?.review_status) === "reviewed").length;
 
   let headline = "当前已进入穿透式监管视角，风险状态可视、链路可追、责任可查。";
@@ -97,7 +109,7 @@ function normalizeExecutiveSummary(topic, latestJob, kpis, alerts) {
 
   return {
     headline,
-    subheadline: `本次识别处理 ${transactionCount} 笔交易，命中 ${matchedCount} 条预警，其中已复核 ${reviewedCount} 条，涉及金额 ${amount}。`,
+    subheadline: `累计处理 ${cumulativeTransactionCount} 笔交易数据，累计识别 ${matchedCount} 条风险事项，其中已复核 ${reviewedCount} 条，涉及金额 ${amount}。`,
     status: normalizeStatus(highRiskCount > 0 ? "high" : alertCount > 0 ? "attention" : "normal"),
     tags: [
       "全级次覆盖",
@@ -146,7 +158,7 @@ function normalizeRuleBreakdown(topic, alerts, rules, latestJob) {
   ]);
 
   if (supplied.length) {
-    return supplied.map((item, index) => normalizeBreakdownItem(item, index, alerts.length, latestJob));
+    return supplied.map((item, index) => normalizeBreakdownItem(item, index, alerts.length, latestJob, rules));
   }
 
   const alertCount = alerts.length || toNumber(pickValue(topic, ["matched_count"], [["latest_job", "matched_count"]])) || 0;
@@ -199,21 +211,25 @@ function normalizeRuleBreakdown(topic, alerts, rules, latestJob) {
             ? `预警关注 ${item.warnCount} 条`
             : `关联 ${item.count} 条`,
       riskLevel: item.highCount > 0 ? "high" : item.warnCount > 0 ? "warn" : "low",
+      drilldownFilters: buildRuleDrilldownFilters(item.code),
     }));
 }
 
-function normalizeBreakdownItem(item, index, totalAlerts, latestJob) {
+function normalizeBreakdownItem(item, index, totalAlerts, latestJob, rules) {
   const count = toNumber(pickValue(item, ["count", "value"], []));
   const share = pickString(item, ["share", "shareLabel"], []) ?? (totalAlerts ? `${Math.round((count / totalAlerts) * 100)}%` : "");
+  const label = pickString(item, ["label", "name", "title"], []) ?? `规则 ${index + 1}`;
+  const ruleCode = resolveRuleCode(item, label, rules);
   return {
     key: pickString(item, ["key", "id"], []) ?? `rule-breakdown-${index}`,
-    label: pickString(item, ["label", "name", "title"], []) ?? `规则 ${index + 1}`,
+    label,
     count,
     share,
     note:
       pickString(item, ["note", "description", "summary"], []) ??
       `最新批次命中 ${toNumber(latestJob.matched_count)} 条`,
     riskLevel: normalizeRiskLevel(pickString(item, ["riskLevel", "risk_level", "level"], []) ?? ""),
+    drilldownFilters: buildRuleDrilldownFilters(ruleCode),
   };
 }
 
@@ -288,6 +304,7 @@ function normalizeSupervisionFunnel(topic, alerts, latestJob) {
       value: pendingDispatchCount,
       note: `已识别 ${matchedCount} 条，其中待明确跟进人的事项`,
       status: pendingDispatchCount > 0 ? "attention" : "normal",
+      drilldownFilters: { dispatchStatus: "pending" },
     },
     {
       key: "pending_feedback",
@@ -295,6 +312,7 @@ function normalizeSupervisionFunnel(topic, alerts, latestJob) {
       value: pendingFeedbackCount,
       note: "已派发但尚未提交反馈或尚未完成阅知的事项",
       status: pendingFeedbackCount > 0 ? "warning" : "normal",
+      drilldownFilters: { dispatchStatus: "dispatched", feedbackStatus: "pending" },
     },
     {
       key: "pending_review",
@@ -302,6 +320,7 @@ function normalizeSupervisionFunnel(topic, alerts, latestJob) {
       value: pendingReviewCount,
       note: "已提交反馈但尚未完成审核或复核的事项",
       status: pendingReviewCount > 0 ? "warning" : "normal",
+      drilldownFilters: { feedbackStatus: "submitted" },
     },
     {
       key: "high_risk_watch",
@@ -309,6 +328,7 @@ function normalizeSupervisionFunnel(topic, alerts, latestJob) {
       value: unresolvedHighRiskCount,
       note: "尚未完成闭环、需要持续盯办的高风险事项",
       status: unresolvedHighRiskCount > 0 ? "high" : "normal",
+      drilldownFilters: { riskLevel: "high", recheckStatus: "pending" },
     },
   ];
 }
@@ -387,6 +407,43 @@ function normalizeLatestJob(topic) {
     transaction_count: toNumber(pickValue(supplied ?? {}, ["transaction_count", "transactionCount"], [])),
     matched_count: toNumber(pickValue(supplied ?? {}, ["matched_count", "matchedCount"], [])),
     high_risk_count: toNumber(pickValue(supplied ?? {}, ["high_risk_count", "highRiskCount"], [])),
+  };
+}
+
+function resolveRuleCode(item, label, rules) {
+  const directCode = pickString(item, ["ruleCode", "rule_code", "code", "ruleType"], []);
+  if (directCode) {
+    return directCode;
+  }
+
+  const matchedRule = normalizeArray(rules).find((rule) => {
+    const name = pickString(rule, ["rule_name", "ruleName", "name"], []);
+    return name === label;
+  });
+
+  return pickString(matchedRule ?? {}, ["rule_code", "ruleCode", "code", "id"], []) ?? "";
+}
+
+function buildRuleDrilldownFilters(ruleCode) {
+  if (!ruleCode) {
+    return EMPTY_DRILLDOWN_FILTERS;
+  }
+
+  return { ruleType: ruleCode };
+}
+
+function normalizeJobTotals(topic) {
+  const supplied = pickObject(topic, ["job_totals", "jobTotals"], [["dashboard", "job_totals"], ["dashboard", "jobTotals"]]) ?? {};
+  return {
+    cumulative_transaction_count: toNumber(
+      pickValue(supplied, ["cumulative_transaction_count", "cumulativeTransactionCount"], []),
+    ),
+    cumulative_matched_count: toNumber(
+      pickValue(supplied, ["cumulative_matched_count", "cumulativeMatchedCount"], []),
+    ),
+    cumulative_high_risk_count: toNumber(
+      pickValue(supplied, ["cumulative_high_risk_count", "cumulativeHighRiskCount"], []),
+    ),
   };
 }
 

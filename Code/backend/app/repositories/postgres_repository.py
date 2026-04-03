@@ -672,6 +672,7 @@ class PostgresRepository:
         rule_type: str | None = None,
         risk_level: str | None = None,
         member_unit: str | None = None,
+        counterparty: str | None = None,
         ticket_type: str | None = None,
         trigger_source: str | None = None,
         dispatch_status: str | None = None,
@@ -691,6 +692,9 @@ class PostgresRepository:
         if member_unit:
             clauses.append("(a.member_unit_name ILIKE %s OR COALESCE(a.member_unit_code,'') ILIKE %s)")
             params.extend([f"%{member_unit}%", f"%{member_unit}%"])
+        if counterparty:
+            clauses.append("(COALESCE(a.payee_name,'') ILIKE %s OR COALESCE(a.payer_name,'') ILIKE %s)")
+            params.extend([f"%{counterparty}%", f"%{counterparty}%"])
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         with self._connection() as conn:
             rows = conn.execute(
@@ -1158,6 +1162,15 @@ class PostgresRepository:
                 LIMIT 1
                 """
             ).fetchone()
+            job_totals = conn.execute(
+                """
+                SELECT COALESCE(SUM(transaction_count), 0) AS cumulative_transaction_count,
+                       COALESCE(SUM(matched_count), 0) AS cumulative_matched_count,
+                       COALESCE(SUM(high_risk_count), 0) AS cumulative_high_risk_count
+                FROM terror_detection_jobs
+                WHERE job_status = 'succeeded'
+                """
+            ).fetchone()
         amounts = sum(float(item["matched_amount"].replace("万元", "")) for item in alerts_payload)
         top_entities: dict[str, dict[str, object]] = {}
         top_accounts: dict[str, dict[str, object]] = {}
@@ -1223,6 +1236,11 @@ class PostgresRepository:
                 "started_at": latest_job["started_at"].isoformat() if latest_job and latest_job["started_at"] else None,
                 "finished_at": latest_job["finished_at"].isoformat() if latest_job and latest_job["finished_at"] else None,
                 "input_snapshot_at": latest_job["input_snapshot_at"].isoformat() if latest_job and latest_job["input_snapshot_at"] else None,
+            },
+            "job_totals": {
+                "cumulative_transaction_count": job_totals["cumulative_transaction_count"] if job_totals else 0,
+                "cumulative_matched_count": job_totals["cumulative_matched_count"] if job_totals else 0,
+                "cumulative_high_risk_count": job_totals["cumulative_high_risk_count"] if job_totals else 0,
             },
         }
 

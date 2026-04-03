@@ -88,6 +88,20 @@ def test_alert_list_supports_ticket_type_and_trigger_source_filters():
     assert all(item["trigger_source"] == "leader_instruction" for item in leader_items)
 
 
+def test_alert_list_supports_counterparty_filter():
+    client = TestClient(app)
+
+    all_items = client.get("/api/terror-risk/alerts").json()["items"]
+    sample = next(item for item in all_items if item.get("payee_name"))
+
+    response = client.get("/api/terror-risk/alerts", params={"counterparty": sample["payee_name"]})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] >= 1
+    assert all(sample["payee_name"] in (item.get("payee_name") or "") for item in payload["items"])
+
+
 def test_terror_risk_alert_list_supports_ticket_type_filter_and_detail_sections():
     client = TestClient(app)
 

@@ -10,6 +10,20 @@ import {
 } from "./api/terrorRisk";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
 
+const DEFAULT_TOPIC_ALERT_FILTERS = {
+  ruleType: "",
+  riskLevel: "",
+  memberUnit: "",
+  counterparty: "",
+  ticketType: "",
+  triggerSource: "",
+  dispatchStatus: "",
+  feedbackStatus: "",
+  reviewStatus: "",
+  recheckStatus: "",
+  isOverdue: "",
+};
+
 const AlertDetailPage = lazy(() =>
   import("./pages/AlertDetailPage").then((module) => ({ default: module.AlertDetailPage })),
 );
@@ -47,7 +61,7 @@ const TOPIC_NAV_ITEMS = [
 ];
 
 function ShellHeader({ activeTab, onChangeTab }) {
-  const title = activeTab === "overview" ? "穿透式监管管理驾驶舱" : "资金安全监管专题";
+  const title = activeTab === "overview" ? "穿透式监管管理平台" : "资金安全监管专题";
   const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与确认闭环";
 
   return (
@@ -87,7 +101,9 @@ function TopicWorkspace({
   activeView,
   onNavigate,
   onOpenDetail,
+  onOpenAlertList,
   onRunDetection,
+  alertFilters,
 }) {
   return (
     <div style={workspaceGridStyle} className="topic-workspace">
@@ -116,6 +132,7 @@ function TopicWorkspace({
           <TerrorRiskTopicPage
             mode="overview"
             onOpenAlertDetail={onOpenDetail}
+            onOpenAlertList={onOpenAlertList}
             onUpdate={onRunDetection}
             onOpenAllCases={() => onNavigate("cases")}
           />
@@ -132,6 +149,7 @@ function TopicWorkspace({
           <TerrorRiskTopicPage
             mode="alerts"
             onOpenAlertDetail={onOpenDetail}
+            presetFilters={alertFilters}
             onUpdate={onRunDetection}
           />
         )}
@@ -148,6 +166,7 @@ export default function App() {
   const [fundSafetyView, setFundSafetyView] = useState("summary");
   const [topicView, setTopicView] = useState("overview");
   const [selectedAlertId, setSelectedAlertId] = useState(null);
+  const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
 
   const openFundSafety = () => {
     setActiveTab("fund-safety");
@@ -159,11 +178,29 @@ export default function App() {
     setActiveTab("fund-safety");
     setFundSafetyView("topic");
     setTopicView("overview");
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
   const openAlertDetail = (alertId) => {
     setSelectedAlertId(alertId);
     setFundSafetyView("detail");
+  };
+
+  const openAlertList = (filters = DEFAULT_TOPIC_ALERT_FILTERS) => {
+    setActiveTab("fund-safety");
+    setFundSafetyView("topic");
+    setTopicView("alerts");
+    setSelectedAlertId(null);
+    setTopicAlertFilters({ ...DEFAULT_TOPIC_ALERT_FILTERS, ...filters });
+  };
+
+  const handleTopicNavigate = (view) => {
+    setTopicView(view);
+    if (view !== "alerts") {
+      setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+      return;
+    }
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
   const runDetectionJob = async () => {
@@ -204,9 +241,11 @@ export default function App() {
         <Suspense fallback={<PageLoadingState label="正在加载涉恐交易风险专题..." />}>
           <TopicWorkspace
             activeView={topicView}
-            onNavigate={setTopicView}
+            onNavigate={handleTopicNavigate}
             onOpenDetail={openAlertDetail}
+            onOpenAlertList={openAlertList}
             onRunDetection={runDetectionJob}
+            alertFilters={topicAlertFilters}
           />
         </Suspense>
       );
@@ -238,6 +277,7 @@ export default function App() {
           if (value === "fund-safety") {
             setFundSafetyView("summary");
             setTopicView("overview");
+            setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
           }
         }}
       />

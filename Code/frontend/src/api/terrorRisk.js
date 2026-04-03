@@ -196,6 +196,7 @@ function buildAlertQueryString(filters) {
   if (filters.ruleType) params.set("rule_type", filters.ruleType);
   if (filters.riskLevel) params.set("risk_level", filters.riskLevel);
   if (filters.memberUnit) params.set("member_unit", filters.memberUnit);
+  if (filters.counterparty) params.set("counterparty", filters.counterparty);
   if (filters.ticketType) params.set("ticket_type", filters.ticketType);
   if (filters.triggerSource) params.set("trigger_source", filters.triggerSource);
   if (filters.dispatchStatus) params.set("dispatch_status", filters.dispatchStatus);
