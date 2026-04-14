@@ -2,7 +2,7 @@ export const demoCockpitOverview = {
   source: "demo",
   updatedAt: "2026-04-02 09:30",
   heroBanner: {
-    eyebrow: "穿透式监管管理驾驶舱",
+    eyebrow: "穿透式监管管理平台",
     title: "青岛海发集团全级次风险预警与监管闭环总览",
     description:
       "覆盖集团总部、成员单位与下属项目公司，统一展示预警暴露、确认推进、整改追责与专题穿透入口。",

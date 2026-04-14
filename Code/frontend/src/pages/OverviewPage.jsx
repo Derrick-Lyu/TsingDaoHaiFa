@@ -19,6 +19,7 @@ import {
 } from "recharts";
 
 import { getOverviewSummary } from "../api/terrorRisk";
+import { isHighRiskRankingNavigable } from "../utils/overviewNavigation";
 
 const toneStyles = {
   critical: {
@@ -160,7 +161,7 @@ export function OverviewPage({ onOpenFundSafety }) {
                 </div>
                 <div style={listStyle}>
                   {overview.riskDistribution.map((item, index) => (
-                    <div key={item.name} style={listRowStyle}>
+                    <div key={item.name} style={listRowStyle(false)}>
                       <div>
                         <div style={distributionLegendLabelStyle}>
                           <span
@@ -194,15 +195,38 @@ export function OverviewPage({ onOpenFundSafety }) {
                   </ResponsiveContainer>
                 </div>
                 <div style={listStyle}>
-                  {overview.highRiskRanking.map((item) => (
-                    <div key={item.name} style={listRowStyle}>
-                      <div>
-                        <div style={listPrimaryStyle}>{item.name}</div>
-                        <div style={listSecondaryStyle}>高风险预警</div>
-                      </div>
-                      <div style={listValueStyle}>{item.value}</div>
-                    </div>
-                  ))}
+                  {overview.highRiskRanking.map((item) => {
+                    const isNavigable = isHighRiskRankingNavigable(item.name);
+
+                    const content = (
+                      <>
+                        <div style={{ textAlign: "left" }}>
+                          <div style={listPrimaryStyle}>{item.name}</div>
+                          <div style={listSecondaryStyle}>高风险预警</div>
+                        </div>
+                        <div style={listValueStyle}>{item.value}</div>
+                      </>
+                    );
+
+                    if (!isNavigable) {
+                      return (
+                        <div key={item.name} style={listRowStyle(false)}>
+                          {content}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={item.name}
+                        type="button"
+                        onClick={onOpenFundSafety}
+                        style={listRowStyle(true)}
+                      >
+                        {content}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -679,15 +703,18 @@ const listStyle = {
   gap: 10,
 };
 
-const listRowStyle = {
+const listRowStyle = (interactive) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   gap: 12,
+  width: "100%",
   padding: "12px 14px",
   borderRadius: 16,
+  border: "1px solid transparent",
   background: "#f8fafc",
-};
+  cursor: interactive ? "pointer" : "default",
+});
 
 const listPrimaryStyle = {
   fontWeight: 700,
