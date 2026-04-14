@@ -19,6 +19,8 @@ cd Code/infra
 docker compose up --build
 ```
 
+The Compose project name defaults to `qingdao-haifa`, so generated container and build image names stay aligned with the project instead of the `infra/` folder name. Set `COMPOSE_PROJECT_NAME` only if you intentionally want a different prefix.
+
 ## Service Ports
 
 - Frontend: `5173`

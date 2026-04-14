@@ -1,5 +1,8 @@
+name: ${COMPOSE_PROJECT_NAME:-qingdao-haifa}
+
 services:
   frontend:
+    image: ${COMPOSE_PROJECT_NAME:-qingdao-haifa}-frontend:latest
     build:
       context: ..
       dockerfile: infra/frontend.Dockerfile
@@ -12,6 +15,7 @@ services:
         condition: service_started
 
   backend:
+    image: ${COMPOSE_PROJECT_NAME:-qingdao-haifa}-backend:latest
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
