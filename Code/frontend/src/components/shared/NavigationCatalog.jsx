@@ -13,13 +13,12 @@ const CATALOG_ITEMS = [
     ],
   },
   { label: "十大重点领域画像穿透", value: "key-areas-penetration" },
-  { label: "风险处置", value: "risk-disposal" },
   { label: "模型中心", value: "model-center" },
   { label: "风险处置中心", value: "risk-disposal-center" },
   { label: "数据中心", value: "data-center" },
 ];
 
-export function NavigationCatalog({ isOpen, onClose, onNavigate }) {
+export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCenter }) {
   const [expandedItems, setExpandedItems] = useState({});
 
   if (!isOpen) {
@@ -39,13 +38,18 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate }) {
     } else if (!isParent) {
       if (item.value === "home") {
         onNavigate("overview");
+        onClose();
+      } else if (item.value === "model-center") {
+        // Navigate to model center (fund safety topic workspace)
+        if (onOpenModelCenter) {
+          onOpenModelCenter();
+        }
+        onClose();
       } else {
-        // For other items, navigate to appropriate pages
-        // Currently only "overview" and "fund-safety" are implemented
-        // Other items will navigate to overview as placeholder
+        // For other items, navigate to overview as placeholder
         onNavigate("overview");
+        onClose();
       }
-      onClose();
     }
   };
 

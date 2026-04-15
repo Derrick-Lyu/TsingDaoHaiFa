@@ -49,7 +49,6 @@ const TransactionDataPage = lazy(() =>
 
 const PRIMARY_TABS = [
   { label: "驾驶舱首页", value: "overview" },
-  { label: "资金安全专题", value: "fund-safety" },
 ];
 
 const TOPIC_NAV_ITEMS = [
@@ -229,6 +228,14 @@ export default function App() {
     setCatalogOpen(false);
   };
 
+  // Direct navigation to model center (fund-safety topic workspace)
+  const openModelCenter = () => {
+    setActiveTab("fund-safety");
+    setFundSafetyView("topic");
+    setTopicView("overview");
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+  };
+
   const runDetectionJob = async () => {
     await requestJson("/terror-risk/detection-jobs", {
       method: "POST",
@@ -313,6 +320,13 @@ export default function App() {
         isOpen={catalogOpen}
         onClose={() => setCatalogOpen(false)}
         onNavigate={handleCatalogNavigate}
+        onOpenModelCenter={() => {
+          setActiveTab("fund-safety");
+          setFundSafetyView("topic");
+          setTopicView("overview");
+          setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+          setCatalogOpen(false);
+        }}
       />
 
       <main style={mainStyle} className="app-main">{pageContent}</main>
