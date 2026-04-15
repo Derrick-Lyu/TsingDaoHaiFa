@@ -223,9 +223,9 @@ export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
                 <XAxis
                   dataKey="name"
                   tick={{ fill: "#64748b", fontSize: 10 }}
-                  angle={-45}
+                  angle={-25}
                   textAnchor="end"
-                  height={70}
+                  height={60}
                   interval={0}
                 />
                 <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
