@@ -197,14 +197,27 @@ export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
       <section style={insightGridStyle}>
         {/* 客商履约风险预警分布 */}
         <section style={insightPanelStyle}>
-          <div style={panelHeaderStyle}>
+          <div style={panelHeaderWithLegendStyle}>
             <div style={panelTitleStyle}>客商履约风险预警分布</div>
+            <div style={legendInlineStyle}>
+              {data.contractRiskDistribution.categories.map((cat, index) => (
+                <div key={cat} style={legendItemStyle}>
+                  <div
+                    style={{
+                      ...legendIconStyle,
+                      backgroundColor: index === 0 ? "#ef4444" : index === 1 ? "#14b8a6" : "#3b82f6",
+                    }}
+                  />
+                  <span style={legendTextStyle}>{cat}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <div style={chartContainerStyle}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={data.contractRiskDistribution.data}
-                margin={{ top: 10, right: 10, bottom: 80, left: 10 }}
+                margin={{ top: 10, right: 10, bottom: 30, left: 10 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#e7edf7" />
                 <XAxis
@@ -212,12 +225,11 @@ export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
                   tick={{ fill: "#64748b", fontSize: 10 }}
                   angle={-45}
                   textAnchor="end"
-                  height={80}
+                  height={70}
                   interval={0}
                 />
                 <YAxis tick={{ fill: "#64748b", fontSize: 12 }} />
                 <Tooltip />
-                <Legend wrapperStyle={{ paddingTop: 10 }} />
                 {data.contractRiskDistribution.categories.map((cat, index) => (
                   <Bar
                     key={cat}
@@ -404,6 +416,39 @@ const panelHeaderStyle = {
   marginBottom: 16,
 };
 
+const panelHeaderWithLegendStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 16,
+  marginBottom: 16,
+  flexWrap: "wrap",
+};
+
+const legendInlineStyle = {
+  display: "flex",
+  gap: 12,
+  alignItems: "center",
+};
+
+const legendItemStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+};
+
+const legendIconStyle = {
+  width: 10,
+  height: 10,
+  borderRadius: 2,
+};
+
+const legendTextStyle = {
+  fontSize: 11,
+  fontWeight: 500,
+  color: "#64748b",
+};
+
 const panelTitleStyle = {
   fontSize: 16,
   fontWeight: 800,
@@ -509,7 +554,7 @@ const inventoryRateLabelStyle = {
 
 const chartContainerStyle = {
   flex: 1,
-  minHeight: 280,
+  minHeight: 320,
 };
 
 const pieChartContainerStyle = {
