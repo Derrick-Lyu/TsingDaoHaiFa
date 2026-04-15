@@ -8,6 +8,7 @@ import {
   saveAlertRecheck,
   saveAlertReview as submitAlertReview,
 } from "./api/terrorRisk";
+import { NavigationCatalog } from "./components/shared/NavigationCatalog";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
 
 const DEFAULT_TOPIC_ALERT_FILTERS = {
@@ -60,13 +61,27 @@ const TOPIC_NAV_ITEMS = [
   { label: "交易数据", value: "transactions" },
 ];
 
-function ShellHeader({ activeTab, onChangeTab }) {
+function ShellHeader({ activeTab, onChangeTab, onOpenCatalog }) {
   const title = activeTab === "overview" ? "穿透式监管管理平台" : "资金安全监管专题";
   const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与确认闭环";
 
   return (
     <header style={headerStyle} className="app-header">
       <div style={brandWrapStyle}>
+        {/* Catalog Button */}
+        <button
+          type="button"
+          onClick={onOpenCatalog}
+          style={catalogButtonStyle}
+          aria-label="打开目录导航"
+          title="目录导航"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
         <img src={haifaLogo} alt="Haifa Logo" style={logoStyle} />
         <div>
           <div style={brandLabelStyle}>青岛海发集团</div>
@@ -167,6 +182,7 @@ export default function App() {
   const [topicView, setTopicView] = useState("overview");
   const [selectedAlertId, setSelectedAlertId] = useState(null);
   const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const openFundSafety = () => {
     setActiveTab("fund-safety");
@@ -201,6 +217,16 @@ export default function App() {
       return;
     }
     setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+  };
+
+  const handleCatalogNavigate = (tabValue) => {
+    setActiveTab(tabValue);
+    if (tabValue === "fund-safety") {
+      setFundSafetyView("summary");
+      setTopicView("overview");
+      setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    }
+    setCatalogOpen(false);
   };
 
   const runDetectionJob = async () => {
@@ -280,6 +306,13 @@ export default function App() {
             setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
           }
         }}
+        onOpenCatalog={() => setCatalogOpen(true)}
+      />
+
+      <NavigationCatalog
+        isOpen={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        onNavigate={handleCatalogNavigate}
       />
 
       <main style={mainStyle} className="app-main">{pageContent}</main>
@@ -319,13 +352,27 @@ const headerStyle = {
   borderBottom: "1px solid rgba(209,219,233,0.9)",
   backdropFilter: "blur(18px)",
   background: "rgba(248,250,253,0.92)",
-  flexWrap: "wrap",
 };
 
 const brandWrapStyle = {
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: 12,
+  flexWrap: "nowrap",
+};
+
+const catalogButtonStyle = {
+  border: "1px solid rgba(15, 59, 102, 0.2)",
+  borderRadius: 10,
+  padding: 8,
+  background: "rgba(255, 255, 255, 0.7)",
+  color: "#475569",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  flexShrink: 0,
 };
 
 const logoStyle = {
