@@ -322,9 +322,7 @@ export default function App() {
         onNavigate={handleCatalogNavigate}
         onOpenModelCenter={() => {
           setActiveTab("fund-safety");
-          setFundSafetyView("topic");
-          setTopicView("overview");
-          setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+          setFundSafetyView("summary");
           setCatalogOpen(false);
         }}
       />
