@@ -1,40 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const CATALOG_ITEMS = [
-  { label: "首页", value: "home" },
-  {
-    label: "四大穿透",
-    value: "four-penetrations",
-    children: [
-      { label: "主体穿透", value: "subject-penetration" },
-      { label: "业务穿透", value: "business-penetration" },
-      { label: "要素穿透", value: "element-penetration" },
-      { label: "流程穿透", value: "process-penetration" },
-    ],
-  },
-  {
-    label: "十大重点领域画像穿透",
-    value: "key-areas-penetration",
-    children: [
-      { label: "投资穿透", value: "investment-penetration" },
-      { label: "金融风险穿透", value: "financial-risk-penetration" },
-      { label: "产权穿透", value: "property-penetration" },
-      { label: "军品业务穿透", value: "military-business-penetration" },
-      { label: "财务穿透", value: "finance-penetration" },
-      { label: "采购与供应链穿透", value: "procurement-supply-chain-penetration" },
-      { label: "会计穿透", value: "accounting-penetration" },
-      { label: "境外单位穿透", value: "overseas-unit-penetration" },
-      { label: "薪酬穿透", value: "compensation-penetration" },
-      { label: "合同穿透", value: "contract-penetration" },
-    ],
-  },
-  { label: "模型中心", value: "model-center" },
-  { label: "风险处置中心", value: "risk-disposal-center" },
-  { label: "数据中心", value: "data-center" },
-];
+import {
+  CATALOG_ITEMS,
+  getCatalogNavigationTarget,
+  getDefaultExpandedItems,
+  isCatalogItemActive,
+} from "../../data/catalogNavigation";
 
-export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCenter, onShowProcurementSupplyChain }) {
-  const [expandedItems, setExpandedItems] = useState({});
+export function NavigationCatalog({ isOpen, onClose, currentRoute, onRouteChange }) {
+  const [expandedItems, setExpandedItems] = useState(() => getDefaultExpandedItems(currentRoute));
+
+  useEffect(() => {
+    setExpandedItems((prev) => ({
+      ...prev,
+      ...getDefaultExpandedItems(currentRoute),
+    }));
+  }, [currentRoute]);
 
   if (!isOpen) {
     return null;
@@ -47,43 +28,29 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCent
     }));
   };
 
-  const handleItemClick = (item, isParent = false) => {
+  const handleItemClick = (item) => {
     if (item.children) {
       toggleExpand(item.value);
-    } else if (!isParent) {
-      if (item.value === "home") {
-        onNavigate("overview");
-        onClose();
-      } else if (item.value === "model-center") {
-        // Navigate to model center (fund safety topic workspace)
-        if (onOpenModelCenter) {
-          onOpenModelCenter();
-        }
-        onClose();
-      } else if (item.value === "procurement-supply-chain-penetration") {
-        // Navigate to procurement & supply chain penetration page
-        if (onShowProcurementSupplyChain) {
-          onShowProcurementSupplyChain();
-        }
-        onClose();
-      } else {
-        // For other items, navigate to overview as placeholder
-        onNavigate("overview");
-        onClose();
-      }
+      return;
     }
+
+    const targetRoute = getCatalogNavigationTarget(item);
+    if (!targetRoute) {
+      return;
+    }
+
+    onRouteChange(targetRoute);
+    onClose();
   };
 
   return (
     <>
-      {/* Backdrop */}
       <div
         style={backdropStyle}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Catalog Panel */}
       <div style={catalogPanelStyle} className="navigation-catalog">
         <div style={catalogHeaderStyle}>
           <div style={catalogTitleStyle}>目录导航</div>
@@ -105,9 +72,10 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCent
             <CatalogItem
               key={item.value}
               item={item}
+              currentRoute={currentRoute}
               isExpanded={expandedItems[item.value]}
-              onToggle={() => handleItemClick(item, true)}
-              onSelect={(clickedItem) => handleItemClick(clickedItem, false)}
+              isActive={isCatalogItemActive(item, currentRoute)}
+              onSelect={handleItemClick}
             />
           ))}
         </nav>
@@ -116,17 +84,20 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCent
   );
 }
 
-function CatalogItem({ item, isExpanded, onToggle, onSelect }) {
+function CatalogItem({ item, currentRoute, isExpanded, isActive, onSelect }) {
   const hasChildren = Boolean(item.children);
+  const isDisabled = !hasChildren && !item.enabled;
 
   return (
     <div style={catalogItemStyle}>
       <button
         type="button"
-        onClick={hasChildren ? onToggle : () => onSelect(item)}
-        style={catalogButtonStyle(hasChildren)}
+        onClick={() => onSelect(item)}
+        style={catalogButtonStyle(isActive)}
+        aria-current={isActive && !hasChildren ? "page" : undefined}
+        aria-disabled={isDisabled ? "true" : undefined}
       >
-        <span style={catalogLabelStyle}>{item.label}</span>
+        <span style={catalogLabelStyle(isActive)}>{item.label}</span>
         {hasChildren && (
           <span style={expandIconStyle(isExpanded)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -138,17 +109,24 @@ function CatalogItem({ item, isExpanded, onToggle, onSelect }) {
 
       {hasChildren && isExpanded && (
         <div style={childrenListStyle}>
-          {item.children.map((child) => (
-            <button
-              key={child.value}
-              type="button"
-              onClick={() => onSelect(child)}
-              style={childButtonStyle}
-            >
-              <span style={childIndicatorStyle} aria-hidden="true" />
-              <span style={childLabelStyle}>{child.label}</span>
-            </button>
-          ))}
+          {item.children.map((child) => {
+            const childActive = isCatalogItemActive(child, currentRoute);
+            const childDisabled = !child.enabled;
+
+            return (
+              <button
+                key={child.value}
+                type="button"
+                onClick={() => onSelect(child)}
+                style={childButtonStyle(childActive)}
+                aria-current={childActive ? "page" : undefined}
+                aria-disabled={childDisabled ? "true" : undefined}
+              >
+                <span style={childIndicatorStyle(childActive)} aria-hidden="true" />
+                <span style={childLabelStyle(childActive)}>{child.label}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -213,7 +191,7 @@ const catalogItemStyle = {
   gap: 4,
 };
 
-function catalogButtonStyle(hasChildren) {
+function catalogButtonStyle(active) {
   return {
     display: "flex",
     justifyContent: "space-between",
@@ -222,7 +200,7 @@ function catalogButtonStyle(hasChildren) {
     padding: "12px 14px",
     border: "none",
     borderRadius: 14,
-    background: "transparent",
+    background: active ? "rgba(15, 47, 102, 0.08)" : "transparent",
     cursor: "pointer",
     textAlign: "left",
     font: "inherit",
@@ -230,18 +208,21 @@ function catalogButtonStyle(hasChildren) {
   };
 }
 
-const catalogLabelStyle = {
-  fontSize: 14,
-  fontWeight: 700,
-  color: "#102033",
-};
+function catalogLabelStyle(active) {
+  return {
+    fontSize: 14,
+    fontWeight: active ? 800 : 700,
+    color: active ? "#0f2f66" : "#102033",
+  };
+}
 
 function expandIconStyle(expanded) {
   return {
     color: "#64748b",
-    transform: expanded ? "rotate(0deg)" : "rotate(0deg)",
     display: "flex",
     alignItems: "center",
+    transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+    transition: "transform 0.15s ease",
   };
 }
 
@@ -251,30 +232,36 @@ const childrenListStyle = {
   gap: 4,
 };
 
-const childButtonStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  width: "100%",
-  padding: "10px 12px",
-  border: "none",
-  borderRadius: 12,
-  background: "rgba(248, 250, 253, 0.8)",
-  cursor: "pointer",
-  textAlign: "left",
-  font: "inherit",
-};
+function childButtonStyle(active) {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    width: "100%",
+    padding: "10px 12px",
+    border: "none",
+    borderRadius: 12,
+    background: active ? "rgba(15, 47, 102, 0.08)" : "rgba(248, 250, 253, 0.8)",
+    cursor: "pointer",
+    textAlign: "left",
+    font: "inherit",
+  };
+}
 
-const childIndicatorStyle = {
-  width: 6,
-  height: 6,
-  borderRadius: "50%",
-  background: "#0f3b66",
-  flexShrink: 0,
-};
+function childIndicatorStyle(active) {
+  return {
+    width: 6,
+    height: 6,
+    borderRadius: "50%",
+    background: active ? "#0f2f66" : "#0f3b66",
+    flexShrink: 0,
+  };
+}
 
-const childLabelStyle = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: "#334155",
-};
+function childLabelStyle(active) {
+  return {
+    fontSize: 13,
+    fontWeight: active ? 700 : 600,
+    color: active ? "#0f2f66" : "#334155",
+  };
+}

@@ -9,8 +9,8 @@ import {
   saveAlertReview as submitAlertReview,
 } from "./api/terrorRisk";
 import { NavigationCatalog } from "./components/shared/NavigationCatalog";
+import { APP_ROUTES } from "./data/catalogNavigation";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
-import { getCatalogNavigationTarget } from "./utils/catalogNavigation";
 
 const DEFAULT_TOPIC_ALERT_FILTERS = {
   ruleType: "",
@@ -52,13 +52,16 @@ const ProcurementSupplyChainPenetrationPage = lazy(() =>
 );
 
 const TOPIC_NAV_ITEMS = [
-  { label: "专题概览", value: "overview" },
-  { label: "风险单据", value: "alerts" },
-  { label: "典型案例", value: "cases" },
-  { label: "黑名单配置", value: "blacklist" },
-  { label: "规则配置", value: "rules" },
-  { label: "交易数据", value: "transactions" },
+  { label: "专题概览", value: "overview", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW },
+  { label: "风险单据", value: "alerts", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS },
+  { label: "典型案例", value: "cases", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_CASES },
+  { label: "黑名单配置", value: "blacklist", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_BLACKLIST },
+  { label: "规则配置", value: "rules", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_RULES },
+  { label: "交易数据", value: "transactions", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_TRANSACTIONS },
 ];
+
+const TOPIC_VIEW_TO_ROUTE = Object.fromEntries(TOPIC_NAV_ITEMS.map((item) => [item.value, item.routeKey]));
+const TOPIC_ROUTE_TO_VIEW = Object.fromEntries(TOPIC_NAV_ITEMS.map((item) => [item.routeKey, item.value]));
 
 function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHomeNav, updateTime }) {
   const title = activeTab === "overview" ? "穿透式监管管理平台" : "资金安全监管专题";
@@ -179,48 +182,47 @@ function TopicWorkspace({
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [fundSafetyView, setFundSafetyView] = useState("summary");
-  const [topicView, setTopicView] = useState("overview");
+  const [currentRoute, setCurrentRoute] = useState(APP_ROUTES.OVERVIEW);
   const [selectedAlertId, setSelectedAlertId] = useState(null);
+  const [detailReturnRoute, setDetailReturnRoute] = useState(APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
   const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const [showProcurementSupplyChain, setShowProcurementSupplyChain] = useState(false);
   const [fundSafetyUpdateTime, setFundSafetyUpdateTime] = useState("");
 
+  const isFundSafetyRoute = currentRoute.startsWith("fund-safety-");
+  const isFundSafetyTopicRoute = currentRoute.startsWith("fund-safety-topic-");
+  const activeTab = isFundSafetyRoute ? "fund-safety" : "overview";
+  const topicView = TOPIC_ROUTE_TO_VIEW[currentRoute] ?? "overview";
+
   const goHome = () => {
-    setActiveTab("overview");
-    setShowProcurementSupplyChain(false);
+    setCurrentRoute(APP_ROUTES.OVERVIEW);
   };
 
   const openFundSafety = () => {
-    setActiveTab("fund-safety");
-    setFundSafetyView("summary");
-    setTopicView("overview");
+    setCurrentRoute(APP_ROUTES.FUND_SAFETY_SUMMARY);
   };
 
   const openTerrorTopic = () => {
-    setActiveTab("fund-safety");
-    setFundSafetyView("topic");
-    setTopicView("overview");
+    setCurrentRoute(APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
     setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
   const openAlertDetail = (alertId) => {
     setSelectedAlertId(alertId);
-    setFundSafetyView("detail");
+    if (isFundSafetyTopicRoute) {
+      setDetailReturnRoute(currentRoute);
+    }
+    setCurrentRoute(APP_ROUTES.FUND_SAFETY_ALERT_DETAIL);
   };
 
   const openAlertList = (filters = DEFAULT_TOPIC_ALERT_FILTERS) => {
-    setActiveTab("fund-safety");
-    setFundSafetyView("topic");
-    setTopicView("alerts");
+    setCurrentRoute(APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS);
     setSelectedAlertId(null);
     setTopicAlertFilters({ ...DEFAULT_TOPIC_ALERT_FILTERS, ...filters });
   };
 
   const handleTopicNavigate = (view) => {
-    setTopicView(view);
+    setCurrentRoute(TOPIC_VIEW_TO_ROUTE[view] ?? APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
     if (view !== "alerts") {
       setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
       return;
@@ -228,25 +230,12 @@ export default function App() {
     setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
-  const handleCatalogNavigate = (tabValue) => {
-    setActiveTab(tabValue);
-    if (tabValue === "fund-safety") {
-      setFundSafetyView("summary");
-      setTopicView("overview");
+  const handleCatalogNavigate = (routeKey) => {
+    setCurrentRoute(routeKey);
+    if (routeKey !== APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS) {
       setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
     }
     setCatalogOpen(false);
-  };
-
-  // Directory navigation to model center should land on the fund safety summary page.
-  const openModelCenter = () => {
-    const target = getCatalogNavigationTarget("model-center");
-
-    setActiveTab(target.activeTab);
-    setFundSafetyView(target.fundSafetyView);
-    setTopicView(target.topicView);
-    setShowProcurementSupplyChain(target.showProcurementSupplyChain);
-    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
   const runDetectionJob = async () => {
@@ -265,7 +254,7 @@ export default function App() {
 
   let pageContent = null;
 
-  if (activeTab === "overview") {
+  if (currentRoute === APP_ROUTES.OVERVIEW) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载风险总览..." />}>
         <OverviewPage onOpenFundSafety={openFundSafety} />
@@ -273,54 +262,52 @@ export default function App() {
     );
   }
 
-  if (activeTab === "fund-safety") {
-    if (fundSafetyView === "summary") {
-      pageContent = (
-        <Suspense fallback={<PageLoadingState label="正在加载资金安全总览..." />}>
-          <FundSafetySummaryPage
-            onOpenTerrorTopic={openTerrorTopic}
-            onUpdateTimeChange={setFundSafetyUpdateTime}
-          />
-        </Suspense>
-      );
-    }
-
-    if (fundSafetyView === "topic") {
-      pageContent = (
-        <Suspense fallback={<PageLoadingState label="正在加载涉恐交易风险专题..." />}>
-          <TopicWorkspace
-            activeView={topicView}
-            onNavigate={handleTopicNavigate}
-            onOpenDetail={openAlertDetail}
-            onOpenAlertList={openAlertList}
-            onRunDetection={runDetectionJob}
-            alertFilters={topicAlertFilters}
-          />
-        </Suspense>
-      );
-    }
-
-    if (fundSafetyView === "detail") {
-      pageContent = (
-        <Suspense fallback={<PageLoadingState label="正在加载风险确认详情..." />}>
-          <AlertDetailPage
-            alertId={selectedAlertId}
-            onSaveReview={saveAlertReview}
-            onAssignReviewer={assignReviewer}
-            onSaveFeedback={saveAlertFeedback}
-            onSaveRecheck={saveAlertRecheck}
-            onSaveAck={saveAlertAck}
-            onBack={() => setFundSafetyView("topic")}
-          />
-        </Suspense>
-      );
-    }
+  if (currentRoute === APP_ROUTES.FUND_SAFETY_SUMMARY) {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载资金安全总览..." />}>
+        <FundSafetySummaryPage
+          onOpenTerrorTopic={openTerrorTopic}
+          onUpdateTimeChange={setFundSafetyUpdateTime}
+        />
+      </Suspense>
+    );
   }
 
-  if (showProcurementSupplyChain && activeTab !== "fund-safety") {
+  if (isFundSafetyTopicRoute) {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载涉恐交易风险专题..." />}>
+        <TopicWorkspace
+          activeView={topicView}
+          onNavigate={handleTopicNavigate}
+          onOpenDetail={openAlertDetail}
+          onOpenAlertList={openAlertList}
+          onRunDetection={runDetectionJob}
+          alertFilters={topicAlertFilters}
+        />
+      </Suspense>
+    );
+  }
+
+  if (currentRoute === APP_ROUTES.FUND_SAFETY_ALERT_DETAIL) {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载风险确认详情..." />}>
+        <AlertDetailPage
+          alertId={selectedAlertId}
+          onSaveReview={saveAlertReview}
+          onAssignReviewer={assignReviewer}
+          onSaveFeedback={saveAlertFeedback}
+          onSaveRecheck={saveAlertRecheck}
+          onSaveAck={saveAlertAck}
+          onBack={() => setCurrentRoute(detailReturnRoute)}
+        />
+      </Suspense>
+    );
+  }
+
+  if (currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载采购与供应链穿透..." />}>
-        <ProcurementSupplyChainPenetrationPage onGoHome={goHome} />
+        <ProcurementSupplyChainPenetrationPage />
       </Suspense>
     );
   }
@@ -329,29 +316,18 @@ export default function App() {
     <div style={appShellStyle}>
       <ShellHeader
         activeTab={activeTab}
-        onChangeTab={(value) => {
-          setActiveTab(value);
-          if (value === "fund-safety") {
-            setFundSafetyView("summary");
-            setTopicView("overview");
-            setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
-          }
-        }}
+        onChangeTab={() => {}}
         onOpenCatalog={() => setCatalogOpen(true)}
         onGoHome={goHome}
-        showHomeNav={showProcurementSupplyChain}
-        updateTime={activeTab === "fund-safety" && fundSafetyView === "summary" ? fundSafetyUpdateTime : null}
+        showHomeNav={currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN}
+        updateTime={currentRoute === APP_ROUTES.FUND_SAFETY_SUMMARY ? fundSafetyUpdateTime : null}
       />
 
       <NavigationCatalog
         isOpen={catalogOpen}
         onClose={() => setCatalogOpen(false)}
-        onNavigate={handleCatalogNavigate}
-        onOpenModelCenter={openModelCenter}
-        onShowProcurementSupplyChain={() => {
-          setShowProcurementSupplyChain(true);
-          setCatalogOpen(false);
-        }}
+        currentRoute={currentRoute}
+        onRouteChange={handleCatalogNavigate}
       />
 
       <main style={mainStyle} className="app-main">{pageContent}</main>
