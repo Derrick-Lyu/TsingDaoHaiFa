@@ -70,7 +70,7 @@ const DEMO_DATA = {
   ],
 };
 
-export function ProcurementSupplyChainPenetrationPage() {
+export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
   const [data, setData] = useState(DEMO_DATA);
   const [status, setStatus] = useState("ready");
 
@@ -85,11 +85,18 @@ export function ProcurementSupplyChainPenetrationPage() {
         if (!cancelled) {
           setData(DEMO_DATA);
           setStatus("ready");
+          // Notify parent component of update time
+          if (onUpdateTimeChange && DEMO_DATA.updatedAt) {
+            onUpdateTimeChange(DEMO_DATA.updatedAt);
+          }
         }
       } catch {
         if (!cancelled) {
           setData(DEMO_DATA);
           setStatus("ready");
+          if (onUpdateTimeChange && DEMO_DATA.updatedAt) {
+            onUpdateTimeChange(DEMO_DATA.updatedAt);
+          }
         }
       }
     }
@@ -99,18 +106,10 @@ export function ProcurementSupplyChainPenetrationPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onUpdateTimeChange]);
 
   return (
     <div style={pageShellStyle}>
-      {/* 更新时间 */}
-      <div style={headerStyle}>
-        <div style={metaCardStyle}>
-          <div style={metaLabelStyle}>更新时间</div>
-          <div style={metaValueStyle}>{data.updatedAt || "-"}</div>
-        </div>
-      </div>
-
       {/* 全量/服务/物资指标卡 */}
       <section style={sectionStyle}>
         <div style={overallGridStyle}>
@@ -268,46 +267,6 @@ const pageShellStyle = {
   padding: "0 24px 28px",
   display: "grid",
   gap: 18,
-};
-
-const headerStyle = {
-  display: "flex",
-  gap: 10,
-  alignItems: "center",
-  justifyContent: "flex-end",
-  marginBottom: 8,
-};
-
-const metaCardStyle = {
-  minWidth: 168,
-  padding: "12px 14px",
-  background: "rgba(255,255,255,0.92)",
-  borderRadius: 14,
-  border: "1px solid #e7edf6",
-  boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-};
-
-const metaLabelStyle = {
-  fontSize: 12,
-  color: "#6b7280",
-  fontWeight: 700,
-};
-
-const metaValueStyle = {
-  marginTop: 4,
-  fontSize: 13,
-  fontWeight: 700,
-  color: "#111827",
-};
-
-const statusPillStyle = {
-  padding: "10px 14px",
-  borderRadius: 999,
-  border: "1px solid #d9e3f0",
-  background: "#f8fafc",
-  color: "#425466",
-  fontSize: 12,
-  fontWeight: 800,
 };
 
 const sectionStyle = {

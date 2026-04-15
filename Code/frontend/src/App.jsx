@@ -188,6 +188,7 @@ export default function App() {
   const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [fundSafetyUpdateTime, setFundSafetyUpdateTime] = useState("");
+  const [procurementSupplyChainUpdateTime, setProcurementSupplyChainUpdateTime] = useState("");
 
   const isFundSafetyRoute = currentRoute.startsWith("fund-safety-");
   const isFundSafetyTopicRoute = currentRoute.startsWith("fund-safety-topic-");
@@ -307,7 +308,7 @@ export default function App() {
   if (currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载采购与供应链穿透..." />}>
-        <ProcurementSupplyChainPenetrationPage />
+        <ProcurementSupplyChainPenetrationPage onUpdateTimeChange={setProcurementSupplyChainUpdateTime} />
       </Suspense>
     );
   }
@@ -320,7 +321,13 @@ export default function App() {
         onOpenCatalog={() => setCatalogOpen(true)}
         onGoHome={goHome}
         showHomeNav={currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN}
-        updateTime={currentRoute === APP_ROUTES.FUND_SAFETY_SUMMARY ? fundSafetyUpdateTime : null}
+        updateTime={
+          currentRoute === APP_ROUTES.FUND_SAFETY_SUMMARY
+            ? fundSafetyUpdateTime
+            : currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN
+              ? procurementSupplyChainUpdateTime
+              : null
+        }
       />
 
       <NavigationCatalog
