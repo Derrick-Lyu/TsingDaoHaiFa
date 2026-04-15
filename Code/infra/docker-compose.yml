@@ -2,31 +2,31 @@ name: ${COMPOSE_PROJECT_NAME:-qingdao-haifa}
 
 services:
   frontend:
-    image: ${COMPOSE_PROJECT_NAME:-qingdao-haifa}-frontend:latest
-    build:
-      context: ..
-      dockerfile: infra/frontend.Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${FRONTEND_PORT:-5173}:5173"
+    command: sh -c "npm install && npm run dev -- --host"
     depends_on:
-      backend:
-        condition: service_started
+      - backend
 
   backend:
-    image: ${COMPOSE_PROJECT_NAME:-qingdao-haifa}-backend:latest
-    build:
-      context: ..
-      dockerfile: infra/backend.Dockerfile
+    image: python:3.13-slim
+    working_dir: /app
+    volumes:
+      - ../backend:/app
     ports:
       - "${BACKEND_PORT:-8001}:8000"
     environment:
       APP_NAME: ${APP_NAME:-tsingdao-haifa-api}
-      APP_ENV: ${APP_ENV:-production}
+      APP_ENV: development
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-tsingdao}
+    command: sh -c "pip install -r requirements.txt && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,3 +56,4 @@ services:
 
 volumes:
   postgres_data:
+  frontend_node_modules:

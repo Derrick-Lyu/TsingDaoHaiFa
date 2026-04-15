@@ -11,21 +11,44 @@ This directory is the application workspace for the Qingdao HaiFa platform. It s
 
 ## Local Startup
 
-1. Copy `Code/infra/.env.example` to `Code/infra/.env` if you want to override defaults.
-2. Start the stack from the `Code/infra/` directory:
+### Development Mode (Hot Reload)
+
+Start frontend and backend with hot reload - code changes automatically restart/refresh services:
 
 ```bash
 cd Code/infra
-docker compose up --build
+docker compose up
 ```
 
-The Compose project name defaults to `qingdao-haifa`, so generated container and build image names stay aligned with the project instead of the `infra/` folder name. Set `COMPOSE_PROJECT_NAME` only if you intentionally want a different prefix.
+Services:
+- **Frontend**: http://localhost:5173/ (Vite dev server with hot reload)
+- **Backend**: http://localhost:8001/ (Uvicorn with `--reload`)
+- **PostgreSQL**: localhost:5433
+
+Both frontend (`../frontend`) and backend (`../backend`) directories are mounted as volumes, enabling live code updates.
+
+### Production Mode
+
+Build and run optimized production containers:
+
+```bash
+cd Code/infra
+docker compose -f docker-compose.prod.yml up --build
+```
+
+### Configuration
+
+1. Copy `Code/infra/.env.example` to `Code/infra/.env` to override defaults.
+2. Key environment variables:
+   - `FRONTEND_PORT`: Frontend port (default: 5173)
+   - `BACKEND_PORT`: Backend port (default: 8001)
+   - `POSTGRES_PORT`: PostgreSQL port (default: 5433)
 
 ## Service Ports
 
 - Frontend: `5173`
-- Backend: internal-only on the Compose network, proxied through the frontend at `/api`
-- PostgreSQL: internal-only on the Compose network
+- Backend: `8001` (exposed for development)
+- PostgreSQL: `5433`
 
 ## Ownership Rules
 
