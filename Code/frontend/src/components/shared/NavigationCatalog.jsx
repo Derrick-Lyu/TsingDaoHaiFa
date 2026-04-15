@@ -123,7 +123,7 @@ function CatalogItem({ item, isExpanded, onToggle, onSelect }) {
     <div style={catalogItemStyle}>
       <button
         type="button"
-        onClick={hasChildren ? onToggle : onSelect}
+        onClick={hasChildren ? onToggle : () => onSelect(item)}
         style={catalogButtonStyle(hasChildren)}
       >
         <span style={catalogLabelStyle}>{item.label}</span>

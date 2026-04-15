@@ -10,7 +10,7 @@ const EMPTY_SUMMARY = {
   topics: [],
 };
 
-export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
+export function FundSafetySummaryPage({ onOpenTerrorTopic, onUpdateTimeChange }) {
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [status, setStatus] = useState("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -27,6 +27,9 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
         if (!cancelled) {
           setSummary(data);
           setStatus("ready");
+          if (onUpdateTimeChange && data.updatedAt) {
+            onUpdateTimeChange(data.updatedAt);
+          }
         }
       } catch {
         if (!cancelled) {
@@ -42,17 +45,10 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onUpdateTimeChange]);
 
   return (
     <div style={pageShellStyle}>
-      <div style={statusClusterStyle}>
-        <div style={metaCardStyle}>
-          <div style={metaLabelStyle}>更新时间</div>
-          <div style={metaValueStyle}>{summary.updatedAt || "-"}</div>
-        </div>
-      </div>
-
       {errorMessage ? <div style={errorBannerStyle}>{errorMessage}</div> : null}
 
       <div style={heroMetricGridStyle}>
@@ -84,36 +80,6 @@ const pageShellStyle = {
   padding: "0 24px 28px",
   display: "grid",
   gap: 18,
-};
-
-const statusClusterStyle = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-  alignItems: "center",
-  justifyContent: "flex-end",
-};
-
-const metaCardStyle = {
-  minWidth: 168,
-  padding: "12px 14px",
-  background: "rgba(255,255,255,0.92)",
-  borderRadius: 14,
-  border: "1px solid #e7edf6",
-  boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-};
-
-const metaLabelStyle = {
-  fontSize: 12,
-  color: "#6b7280",
-  fontWeight: 700,
-};
-
-const metaValueStyle = {
-  marginTop: 4,
-  fontSize: 13,
-  fontWeight: 700,
-  color: "#111827",
 };
 
 function statusPillStyle(loading) {

@@ -10,6 +10,7 @@ import {
 } from "./api/terrorRisk";
 import { NavigationCatalog } from "./components/shared/NavigationCatalog";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
+import { getCatalogNavigationTarget } from "./utils/catalogNavigation";
 
 const DEFAULT_TOPIC_ALERT_FILTERS = {
   ruleType: "",
@@ -59,7 +60,7 @@ const TOPIC_NAV_ITEMS = [
   { label: "交易数据", value: "transactions" },
 ];
 
-function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHomeNav }) {
+function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHomeNav, updateTime }) {
   const title = activeTab === "overview" ? "穿透式监管管理平台" : "资金安全监管专题";
   const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与确认闭环";
 
@@ -101,6 +102,14 @@ function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHome
           <div style={brandSubtitleStyle}>{subtitle}</div>
         </div>
       </div>
+
+      {/* Update Time - Right Side */}
+      {updateTime && (
+        <div style={updateTimeCardStyle}>
+          <div style={updateTimeLabelStyle}>更新时间</div>
+          <div style={updateTimeValueStyle}>{updateTime}</div>
+        </div>
+      )}
     </header>
   );
 }
@@ -177,6 +186,7 @@ export default function App() {
   const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [showProcurementSupplyChain, setShowProcurementSupplyChain] = useState(false);
+  const [fundSafetyUpdateTime, setFundSafetyUpdateTime] = useState("");
 
   const goHome = () => {
     setActiveTab("overview");
@@ -228,11 +238,14 @@ export default function App() {
     setCatalogOpen(false);
   };
 
-  // Direct navigation to model center (fund-safety topic workspace)
+  // Directory navigation to model center should land on the fund safety summary page.
   const openModelCenter = () => {
-    setActiveTab("fund-safety");
-    setFundSafetyView("topic");
-    setTopicView("overview");
+    const target = getCatalogNavigationTarget("model-center");
+
+    setActiveTab(target.activeTab);
+    setFundSafetyView(target.fundSafetyView);
+    setTopicView(target.topicView);
+    setShowProcurementSupplyChain(target.showProcurementSupplyChain);
     setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
@@ -264,7 +277,10 @@ export default function App() {
     if (fundSafetyView === "summary") {
       pageContent = (
         <Suspense fallback={<PageLoadingState label="正在加载资金安全总览..." />}>
-          <FundSafetySummaryPage onOpenTerrorTopic={openTerrorTopic} />
+          <FundSafetySummaryPage
+            onOpenTerrorTopic={openTerrorTopic}
+            onUpdateTimeChange={setFundSafetyUpdateTime}
+          />
         </Suspense>
       );
     }
@@ -301,7 +317,7 @@ export default function App() {
     }
   }
 
-  if (showProcurementSupplyChain) {
+  if (showProcurementSupplyChain && activeTab !== "fund-safety") {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载采购与供应链穿透..." />}>
         <ProcurementSupplyChainPenetrationPage onGoHome={goHome} />
@@ -324,17 +340,14 @@ export default function App() {
         onOpenCatalog={() => setCatalogOpen(true)}
         onGoHome={goHome}
         showHomeNav={showProcurementSupplyChain}
+        updateTime={activeTab === "fund-safety" && fundSafetyView === "summary" ? fundSafetyUpdateTime : null}
       />
 
       <NavigationCatalog
         isOpen={catalogOpen}
         onClose={() => setCatalogOpen(false)}
         onNavigate={handleCatalogNavigate}
-        onOpenModelCenter={() => {
-          setActiveTab("fund-safety");
-          setFundSafetyView("summary");
-          setCatalogOpen(false);
-        }}
+        onOpenModelCenter={openModelCenter}
         onShowProcurementSupplyChain={() => {
           setShowProcurementSupplyChain(true);
           setCatalogOpen(false);
@@ -505,4 +518,26 @@ const sideNavDotStyle = {
   borderRadius: "50%",
   background: "#8ac7ff",
   flexShrink: 0,
+};
+
+const updateTimeCardStyle = {
+  minWidth: 168,
+  padding: "12px 14px",
+  background: "rgba(255,255,255,0.92)",
+  borderRadius: 14,
+  border: "1px solid #e7edf6",
+  boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+};
+
+const updateTimeLabelStyle = {
+  fontSize: 12,
+  color: "#6b7280",
+  fontWeight: 700,
+};
+
+const updateTimeValueStyle = {
+  marginTop: 4,
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#111827",
 };
