@@ -60,6 +60,10 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCent
           onOpenModelCenter();
         }
         onClose();
+      } else if (item.value === "procurement-supply-chain-penetration") {
+        // Navigate to procurement & supply chain penetration page
+        onNavigate("procurement-supply-chain");
+        onClose();
       } else {
         // For other items, navigate to overview as placeholder
         onNavigate("overview");

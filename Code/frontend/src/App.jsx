@@ -46,9 +46,13 @@ const TerrorRiskTopicPage = lazy(() =>
 const TransactionDataPage = lazy(() =>
   import("./pages/TransactionDataPage").then((module) => ({ default: module.TransactionDataPage })),
 );
+const ProcurementSupplyChainPenetrationPage = lazy(() =>
+  import("./pages/ProcurementSupplyChainPenetrationPage").then((module) => ({ default: module.ProcurementSupplyChainPenetrationPage })),
+);
 
 const PRIMARY_TABS = [
   { label: "驾驶舱首页", value: "overview" },
+  { label: "采购与供应链穿透", value: "procurement-supply-chain" },
 ];
 
 const TOPIC_NAV_ITEMS = [
@@ -225,6 +229,11 @@ export default function App() {
       setTopicView("overview");
       setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
     }
+    if (tabValue === "procurement-supply-chain") {
+      // Navigate to procurement & supply chain penetration page
+      setTopicView("overview");
+      setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    }
     setCatalogOpen(false);
   };
 
@@ -301,6 +310,14 @@ export default function App() {
     }
   }
 
+  if (activeTab === "procurement-supply-chain") {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载采购与供应链穿透..." />}>
+        <ProcurementSupplyChainPenetrationPage />
+      </Suspense>
+    );
+  }
+
   return (
     <div style={appShellStyle}>
       <ShellHeader
@@ -311,6 +328,9 @@ export default function App() {
             setFundSafetyView("summary");
             setTopicView("overview");
             setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+          }
+          if (value === "procurement-supply-chain") {
+            // Navigate to procurement & supply chain penetration page
           }
         }}
         onOpenCatalog={() => setCatalogOpen(true)}
