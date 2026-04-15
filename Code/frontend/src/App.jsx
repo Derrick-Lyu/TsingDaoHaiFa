@@ -50,11 +50,6 @@ const ProcurementSupplyChainPenetrationPage = lazy(() =>
   import("./pages/ProcurementSupplyChainPenetrationPage").then((module) => ({ default: module.ProcurementSupplyChainPenetrationPage })),
 );
 
-const PRIMARY_TABS = [
-  { label: "驾驶舱首页", value: "overview" },
-  { label: "采购与供应链穿透", value: "procurement-supply-chain" },
-];
-
 const TOPIC_NAV_ITEMS = [
   { label: "专题概览", value: "overview" },
   { label: "风险单据", value: "alerts" },
@@ -64,7 +59,7 @@ const TOPIC_NAV_ITEMS = [
   { label: "交易数据", value: "transactions" },
 ];
 
-function ShellHeader({ activeTab, onChangeTab, onOpenCatalog }) {
+function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHomeNav }) {
   const title = activeTab === "overview" ? "穿透式监管管理平台" : "资金安全监管专题";
   const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与确认闭环";
 
@@ -85,6 +80,20 @@ function ShellHeader({ activeTab, onChangeTab, onOpenCatalog }) {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
+        {showHomeNav && (
+          <button
+            type="button"
+            onClick={onGoHome}
+            style={homeButtonStyle}
+            aria-label="返回驾驶舱首页"
+            title="返回驾驶舱首页"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+          </button>
+        )}
         <img src={haifaLogo} alt="Haifa Logo" style={logoStyle} />
         <div>
           <div style={brandLabelStyle}>青岛海发集团</div>
@@ -92,25 +101,6 @@ function ShellHeader({ activeTab, onChangeTab, onOpenCatalog }) {
           <div style={brandSubtitleStyle}>{subtitle}</div>
         </div>
       </div>
-
-      <nav style={topNavStyle} aria-label="主导航" className="primary-nav">
-        {PRIMARY_TABS.map((tab) => {
-          const active = activeTab === tab.value;
-
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => onChangeTab(tab.value)}
-              style={topNavButtonStyle(active)}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </nav>
-
-      <div style={audienceBadgeStyle}>Demo Fallback</div>
     </header>
   );
 }
@@ -186,6 +176,12 @@ export default function App() {
   const [selectedAlertId, setSelectedAlertId] = useState(null);
   const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [showProcurementSupplyChain, setShowProcurementSupplyChain] = useState(false);
+
+  const goHome = () => {
+    setActiveTab("overview");
+    setShowProcurementSupplyChain(false);
+  };
 
   const openFundSafety = () => {
     setActiveTab("fund-safety");
@@ -226,11 +222,6 @@ export default function App() {
     setActiveTab(tabValue);
     if (tabValue === "fund-safety") {
       setFundSafetyView("summary");
-      setTopicView("overview");
-      setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
-    }
-    if (tabValue === "procurement-supply-chain") {
-      // Navigate to procurement & supply chain penetration page
       setTopicView("overview");
       setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
     }
@@ -310,10 +301,10 @@ export default function App() {
     }
   }
 
-  if (activeTab === "procurement-supply-chain") {
+  if (showProcurementSupplyChain) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载采购与供应链穿透..." />}>
-        <ProcurementSupplyChainPenetrationPage />
+        <ProcurementSupplyChainPenetrationPage onGoHome={goHome} />
       </Suspense>
     );
   }
@@ -329,11 +320,10 @@ export default function App() {
             setTopicView("overview");
             setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
           }
-          if (value === "procurement-supply-chain") {
-            // Navigate to procurement & supply chain penetration page
-          }
         }}
         onOpenCatalog={() => setCatalogOpen(true)}
+        onGoHome={goHome}
+        showHomeNav={showProcurementSupplyChain}
       />
 
       <NavigationCatalog
@@ -343,6 +333,10 @@ export default function App() {
         onOpenModelCenter={() => {
           setActiveTab("fund-safety");
           setFundSafetyView("summary");
+          setCatalogOpen(false);
+        }}
+        onShowProcurementSupplyChain={() => {
+          setShowProcurementSupplyChain(true);
           setCatalogOpen(false);
         }}
       />
@@ -407,6 +401,20 @@ const catalogButtonStyle = {
   flexShrink: 0,
 };
 
+const homeButtonStyle = {
+  border: "1px solid rgba(15, 59, 102, 0.2)",
+  borderRadius: 10,
+  padding: 8,
+  background: "rgba(255, 255, 255, 0.7)",
+  color: "#475569",
+  cursor: "pointer",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+  flexShrink: 0,
+};
+
 const logoStyle = {
   width: 42,
   height: 42,
@@ -435,36 +443,6 @@ const brandSubtitleStyle = {
   color: "#607087",
 };
 
-const topNavStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  flexWrap: "wrap",
-};
-
-function topNavButtonStyle(active) {
-  return {
-    border: active ? "none" : "1px solid #d4dce8",
-    background: active ? "#102c57" : "rgba(255,255,255,0.82)",
-    color: active ? "white" : "#344559",
-    borderRadius: 999,
-    padding: "10px 18px",
-    font: "inherit",
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: "pointer",
-    boxShadow: active ? "0 12px 24px rgba(16,44,87,0.24)" : "none",
-  };
-}
-
-const audienceBadgeStyle = {
-  padding: "8px 12px",
-  borderRadius: 999,
-  background: "#e4edf8",
-  color: "#27496f",
-  fontSize: 12,
-  fontWeight: 700,
-};
 
 const loadingCardStyle = {
   padding: "18px 20px",

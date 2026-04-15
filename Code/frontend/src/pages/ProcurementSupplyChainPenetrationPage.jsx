@@ -109,9 +109,6 @@ export function ProcurementSupplyChainPenetrationPage() {
           <div style={metaLabelStyle}>更新时间</div>
           <div style={metaValueStyle}>{data.updatedAt || "-"}</div>
         </div>
-        <div style={statusPillStyle}>
-          {status === "loading" ? "更新中" : "已更新"}
-        </div>
       </div>
 
       {/* 全量/服务/物资指标卡 */}

@@ -33,7 +33,7 @@ const CATALOG_ITEMS = [
   { label: "数据中心", value: "data-center" },
 ];
 
-export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCenter }) {
+export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCenter, onShowProcurementSupplyChain }) {
   const [expandedItems, setExpandedItems] = useState({});
 
   if (!isOpen) {
@@ -62,7 +62,9 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCent
         onClose();
       } else if (item.value === "procurement-supply-chain-penetration") {
         // Navigate to procurement & supply chain penetration page
-        onNavigate("procurement-supply-chain");
+        if (onShowProcurementSupplyChain) {
+          onShowProcurementSupplyChain();
+        }
         onClose();
       } else {
         // For other items, navigate to overview as placeholder
@@ -105,7 +107,7 @@ export function NavigationCatalog({ isOpen, onClose, onNavigate, onOpenModelCent
               item={item}
               isExpanded={expandedItems[item.value]}
               onToggle={() => handleItemClick(item, true)}
-              onSelect={() => handleItemClick(item, false)}
+              onSelect={(clickedItem) => handleItemClick(clickedItem, false)}
             />
           ))}
         </nav>

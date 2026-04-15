@@ -51,9 +51,6 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic }) {
           <div style={metaLabelStyle}>更新时间</div>
           <div style={metaValueStyle}>{summary.updatedAt || "-"}</div>
         </div>
-        <div style={statusPillStyle(status === "loading")}>
-          {status === "loading" ? "更新中" : status === "error" ? "加载失败" : "已更新"}
-        </div>
       </div>
 
       {errorMessage ? <div style={errorBannerStyle}>{errorMessage}</div> : null}
