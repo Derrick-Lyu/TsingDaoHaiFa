@@ -281,6 +281,13 @@ export default function App() {
     setCurrentRoute(APP_ROUTES.TOP_RISK_FINANCE);
   };
 
+  const openProcurementSupplyChainDetail = (sourceRoute = currentRoute) => {
+    setDetailReturnRoute(getFinanceReturnRoute(sourceRoute));
+    setSelectedAlertId(null);
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    setCurrentRoute(APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN);
+  };
+
   const runDetectionJob = async () => {
     await requestJson("/terror-risk/detection-jobs", {
       method: "POST",
@@ -308,7 +315,10 @@ export default function App() {
   if (currentRoute === APP_ROUTES.FUNCTIONAL_PORTAL) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载功能门户..." />}>
-        <FunctionalPortalPage onOpenTopRiskFinance={() => openFinanceDetail(APP_ROUTES.FUNCTIONAL_PORTAL)} />
+        <FunctionalPortalPage
+          onOpenTopRiskFinance={() => openFinanceDetail(APP_ROUTES.FUNCTIONAL_PORTAL)}
+          onOpenProcurementSupplyChain={() => openProcurementSupplyChainDetail(APP_ROUTES.FUNCTIONAL_PORTAL)}
+        />
       </Suspense>
     );
   }
@@ -316,7 +326,16 @@ export default function App() {
   if (currentRoute === APP_ROUTES.TOP_RISK_PORTAL) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载十大重点风险门户..." />}>
-        <TopRiskPortalPage onOpenFinance={() => openFinanceDetail(APP_ROUTES.TOP_RISK_PORTAL)} />
+        <TopRiskPortalPage
+          onOpenDomain={(item) => {
+            if (item?.id === "finance") {
+              openFinanceDetail(APP_ROUTES.TOP_RISK_PORTAL);
+            }
+            if (item?.id === "supply") {
+              openProcurementSupplyChainDetail(APP_ROUTES.TOP_RISK_PORTAL);
+            }
+          }}
+        />
       </Suspense>
     );
   }
@@ -366,7 +385,10 @@ export default function App() {
   if (currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN) {
     pageContent = (
       <Suspense fallback={<PageLoadingState label="正在加载采购与供应链穿透..." />}>
-        <ProcurementSupplyChainPenetrationPage onUpdateTimeChange={setProcurementSupplyChainUpdateTime} />
+        <ProcurementSupplyChainPenetrationPage
+          onUpdateTimeChange={setProcurementSupplyChainUpdateTime}
+          onBack={() => setCurrentRoute(detailReturnRoute)}
+        />
       </Suspense>
     );
   }
@@ -432,8 +454,8 @@ const headerStyle = {
   position: "sticky",
   top: 0,
   zIndex: 20,
-  display: "flex",
-  justifyContent: "space-between",
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
   alignItems: "center",
   gap: 20,
   padding: "16px 24px",
@@ -448,6 +470,7 @@ const brandWrapStyle = {
   gap: 12,
   flexWrap: "nowrap",
   minWidth: 0,
+  justifySelf: "start",
 };
 
 const catalogButtonStyle = {
@@ -512,6 +535,7 @@ const tabNavStyle = {
   justifyContent: "center",
   alignItems: "center",
   minWidth: 0,
+  justifySelf: "center",
 };
 
 function tabButtonStyle(active) {
@@ -600,6 +624,7 @@ const updateTimeCardStyle = {
   borderRadius: 14,
   border: "1px solid #e7edf6",
   boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
+  justifySelf: "end",
 };
 
 const updateTimeLabelStyle = {

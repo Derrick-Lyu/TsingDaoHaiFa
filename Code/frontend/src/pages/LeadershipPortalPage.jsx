@@ -2,7 +2,6 @@ import { DomainPenetrationGrid } from "../components/leadership/DomainPenetratio
 import { ModelMenuSection } from "../components/leadership/ModelMenuSection";
 import { PenetrationOverviewSection } from "../components/leadership/PenetrationOverviewSection";
 import { RiskHandlingSection } from "../components/leadership/RiskHandlingSection";
-import { PortalHeader } from "../components/shared/PortalHeader";
 import {
   domainPenetrations,
   modelEntries,
@@ -25,7 +24,6 @@ const pageStyle = {
 export function LeadershipPortalPage() {
   return (
     <section style={pageStyle}>
-      <PortalHeader title="领导门户" icon="📊" />
       <PenetrationOverviewSection items={penetrationOverview} />
       <DomainPenetrationGrid items={domainPenetrations} />
       <div style={bottomGridStyle}>

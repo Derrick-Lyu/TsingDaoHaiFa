@@ -12,6 +12,7 @@ import {
   YAxis,
   Cell,
 } from "recharts";
+import { PortalHeader } from "../components/shared/PortalHeader";
 
 const COLORS = ["#0f766e", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
@@ -70,7 +71,16 @@ const DEMO_DATA = {
   ],
 };
 
-export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
+const backButtonStyle = {
+  border: "1px solid var(--color-border)",
+  background: "#fff",
+  color: "var(--color-text-secondary)",
+  padding: "10px 14px",
+  borderRadius: "var(--radius-full)",
+  cursor: "pointer",
+};
+
+export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange, onBack }) {
   const [data, setData] = useState(DEMO_DATA);
 
   useEffect(() => {
@@ -106,6 +116,16 @@ export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
 
   return (
     <div style={pageShellStyle}>
+      <PortalHeader
+        title="采购与供应链穿透"
+        icon="📦"
+        rightSlot={(
+          <button type="button" style={backButtonStyle} onClick={onBack}>
+            返回上一页
+          </button>
+        )}
+      />
+
       {/* 全量/服务/物资指标卡 */}
       <section style={sectionStyle}>
         <div style={overallGridStyle}>

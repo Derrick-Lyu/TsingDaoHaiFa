@@ -13,7 +13,7 @@ export function TopRiskDomainGrid({ items, onCardClick }) {
         <TopRiskDomainCard
           key={item.id}
           item={item}
-          onClick={onCardClick && item.id === "finance" ? () => onCardClick(item) : undefined}
+          onClick={onCardClick && (item.id === "finance" || item.id === "supply") ? () => onCardClick(item) : undefined}
         />
       ))}
     </section>

@@ -55,7 +55,7 @@ const dataActions = [
   { key: "d3", label: "画像数据" },
 ];
 
-export function FunctionalPortalPage({ onOpenTopRiskFinance }) {
+export function FunctionalPortalPage({ onOpenTopRiskFinance, onOpenProcurementSupplyChain }) {
   return (
     <section style={pageStyle}>
       <PortalHeader title="穿透式监管" icon="🛡️" searchPlaceholder="搜索智慧应用" />
@@ -74,6 +74,9 @@ export function FunctionalPortalPage({ onOpenTopRiskFinance }) {
               onItemClick={(item) => {
                 if (item.label === "财务管理") {
                   onOpenTopRiskFinance?.();
+                }
+                if (item.label === "采购供应链") {
+                  onOpenProcurementSupplyChain?.();
                 }
               }}
             />

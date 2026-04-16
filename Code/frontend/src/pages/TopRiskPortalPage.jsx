@@ -15,7 +15,7 @@ const headRowStyle = {
   flexWrap: "wrap",
 };
 
-export function TopRiskPortalPage({ onOpenFinance }) {
+export function TopRiskPortalPage({ onOpenDomain }) {
   return (
     <section style={pageStyle}>
       <div style={headRowStyle}>
@@ -25,7 +25,7 @@ export function TopRiskPortalPage({ onOpenFinance }) {
         </div>
         <TopRiskFilterBar />
       </div>
-      <TopRiskDomainGrid items={topRiskCards} onCardClick={() => onOpenFinance?.()} />
+      <TopRiskDomainGrid items={topRiskCards} onCardClick={onOpenDomain} />
     </section>
   );
 }

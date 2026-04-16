@@ -35,6 +35,7 @@
 
 @media (max-width: 860px) {
   .app-header {
+    grid-template-columns: 1fr !important;
     gap: 14px;
   }
 

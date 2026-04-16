@@ -15,11 +15,19 @@ const contentStyle = {
   display: "grid",
   gridTemplateColumns: "minmax(240px, 320px) minmax(0, 1fr)",
   gap: "var(--spacing-xl)",
+  alignItems: "center",
 };
 
 const statGridStyle = {
   display: "grid",
   gap: "var(--spacing-md)",
+};
+
+const chartWrapStyle = {
+  minWidth: 0,
+  height: 280,
+  display: "flex",
+  alignItems: "center",
 };
 
 export function RiskHandlingSection({ stats, trend }) {
@@ -31,7 +39,7 @@ export function RiskHandlingSection({ stats, trend }) {
             <StatTile key={item.id} label={item.label} value={item.value} />
           ))}
         </div>
-        <div style={{ minWidth: 0, height: 280 }}>
+        <div style={chartWrapStyle}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={trend} margin={{ top: 16, right: 16, left: 8, bottom: 16 }}>
               <CartesianGrid stroke="#e5edf8" vertical={false} />

@@ -26,18 +26,18 @@ function GaugeSVG({ score }) {
   const needleY = centerY + needleLength * Math.sin((angle * Math.PI) / 180);
 
   return (
-    <svg viewBox="0 0 164 94" style={{ width: "100%", maxWidth: 164, display: "block", margin: "0 auto" }}>
+    <svg viewBox="0 0 164 108" style={{ width: "100%", maxWidth: 164, display: "block", margin: "8px auto 0" }}>
       <path d="M 22 78 A 60 60 0 0 1 142 78" stroke="#6ecf66" strokeWidth="7" strokeLinecap="round" fill="none" />
       <path d="M 142 78 A 60 60 0 0 0 82 18" stroke="#2aa6f3" strokeWidth="7" strokeLinecap="round" fill="none" />
       <path d="M 82 18 A 60 60 0 0 0 22 78" stroke="#f26c63" strokeWidth="7" strokeLinecap="round" fill="none" />
       <line x1={centerX} y1={centerY} x2={needleX} y2={needleY} stroke="#1f2f4a" strokeWidth="2.2" strokeLinecap="round" />
       <circle cx={centerX} cy={centerY} r="4" fill="#1f2f4a" />
-      <text x={centerX} y={centerY + 20} textAnchor="middle" style={{ fill: "#1f2f4a", fontSize: 14, fontWeight: 700 }}>
+      <text x={centerX} y={centerY + 24} textAnchor="middle" style={{ fill: "#1f2f4a", fontSize: 14, fontWeight: 700 }}>
         {normalizedScore}
       </text>
-      <text x="22" y="88" style={{ fill: "#607087", fontSize: 12 }}>低</text>
+      <text x="22" y="92" style={{ fill: "#607087", fontSize: 12 }}>低</text>
       <text x="82" y="8" textAnchor="middle" style={{ fill: "#607087", fontSize: 12 }}>中</text>
-      <text x="142" y="88" textAnchor="end" style={{ fill: "#607087", fontSize: 12 }}>高</text>
+      <text x="142" y="92" textAnchor="end" style={{ fill: "#607087", fontSize: 12 }}>高</text>
     </svg>
   );
 }
