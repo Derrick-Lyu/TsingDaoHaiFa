@@ -9,7 +9,8 @@ import {
   saveAlertReview as submitAlertReview,
 } from "./api/terrorRisk";
 import { NavigationCatalog } from "./components/shared/NavigationCatalog";
-import { APP_ROUTES } from "./data/catalogNavigation";
+import { APP_ROUTES, TAB_LABELS, TAB_ROUTES } from "./data/catalogNavigation";
+import { getActivePortalTab, getFinanceReturnRoute } from "./utils/portalRouting";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
 
 const DEFAULT_TOPIC_ALERT_FILTERS = {
@@ -35,6 +36,12 @@ const BlacklistConfigPage = lazy(() =>
 const FundSafetySummaryPage = lazy(() =>
   import("./pages/FundSafetySummaryPage").then((module) => ({ default: module.FundSafetySummaryPage })),
 );
+const FunctionalPortalPage = lazy(() =>
+  import("./pages/FunctionalPortalPage").then((module) => ({ default: module.FunctionalPortalPage })),
+);
+const LeadershipPortalPage = lazy(() =>
+  import("./pages/LeadershipPortalPage").then((module) => ({ default: module.LeadershipPortalPage })),
+);
 const OverviewPage = lazy(() =>
   import("./pages/OverviewPage").then((module) => ({ default: module.OverviewPage })),
 );
@@ -43,6 +50,12 @@ const RuleConfigPage = lazy(() =>
 );
 const TerrorRiskTopicPage = lazy(() =>
   import("./pages/TerrorRiskTopicPage").then((module) => ({ default: module.TerrorRiskTopicPage })),
+);
+const TopRiskFinanceManagementPage = lazy(() =>
+  import("./pages/TopRiskFinanceManagementPage").then((module) => ({ default: module.TopRiskFinanceManagementPage })),
+);
+const TopRiskPortalPage = lazy(() =>
+  import("./pages/TopRiskPortalPage").then((module) => ({ default: module.TopRiskPortalPage })),
 );
 const TransactionDataPage = lazy(() =>
   import("./pages/TransactionDataPage").then((module) => ({ default: module.TransactionDataPage })),
@@ -64,8 +77,8 @@ const TOPIC_VIEW_TO_ROUTE = Object.fromEntries(TOPIC_NAV_ITEMS.map((item) => [it
 const TOPIC_ROUTE_TO_VIEW = Object.fromEntries(TOPIC_NAV_ITEMS.map((item) => [item.routeKey, item.value]));
 
 function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHomeNav, updateTime }) {
-  const title = activeTab === "overview" ? "穿透式监管管理平台" : "资金安全监管专题";
-  const subtitle = activeTab === "overview" ? "集团全级次风险总览" : "专题下钻与确认闭环";
+  const title = TAB_ROUTES.includes(activeTab) ? "穿透式监管管理平台" : "资金安全监管专题";
+  const subtitle = TAB_ROUTES.includes(activeTab) ? "集团全级次风险总览与门户导航" : "专题下钻与确认闭环";
 
   return (
     <header style={headerStyle} className="app-header">
@@ -105,6 +118,19 @@ function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHome
           <div style={brandSubtitleStyle}>{subtitle}</div>
         </div>
       </div>
+
+      <nav style={tabNavStyle} className="portal-tab-nav" aria-label="门户导航">
+        {TAB_ROUTES.map((route) => (
+          <button
+            key={route}
+            type="button"
+            onClick={() => onChangeTab(route)}
+            style={tabButtonStyle(activeTab === route)}
+          >
+            {TAB_LABELS[route]}
+          </button>
+        ))}
+      </nav>
 
       {/* Update Time - Right Side */}
       {updateTime && (
@@ -182,7 +208,7 @@ function TopicWorkspace({
 }
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState(APP_ROUTES.OVERVIEW);
+  const [currentRoute, setCurrentRoute] = useState(APP_ROUTES.LEADERSHIP_PORTAL);
   const [selectedAlertId, setSelectedAlertId] = useState(null);
   const [detailReturnRoute, setDetailReturnRoute] = useState(APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
   const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
@@ -192,15 +218,13 @@ export default function App() {
 
   const isFundSafetyRoute = currentRoute.startsWith("fund-safety-");
   const isFundSafetyTopicRoute = currentRoute.startsWith("fund-safety-topic-");
-  const activeTab = isFundSafetyRoute ? "fund-safety" : "overview";
+  const activeTab = isFundSafetyRoute ? "fund-safety" : getActivePortalTab(currentRoute);
   const topicView = TOPIC_ROUTE_TO_VIEW[currentRoute] ?? "overview";
 
   const goHome = () => {
-    setCurrentRoute(APP_ROUTES.OVERVIEW);
-  };
-
-  const openFundSafety = () => {
-    setCurrentRoute(APP_ROUTES.FUND_SAFETY_SUMMARY);
+    setCurrentRoute(APP_ROUTES.LEADERSHIP_PORTAL);
+    setSelectedAlertId(null);
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
   const openTerrorTopic = () => {
@@ -233,10 +257,28 @@ export default function App() {
 
   const handleCatalogNavigate = (routeKey) => {
     setCurrentRoute(routeKey);
+    setSelectedAlertId(null);
+    if (routeKey === APP_ROUTES.TOP_RISK_FINANCE) {
+      setDetailReturnRoute(getFinanceReturnRoute(currentRoute));
+    }
     if (routeKey !== APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS) {
       setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
     }
     setCatalogOpen(false);
+  };
+
+  const handlePortalTabChange = (route) => {
+    setCurrentRoute(route);
+    setSelectedAlertId(null);
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    setDetailReturnRoute(route);
+  };
+
+  const openFinanceDetail = (sourceRoute = currentRoute) => {
+    setDetailReturnRoute(getFinanceReturnRoute(sourceRoute));
+    setSelectedAlertId(null);
+    setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    setCurrentRoute(APP_ROUTES.TOP_RISK_FINANCE);
   };
 
   const runDetectionJob = async () => {
@@ -255,10 +297,26 @@ export default function App() {
 
   let pageContent = null;
 
-  if (currentRoute === APP_ROUTES.OVERVIEW) {
+  if (currentRoute === APP_ROUTES.LEADERSHIP_PORTAL || currentRoute === APP_ROUTES.OVERVIEW) {
     pageContent = (
-      <Suspense fallback={<PageLoadingState label="正在加载风险总览..." />}>
-        <OverviewPage onOpenFundSafety={openFundSafety} />
+      <Suspense fallback={<PageLoadingState label="正在加载领导门户..." />}>
+        <LeadershipPortalPage />
+      </Suspense>
+    );
+  }
+
+  if (currentRoute === APP_ROUTES.FUNCTIONAL_PORTAL) {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载功能门户..." />}>
+        <FunctionalPortalPage onOpenTopRiskFinance={() => openFinanceDetail(APP_ROUTES.FUNCTIONAL_PORTAL)} />
+      </Suspense>
+    );
+  }
+
+  if (currentRoute === APP_ROUTES.TOP_RISK_PORTAL) {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载十大重点风险门户..." />}>
+        <TopRiskPortalPage onOpenFinance={() => openFinanceDetail(APP_ROUTES.TOP_RISK_PORTAL)} />
       </Suspense>
     );
   }
@@ -313,14 +371,22 @@ export default function App() {
     );
   }
 
+  if (currentRoute === APP_ROUTES.TOP_RISK_FINANCE) {
+    pageContent = (
+      <Suspense fallback={<PageLoadingState label="正在加载财务管理详情..." />}>
+        <TopRiskFinanceManagementPage onBack={() => setCurrentRoute(detailReturnRoute)} />
+      </Suspense>
+    );
+  }
+
   return (
     <div style={appShellStyle}>
       <ShellHeader
         activeTab={activeTab}
-        onChangeTab={() => {}}
+        onChangeTab={handlePortalTabChange}
         onOpenCatalog={() => setCatalogOpen(true)}
         onGoHome={goHome}
-        showHomeNav={currentRoute === APP_ROUTES.PROCUREMENT_SUPPLY_CHAIN}
+        showHomeNav={!TAB_ROUTES.includes(currentRoute)}
         updateTime={
           currentRoute === APP_ROUTES.FUND_SAFETY_SUMMARY
             ? fundSafetyUpdateTime
@@ -381,6 +447,7 @@ const brandWrapStyle = {
   alignItems: "center",
   gap: 12,
   flexWrap: "nowrap",
+  minWidth: 0,
 };
 
 const catalogButtonStyle = {
@@ -438,6 +505,29 @@ const brandSubtitleStyle = {
   fontSize: 13,
   color: "#607087",
 };
+
+const tabNavStyle = {
+  display: "flex",
+  gap: 12,
+  justifyContent: "center",
+  alignItems: "center",
+  minWidth: 0,
+};
+
+function tabButtonStyle(active) {
+  return {
+    border: "none",
+    borderBottom: active ? "3px solid #0f2f66" : "3px solid transparent",
+    padding: "8px 18px",
+    fontSize: 15,
+    fontWeight: active ? 700 : 600,
+    color: active ? "#0f2f66" : "#607087",
+    background: "transparent",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    whiteSpace: "nowrap",
+  };
+}
 
 
 const loadingCardStyle = {

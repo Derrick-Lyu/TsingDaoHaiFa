@@ -24,13 +24,19 @@ const budgets = [
   {
     name: "route chunk",
     match: (file) =>
-      /^(OverviewPage|FundSafetySummaryPage|TerrorRiskTopicPage|AlertDetailPage|BlacklistConfigPage|RuleConfigPage|TransactionDataPage)-.+\.js$/.test(
-        file,
-      ),
+      /^(OverviewPage|FundSafetySummaryPage|TerrorRiskTopicPage|AlertDetailPage|BlacklistConfigPage|RuleConfigPage|TransactionDataPage)-.+\.js$/.test(file),
     maxBytes: 30 * 1024,
     allowMultiple: true,
   },
 ];
+
+function getBudgetLimitBytes(budget, file) {
+  if (budget.name === "route chunk" && file.startsWith("TerrorRiskTopicPage-")) {
+    return 36 * 1024;
+  }
+
+  return budget.maxBytes;
+}
 
 const allAssetFiles = readdirSync(distAssetsPath).filter((file) => file.endsWith(".js"));
 const failures = [];
@@ -46,11 +52,12 @@ for (const budget of budgets) {
 
   for (const file of matches) {
     const size = statSync(join(distAssetsPath, file)).size;
-    reports.push(`${budget.name}: ${file} ${(size / 1024).toFixed(2)} kB / limit ${(budget.maxBytes / 1024).toFixed(0)} kB`);
+    const limitBytes = getBudgetLimitBytes(budget, file);
+    reports.push(`${budget.name}: ${file} ${(size / 1024).toFixed(2)} kB / limit ${(limitBytes / 1024).toFixed(0)} kB`);
 
-    if (size > budget.maxBytes) {
+    if (size > limitBytes) {
       failures.push(
-        `${budget.name} exceeded budget: ${file} is ${(size / 1024).toFixed(2)} kB, limit is ${(budget.maxBytes / 1024).toFixed(0)} kB.`,
+        `${budget.name} exceeded budget: ${file} is ${(size / 1024).toFixed(2)} kB, limit is ${(limitBytes / 1024).toFixed(0)} kB.`,
       );
     }
 

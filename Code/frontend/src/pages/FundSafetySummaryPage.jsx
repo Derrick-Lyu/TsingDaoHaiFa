@@ -12,21 +12,18 @@ const EMPTY_SUMMARY = {
 
 export function FundSafetySummaryPage({ onOpenTerrorTopic, onUpdateTimeChange }) {
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
-  const [status, setStatus] = useState("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadSummary() {
-      setStatus("loading");
       setErrorMessage("");
       try {
         const data = await getFundSafetySummary();
 
         if (!cancelled) {
           setSummary(data);
-          setStatus("ready");
           if (onUpdateTimeChange && data.updatedAt) {
             onUpdateTimeChange(data.updatedAt);
           }
@@ -34,7 +31,6 @@ export function FundSafetySummaryPage({ onOpenTerrorTopic, onUpdateTimeChange })
       } catch {
         if (!cancelled) {
           setSummary(EMPTY_SUMMARY);
-          setStatus("error");
           setErrorMessage("资金安全摘要加载失败，当前未显示演示兜底数据。");
         }
       }
@@ -81,19 +77,6 @@ const pageShellStyle = {
   display: "grid",
   gap: 18,
 };
-
-function statusPillStyle(loading) {
-  return {
-    padding: "10px 14px",
-    borderRadius: 999,
-    border: "1px solid " + (loading ? "#d9e6ff" : "#d9e3f0"),
-    background: loading ? "#eef4ff" : "#f8fafc",
-    color: loading ? "#1a3a8f" : "#425466",
-    fontSize: 12,
-    fontWeight: 800,
-    whiteSpace: "nowrap",
-  };
-}
 
 const heroMetricGridStyle = {
   display: "grid",

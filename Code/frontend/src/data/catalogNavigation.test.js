@@ -9,10 +9,23 @@ import {
   isCatalogItemActive,
 } from "./catalogNavigation.js";
 
+test("home catalog item routes to leadership portal", () => {
+  const home = CATALOG_ITEMS.find((item) => item.value === "home");
+
+  assert.equal(getCatalogNavigationTarget(home), APP_ROUTES.LEADERSHIP_PORTAL);
+});
+
 test("getCatalogNavigationTarget returns a real route for enabled leaves", () => {
   const modelCenter = CATALOG_ITEMS.find((item) => item.value === "model-center");
 
   assert.equal(getCatalogNavigationTarget(modelCenter), APP_ROUTES.FUND_SAFETY_SUMMARY);
+});
+
+test("finance catalog item routes to finance detail", () => {
+  const keyAreas = CATALOG_ITEMS.find((item) => item.value === "key-areas-penetration");
+  const financeManagement = keyAreas.children.find((item) => item.value === "finance-management");
+
+  assert.equal(getCatalogNavigationTarget(financeManagement), APP_ROUTES.TOP_RISK_FINANCE);
 });
 
 test("getCatalogNavigationTarget blocks unfinished pages", () => {

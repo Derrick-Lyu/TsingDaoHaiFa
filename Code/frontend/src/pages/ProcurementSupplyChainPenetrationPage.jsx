@@ -72,19 +72,16 @@ const DEMO_DATA = {
 
 export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
   const [data, setData] = useState(DEMO_DATA);
-  const [status, setStatus] = useState("ready");
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadData() {
-      setStatus("loading");
       try {
         // TODO: 调用后端 API 获取数据
         // const apiData = await requestJson("/procurement-supply-chain/summary");
         if (!cancelled) {
           setData(DEMO_DATA);
-          setStatus("ready");
           // Notify parent component of update time
           if (onUpdateTimeChange && DEMO_DATA.updatedAt) {
             onUpdateTimeChange(DEMO_DATA.updatedAt);
@@ -93,7 +90,6 @@ export function ProcurementSupplyChainPenetrationPage({ onUpdateTimeChange }) {
       } catch {
         if (!cancelled) {
           setData(DEMO_DATA);
-          setStatus("ready");
           if (onUpdateTimeChange && DEMO_DATA.updatedAt) {
             onUpdateTimeChange(DEMO_DATA.updatedAt);
           }

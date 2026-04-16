@@ -490,77 +490,6 @@ const loadingStyle = {
   color: "#4b5563",
 };
 
-const heroStyle = {
-  position: "relative",
-  overflow: "hidden",
-  borderRadius: 28,
-  border: "1px solid rgba(15, 59, 102, 0.08)",
-  background: "linear-gradient(135deg, #ffffff 0%, #f8fbff 48%, #eef5fb 100%)",
-  boxShadow: "0 24px 80px rgba(15, 23, 42, 0.08)",
-  padding: 28,
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1.8fr) minmax(240px, 0.8fr)",
-  gap: 20,
-};
-
-const heroBackdropStyle = {
-  position: "absolute",
-  inset: 0,
-  background:
-    "radial-gradient(circle at top right, rgba(37,99,235,0.12), transparent 24%), radial-gradient(circle at left bottom, rgba(180,83,9,0.08), transparent 18%)",
-  pointerEvents: "none",
-};
-
-const heroCopyStyle = {
-  position: "relative",
-  zIndex: 1,
-};
-
-const eyebrowStyle = {
-  display: "inline-flex",
-  padding: "6px 12px",
-  borderRadius: 999,
-  background: "#e8f1fb",
-  color: "#0f3b66",
-  fontWeight: 700,
-  fontSize: 12,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const heroTitleStyle = {
-  margin: "16px 0 12px",
-  fontSize: "clamp(30px, 3.6vw, 44px)",
-  lineHeight: 1.1,
-  color: "#102033",
-};
-
-const heroDescriptionStyle = {
-  maxWidth: 760,
-  color: "#475569",
-  fontSize: 16,
-  lineHeight: 1.75,
-};
-
-const heroMetaStyle = {
-  marginTop: 24,
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 14,
-  alignItems: "center",
-};
-
-const primaryButtonStyle = {
-  border: 0,
-  borderRadius: 14,
-  padding: "12px 18px",
-  fontWeight: 700,
-  color: "#fff",
-  background: "linear-gradient(135deg, #163d65, #2563eb)",
-  cursor: "pointer",
-  boxShadow: "0 12px 28px rgba(37, 99, 235, 0.22)",
-};
-
 const ghostButtonStyle = {
   border: "1px solid rgba(15, 59, 102, 0.12)",
   borderRadius: 14,
@@ -569,41 +498,6 @@ const ghostButtonStyle = {
   background: "#fff",
   fontWeight: 700,
   cursor: "pointer",
-};
-
-const heroNoteStyle = {
-  color: "#64748b",
-  fontSize: 14,
-};
-
-const heroAsideStyle = {
-  position: "relative",
-  zIndex: 1,
-  borderRadius: 22,
-  background: "rgba(15, 59, 102, 0.96)",
-  color: "#eff6ff",
-  padding: 22,
-  display: "grid",
-  alignContent: "space-between",
-  minHeight: 200,
-};
-
-const heroAsideLabelStyle = {
-  fontSize: 12,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: "rgba(239, 246, 255, 0.72)",
-};
-
-const heroAsideDateStyle = {
-  fontSize: 30,
-  fontWeight: 800,
-  lineHeight: 1.2,
-};
-
-const heroAsideSourceStyle = {
-  alignSelf: "end",
-  color: "rgba(239, 246, 255, 0.84)",
 };
 
 const metricGridStyle = {

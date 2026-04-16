@@ -1301,14 +1301,6 @@ const reviewPanelStyle = {
   height: "100%",
 };
 
-const assignmentPanelStyle = {
-  padding: 16,
-  borderRadius: 16,
-  border: "1px solid #dbe5f1",
-  background: "#f8fbff",
-  marginBottom: 18,
-};
-
 const workflowHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",

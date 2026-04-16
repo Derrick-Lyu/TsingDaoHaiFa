@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   CATALOG_ITEMS,
@@ -9,13 +9,10 @@ import {
 
 export function NavigationCatalog({ isOpen, onClose, currentRoute, onRouteChange }) {
   const [expandedItems, setExpandedItems] = useState(() => getDefaultExpandedItems(currentRoute));
-
-  useEffect(() => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      ...getDefaultExpandedItems(currentRoute),
-    }));
-  }, [currentRoute]);
+  const visibleExpandedItems = {
+    ...expandedItems,
+    ...getDefaultExpandedItems(currentRoute),
+  };
 
   if (!isOpen) {
     return null;
@@ -73,7 +70,7 @@ export function NavigationCatalog({ isOpen, onClose, currentRoute, onRouteChange
               key={item.value}
               item={item}
               currentRoute={currentRoute}
-              isExpanded={expandedItems[item.value]}
+              isExpanded={visibleExpandedItems[item.value]}
               isActive={isCatalogItemActive(item, currentRoute)}
               onSelect={handleItemClick}
             />

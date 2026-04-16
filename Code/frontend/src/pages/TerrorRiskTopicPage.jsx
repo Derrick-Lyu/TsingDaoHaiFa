@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -10,9 +10,7 @@ import {
 } from "recharts";
 
 import { requestJson } from "../api/client";
-import { AlertTable } from "../components/terrorRisk/AlertTable";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
-import { TypicalCaseCards } from "../components/terrorRisk/TypicalCaseCards";
 import { formatAmountDisplay } from "../utils/amount";
 import { buildRuleFilterOptions } from "../utils/terrorRiskRules";
 import {
@@ -21,6 +19,13 @@ import {
   OVERVIEW_RANKING_TABS,
 } from "../utils/terrorRiskOverview";
 import { listRiskTickets } from "../api/terrorRisk";
+
+const AlertTable = lazy(() =>
+  import("../components/terrorRisk/AlertTable").then((module) => ({ default: module.AlertTable })),
+);
+const TypicalCaseCards = lazy(() =>
+  import("../components/terrorRisk/TypicalCaseCards").then((module) => ({ default: module.TypicalCaseCards })),
+);
 
 const EMPTY_TOPIC = {
   page_title: "涉恐交易风险",
@@ -215,7 +220,9 @@ export function TerrorRiskTopicPage({
             </div>
             <span style={metaPillStyle("#f4f7fb", "#516173")}>共 {dashboard.typicalCases.length} 个案例</span>
           </div>
-          <TypicalCaseCards cases={dashboard.typicalCases} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+          <Suspense fallback={<div style={lazyPanelFallbackStyle}>正在加载案例卡片...</div>}>
+            <TypicalCaseCards cases={dashboard.typicalCases} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+          </Suspense>
         </section>
       </div>
     );
@@ -229,14 +236,16 @@ export function TerrorRiskTopicPage({
           <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
         </div>
 
-        <AlertTable
-          alerts={alerts}
-          ruleOptions={ruleOptions}
-          filters={filters}
-          onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
-          onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
-          loading={loadingAlerts}
-        />
+        <Suspense fallback={<div style={lazyPanelFallbackStyle}>正在加载预警明细...</div>}>
+          <AlertTable
+            alerts={alerts}
+            ruleOptions={ruleOptions}
+            filters={filters}
+            onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
+            onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
+            loading={loadingAlerts}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -257,7 +266,6 @@ export function TerrorRiskTopicPage({
         summary={dashboard.executiveSummary}
         latestState={latestState}
         snapshotDate={dashboard.snapshotDate || topic.snapshot_date}
-        latestJob={dashboard.latestJob}
         involvedUnits={topic.kpis?.involved_units || "0"}
         blacklistHits={topic.kpis?.blacklist_hit_count || "0"}
         highRiskAlerts={topic.kpis?.high_risk_count || "0"}
@@ -447,7 +455,9 @@ export function TerrorRiskTopicPage({
               查看全部典型案例
             </button>
           </div>
-          <TypicalCaseCards cases={dashboard.typicalCases.slice(0, 3)} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+          <Suspense fallback={<div style={lazyPanelFallbackStyle}>正在加载案例卡片...</div>}>
+            <TypicalCaseCards cases={dashboard.typicalCases.slice(0, 3)} onSelectCase={(item) => onOpenAlertDetail?.(item.id)} />
+          </Suspense>
         </section>
       </div>
 
@@ -460,20 +470,32 @@ export function TerrorRiskTopicPage({
             查看首条预警
           </button>
         </div>
-        <AlertTable
-          alerts={alerts}
-          ruleOptions={ruleOptions}
-          filters={filters}
-          onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
-          onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
-          loading={loadingAlerts}
-        />
+        <Suspense fallback={<div style={lazyPanelFallbackStyle}>正在加载预警明细...</div>}>
+          <AlertTable
+            alerts={alerts}
+            ruleOptions={ruleOptions}
+            filters={filters}
+            onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
+            onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
+            loading={loadingAlerts}
+          />
+        </Suspense>
       </section>
     </div>
   );
 }
 
-function ExecutiveSummaryPanel({ summary, latestState, snapshotDate, latestJob, involvedUnits, blacklistHits, highRiskAlerts }) {
+const lazyPanelFallbackStyle = {
+  padding: "18px 20px",
+  borderRadius: 16,
+  border: "1px solid #d9e2ee",
+  background: "rgba(255,255,255,0.88)",
+  color: "#516173",
+  fontSize: 14,
+  fontWeight: 600,
+};
+
+function ExecutiveSummaryPanel({ summary, latestState, snapshotDate, involvedUnits, blacklistHits, highRiskAlerts }) {
   const tags = Array.isArray(summary?.tags) ? summary.tags : [];
   const focus = Array.isArray(summary?.focus) ? summary.focus : [];
 

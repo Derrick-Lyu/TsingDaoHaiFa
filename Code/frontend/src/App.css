@@ -2,6 +2,15 @@
   flex-wrap: wrap;
 }
 
+.portal-tab-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
 .cockpit-page {
   min-width: 0;
 }
@@ -29,6 +38,11 @@
     gap: 14px;
   }
 
+  .portal-tab-nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .primary-nav {
     width: 100%;
   }
@@ -48,6 +62,11 @@
   .cockpit-topic-section,
   .cockpit-table-section {
     padding: 18px !important;
+  }
+
+  .portal-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
 }

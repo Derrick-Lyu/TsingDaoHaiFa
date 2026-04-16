@@ -42,6 +42,10 @@ Keep the client demo path from turning into a future tech blocker:
 3. Treat bundle-budget failures as design feedback, not as a release-time cleanup task.
 4. When adding a dependency, document which route pays for it and whether it loads eagerly or lazily.
 
+`@svg-maps/china` is only used by the lazily loaded `TopRiskFinanceManagementPage` route so the primary app shell does not pay that cost up front.
+
+`TerrorRiskTopicPage` keeps a slightly higher route budget than other route chunks because it owns the overview orchestration layer for the topic dashboard; the alert table and case cards are already split into secondary lazy chunks.
+
 ## Docker
 
 From the [`Code/README.md`](../README.md) workspace root:

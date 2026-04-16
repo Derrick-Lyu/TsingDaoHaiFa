@@ -1,4 +1,8 @@
 export const APP_ROUTES = {
+  LEADERSHIP_PORTAL: "leadership-portal",
+  FUNCTIONAL_PORTAL: "functional-portal",
+  TOP_RISK_PORTAL: "top-risk-portal",
+  TOP_RISK_FINANCE: "top-risk-finance",
   OVERVIEW: "overview",
   FUND_SAFETY_SUMMARY: "fund-safety-summary",
   FUND_SAFETY_TOPIC_OVERVIEW: "fund-safety-topic-overview",
@@ -11,8 +15,20 @@ export const APP_ROUTES = {
   PROCUREMENT_SUPPLY_CHAIN: "procurement-supply-chain-penetration",
 };
 
+export const TAB_ROUTES = [
+  APP_ROUTES.LEADERSHIP_PORTAL,
+  APP_ROUTES.FUNCTIONAL_PORTAL,
+  APP_ROUTES.TOP_RISK_PORTAL,
+];
+
+export const TAB_LABELS = {
+  [APP_ROUTES.LEADERSHIP_PORTAL]: "领导门户",
+  [APP_ROUTES.FUNCTIONAL_PORTAL]: "功能门户",
+  [APP_ROUTES.TOP_RISK_PORTAL]: "十大重点风险",
+};
+
 export const CATALOG_ITEMS = [
-  { label: "首页", value: "home", routeKey: APP_ROUTES.OVERVIEW, enabled: true },
+  { label: "首页", value: "home", routeKey: APP_ROUTES.LEADERSHIP_PORTAL, enabled: true },
   {
     label: "四大穿透",
     value: "four-penetrations",
@@ -31,7 +47,12 @@ export const CATALOG_ITEMS = [
       { label: "金融风险穿透", value: "financial-risk-penetration", enabled: false },
       { label: "产权穿透", value: "property-penetration", enabled: false },
       { label: "军品业务穿透", value: "military-business-penetration", enabled: false },
-      { label: "财务穿透", value: "finance-penetration", enabled: false },
+      {
+        label: "财务管理",
+        value: "finance-management",
+        routeKey: APP_ROUTES.TOP_RISK_FINANCE,
+        enabled: true,
+      },
       {
         label: "采购与供应链穿透",
         value: "procurement-supply-chain-penetration",
