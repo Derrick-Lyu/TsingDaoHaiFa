@@ -18,6 +18,8 @@ Merge the four pages from `risk-dashboard-app-v2` into the current frontend proj
 
 ### V2 Project Structure
 
+**Source Location**: `/Users/derricklyu/Desktop/temp/risk-dashboard-app-v2` (external directory, not in current repo)
+
 - **Pages**:
   - `LeadershipPortalPage` - 领导门户 (penetration overview, domain cards, risk handling, model menu)
   - `FunctionalPortalPage` - 功能门户 (penetration controls, top domain entry)
@@ -27,6 +29,8 @@ Merge the four pages from `risk-dashboard-app-v2` into the current frontend proj
 - **Charts**: Custom SVG + `@svg-maps/china` for China map
 - **Styling**: CSS file (`App.css`, ~1700 lines)
 - **Data**: Mock data files (`leadershipPortal.mock.js`, `topRiskPortal.mock.js`, `topRiskFinance.mock.js`)
+
+**Migration Approach**: Copy component source code from external v2 directory into current project, adapting imports and styles.
 
 ---
 
@@ -124,7 +128,7 @@ export const CATALOG_ITEMS = [
       { label: "产权穿透", value: "property-penetration", enabled: false },
       { label: "军品业务穿透", value: "military-business-penetration", enabled: false },
       {
-        label: "财务管理",
+        label: "财务管理",  // Note: Renamed from existing "财务穿透" to align with v2 naming
         value: "finance-management",
         routeKey: APP_ROUTES.TOP_RISK_FINANCE,  // NEW: Enabled with route
         enabled: true,
@@ -146,6 +150,8 @@ export const CATALOG_ITEMS = [
   { label: "数据中心", value: "data-center", enabled: false },
 ];
 ```
+
+**Note on Naming**: The existing catalog has `财务穿透` (disabled). This is renamed to `财务管理` and enabled with the new route. This aligns with v2's domain naming convention.
 
 ---
 
@@ -231,18 +237,49 @@ function tabButtonStyle(active) {
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState(APP_ROUTES.LEADERSHIP_PORTAL);
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
+  const [detailReturnRoute, setDetailReturnRoute] = useState(APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
+  const [topicAlertFilters, setTopicAlertFilters] = useState(DEFAULT_TOPIC_ALERT_FILTERS);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   // ... other state
 
   // Determine if current route is a tab route
   const isTabRoute = TAB_ROUTES.includes(currentRoute);
   const activeTab = isTabRoute ? currentRoute : APP_ROUTES.LEADERSHIP_PORTAL;
 
-  // Handle tab change
+  // Handle tab change - clears all detail-level state
   const handleTabChange = (route) => {
     setCurrentRoute(route);
-    // Clear any detail-level state when switching tabs
     setSelectedAlertId(null);
     setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    // Reset detail return route when switching tabs
+    setDetailReturnRoute(route);
+  };
+
+  // Handle catalog navigation
+  const handleCatalogNavigate = (route) => {
+    setCurrentRoute(route);
+    setCatalogOpen(false);
+    // Clear alert filters when navigating to non-alert routes
+    if (route !== APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS) {
+      setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
+    }
+  };
+
+  // Handle finance detail navigation (from catalog or top risk portal)
+  const openFinanceDetail = () => {
+    setCurrentRoute(APP_ROUTES.TOP_RISK_FINANCE);
+    // Track return route based on where user came from
+    if (currentRoute === APP_ROUTES.TOP_RISK_PORTAL) {
+      setDetailReturnRoute(APP_ROUTES.TOP_RISK_PORTAL);
+    } else {
+      setDetailReturnRoute(APP_ROUTES.LEADERSHIP_PORTAL);
+    }
+  };
+
+  // Handle back from finance detail
+  const closeFinanceDetail = () => {
+    setCurrentRoute(detailReturnRoute);
   };
 
   // Page content rendering
@@ -253,15 +290,15 @@ export default function App() {
     pageContent = <LeadershipPortalPage />;
   }
   if (currentRoute === APP_ROUTES.FUNCTIONAL_PORTAL) {
-    pageContent = <FunctionalPortalPage onOpenTopRiskFinance={() => setCurrentRoute(APP_ROUTES.TOP_RISK_FINANCE)} />;
+    pageContent = <FunctionalPortalPage onOpenTopRiskFinance={openFinanceDetail} />;
   }
   if (currentRoute === APP_ROUTES.TOP_RISK_PORTAL) {
-    pageContent = <TopRiskPortalPage onOpenFinance={() => setCurrentRoute(APP_ROUTES.TOP_RISK_FINANCE)} />;
+    pageContent = <TopRiskPortalPage onOpenFinance={openFinanceDetail} />;
   }
 
   // Detail pages
   if (currentRoute === APP_ROUTES.TOP_RISK_FINANCE) {
-    pageContent = <TopRiskFinanceManagementPage onBack={() => setCurrentRoute(APP_ROUTES.TOP_RISK_PORTAL)} />;
+    pageContent = <TopRiskFinanceManagementPage onBack={closeFinanceDetail} />;
   }
 
   // Existing pages (fund safety, procurement, etc.)
@@ -283,16 +320,22 @@ export default function App() {
         isOpen={catalogOpen}
         onClose={() => setCatalogOpen(false)}
         currentRoute={currentRoute}
-        onRouteChange={(route) => {
-          setCurrentRoute(route);
-          setCatalogOpen(false);
-        }}
+        onRouteChange={handleCatalogNavigate}
       />
       <main style={mainStyle}>{pageContent}</main>
     </div>
   );
 }
 ```
+
+**State Clearing Rules**:
+| Navigation Action | State to Clear |
+|-------------------|----------------|
+| Tab switch | `selectedAlertId`, `topicAlertFilters`, reset `detailReturnRoute` |
+| Catalog navigation | `topicAlertFilters` (unless going to alerts), `selectedAlertId` |
+| Enter finance detail | Set `detailReturnRoute` based on source |
+| Exit finance detail | Navigate to `detailReturnRoute` |
+| Home button | All detail state, return to `LEADERSHIP_PORTAL` |
 
 ---
 
@@ -318,6 +361,79 @@ export default function App() {
 - `SectionCard` → Create `src/components/shared/SectionCard.jsx` (reusable card wrapper)
 
 **Chart handling**: The trend chart in `RiskHandlingSection` uses custom SVG - migrate to recharts `LineChart` + `BarChart` combo.
+
+**Gauge Visualization (DomainPenetrationCard)**:
+
+```jsx
+// Gauge SVG for domain risk score visualization
+const GaugeSVG = ({ score }) => {
+  // Normalize score to 0-100 range
+  const normalizedScore = Math.max(0, Math.min(100, score));
+  // Calculate needle angle (180° arc, 0 at left, 100 at right)
+  const angle = (normalizedScore / 100) * 180 - 90; // -90 to 90 degrees
+
+  // SVG coordinates (center at 82, 78, radius 60)
+  const centerX = 82;
+  const centerY = 78;
+  const radius = 60;
+  const needleLength = 45;
+
+  // Needle end point calculation
+  const needleX = centerX + needleLength * Math.cos((angle * Math.PI) / 180);
+  const needleY = centerY + needleLength * Math.sin((angle * Math.PI) / 180);
+
+  return (
+    <svg className="domain-gauge-svg" viewBox="0 0 164 94">
+      {/* Background arc segments */}
+      <path
+        d="M 22 78 A 60 60 0 0 1 142 78"
+        className="domain-gauge-segment low"
+        stroke="#6ecf66"
+        strokeWidth="7"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M 142 78 A 60 60 0 0 0 82 18"
+        className="domain-gauge-segment medium"
+        stroke="#2aa6f3"
+        strokeWidth="7"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M 82 18 A 60 60 0 0 0 22 78"
+        className="domain-gauge-segment high"
+        stroke="#f26c63"
+        strokeWidth="7"
+        strokeLinecap="round"
+        fill="none"
+      />
+      {/* Needle */}
+      <line
+        x1={centerX}
+        y1={centerY}
+        x2={needleX}
+        y2={needleY}
+        className="domain-gauge-needle"
+        stroke="#1f2f4a"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      {/* Center dot */}
+      <circle cx={centerX} cy={centerY} r="4" className="domain-gauge-center" fill="#1f2f4a" />
+      {/* Score label */}
+      <text x={centerX} y={centerY + 20} textAnchor="middle" className="domain-gauge-value">
+        {normalizedScore}
+      </text>
+      {/* Level labels */}
+      <text x="22" y="88" className="domain-gauge-levels">低</text>
+      <text x="82" y="8" className="domain-gauge-levels">中</text>
+      <text x="142" y="88" className="domain-gauge-levels">高</text>
+    </svg>
+  );
+};
+```
 
 ### Page 2: FunctionalPortalPage (功能门户)
 
@@ -909,11 +1025,40 @@ const TrendComposedChart = ({ data }) => {
 // TopRiskFinanceManagementPage - Keep SVG map logic
 import china from '@svg-maps/china';
 
-// Province ID mapping (keep from v2)
+// Province ID mapping (complete - maps risk data IDs to @svg-maps/china IDs)
 const MAP_ID_BY_RISK_ID = {
   xinjiang: 'xinjiang-uygur',
   tibet: 'xizang',
-  // ... full mapping preserved
+  qinghai: 'quinghai',
+  gansu: 'gansu',
+  ningxia: 'ningxia-hui',
+  'inner-mongolia': 'nei-mongol',
+  heilongjiang: 'heilongjiang',
+  jilin: 'jilin',
+  liaoning: 'liaoning',
+  beijing: 'beijing',
+  tianjin: 'tianjin',
+  hebei: 'hebei',
+  shanxi: 'shanxi',
+  shandong: 'shandong',
+  henan: 'henan',
+  shaanxi: 'shaanxi',  // Note: 'shanxi2' in v2 data, use 'shaanxi' for map
+  jiangsu: 'jiangsu',
+  anhui: 'anhui',
+  hubei: 'hubei',
+  sichuan: 'sichuan',
+  chongqing: 'chongqing',
+  shanghai: 'shanghai',
+  zhejiang: 'zhejiang',
+  jiangxi: 'jiangxi',
+  hunan: 'hunan',
+  fujian: 'fujian',
+  guizhou: 'guizhou',
+  yunnan: 'yunnan',
+  'guangxi': 'guangxi-zhuang',
+  guangdong: 'guangdong',
+  hainan: 'hainan',
+  taiwan: 'taiwan',
 };
 
 // Color calculation based on risk value
@@ -927,12 +1072,35 @@ const getRiskColor = (riskValue) => {
   return `rgba(255, 77, 79, ${opacity.toFixed(2)})`;
 };
 
-// Tooltip state and handlers preserved
+// Tooltip state and handlers
+const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, name: '', risk: null });
+
+const handleMouseMove = (e, provinceData, locationName) => {
+  setTooltip({
+    show: true,
+    x: e.clientX,
+    y: e.clientY,
+    name: locationName,
+    risk: provinceData ? provinceData.risk : null,
+  });
+};
+
+const handleMouseLeave = () => {
+  setTooltip(prev => ({ ...prev, show: false }));
+};
 ```
 
 ---
 
 ## Part 7: Dependencies
+
+### Dependencies
+
+**Install Command**:
+```bash
+cd Code/frontend
+npm install @svg-maps/china
+```
 
 ### Package.json Updates
 
@@ -967,8 +1135,86 @@ No additional dev dependencies needed.
 3. Create `src/styles/tokens.css` - CSS variables foundation
 4. Create `src/styles/shared.css` - shared component styles
 5. Import styles in `src/main.jsx` or `src/index.css`
-6. Add `@svg-maps/china` to package.json
-7. Create placeholder pages for new routes (empty components returning loading state)
+6. Install `@svg-maps/china`: `npm install @svg-maps/china`
+7. Create placeholder pages for new routes
+
+**Placeholder Page Template**:
+
+```jsx
+// src/pages/LeadershipPortalPage.jsx (placeholder)
+import { Suspense } from 'react';
+
+export default function LeadershipPortalPage() {
+  return (
+    <div style={{
+      padding: '24px',
+      borderRadius: '16px',
+      border: '1px solid var(--color-border-light)',
+      background: 'var(--color-background-subtle)',
+      color: 'var(--color-text-secondary)',
+      textAlign: 'center',
+    }}>
+      领导门户 - 页面开发中...
+    </div>
+  );
+}
+
+// Create similar placeholders for:
+// - FunctionalPortalPage.jsx
+// - TopRiskPortalPage.jsx
+// - TopRiskFinanceManagementPage.jsx
+```
+
+**Responsive Breakpoints** (consistent with existing App.css):
+
+```css
+/* Tablet breakpoint */
+@media (max-width: 1180px) {
+  .domain-penetration-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .leader-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .leader-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .finance-risk-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .finance-risk-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile breakpoint */
+@media (max-width: 860px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .risk-handling-content {
+    grid-template-columns: 1fr;
+  }
+  .risk-stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .top-risk-domain-grid {
+    grid-template-columns: 1fr;
+  }
+  .portal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .finance-risk-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .finance-risk-kpi-grid,
+  .finance-risk-region-grid {
+    grid-template-columns: 1fr;
+  }
+}
+```
 
 **Validation**: Navigation works - clicking tabs, drawer items, route transitions all functional. Styling tokens applied to existing components.
 
@@ -1110,8 +1356,6 @@ Code/frontend/src/
 │   ├── leadershipPortal.js            (NEW)
 │   ├── navigation.js
 │   ├── overview.js
-│   ├── overviewNavigation.js
-│   ├── overviewNavigation.test.js
 │   ├── topRiskFinance.js              (NEW)
 │   └── topRiskPortal.js               (NEW)
 │
@@ -1139,7 +1383,7 @@ Code/frontend/src/
 │   ├── heatmap.js
 │   ├── metricValue.js
 │   ├── metricValue.test.js
-│   ├── overviewNavigation.js
+│   ├── overviewNavigation.js         (NOTE: in utils/, not data/)
 │   ├── overviewNavigation.test.js
 │   ├── terrorRiskOverview.js
 │   ├── terrorRiskOverview.test.js
