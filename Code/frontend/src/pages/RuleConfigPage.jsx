@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { requestJson } from "../api/client";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
+import { filterVisibleRuleConfigRules } from "../utils/ruleConfigRules";
 
 const API_PATH = "/terror-risk/rules";
 
@@ -208,7 +209,7 @@ export function RuleConfigPage() {
       setErrorMessage("");
       try {
         const data = await requestJson(API_PATH);
-        const nextRules = (Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
+        const nextRules = filterVisibleRuleConfigRules(Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
 
         if (!cancelled) {
           setRules(nextRules);
@@ -271,7 +272,7 @@ export function RuleConfigPage() {
     setErrorMessage("");
     try {
       const data = await requestJson(API_PATH);
-      const nextRules = (Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
+      const nextRules = filterVisibleRuleConfigRules(Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
       setRules(nextRules);
       const next = nextRules[0] || null;
       setSelectedRuleId(next?.id || "");

@@ -1,0 +1,55 @@
+.portal-shell {
+  min-height: 100vh;
+  background: #e9eff5;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+}
+
+.portal-header {
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #dde4ec;
+}
+
+.portal-title {
+  color: #1a3f6f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.portal-hint {
+  margin-top: 2px;
+  color: #6b84a0;
+  font-size: 11px;
+}
+
+.portal-prompt-status {
+  padding: 8px 16px;
+  background: #f7fafd;
+  border-bottom: 1px solid #dde4ec;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+}
+
+.portal-prompt-label {
+  color: #6b84a0;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.portal-prompt-value {
+  color: #2a3d50;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portal-frame {
+  width: 100%;
+  height: calc(100vh - 86px);
+  border: 0;
+  background: #f0f4f8;
+}
