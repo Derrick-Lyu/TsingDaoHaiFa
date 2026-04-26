@@ -19,6 +19,8 @@ import {
 } from "recharts";
 
 import { getOverviewSummary } from "../api/terrorRisk";
+import { TablePagination } from "../components/shared/TablePagination";
+import { paginateItems } from "../utils/pagination";
 import { isHighRiskRankingNavigable } from "../utils/overviewNavigation";
 
 const toneStyles = {
@@ -67,6 +69,8 @@ const riskDistributionColors = [
 export function OverviewPage({ onOpenFundSafety }) {
   const [overview, setOverview] = useState(null);
   const [selectedOrgId, setSelectedOrgId] = useState("capital");
+  const [recentAlertsPage, setRecentAlertsPage] = useState(1);
+  const [recentAlertsPageSize, setRecentAlertsPageSize] = useState(10);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,6 +93,11 @@ export function OverviewPage({ onOpenFundSafety }) {
   if (!overview) {
     return <div style={loadingStyle}>正在加载驾驶舱首页...</div>;
   }
+
+  const recentAlertsPagination = paginateItems(overview.recentAlerts || [], {
+    currentPage: recentAlertsPage,
+    pageSize: recentAlertsPageSize,
+  });
 
   const selectedOrg =
     overview.orgTree[0].children.find((item) => item.id === selectedOrgId) ??
@@ -437,7 +446,7 @@ export function OverviewPage({ onOpenFundSafety }) {
             <div style={sectionKickerStyle}>底部详情区</div>
             <h2 style={sectionTitleStyle}>近期预警列表</h2>
           </div>
-          <div style={tableMetaStyle}>默认展示最近 4 条预警</div>
+          <div style={tableMetaStyle}>支持切换单页显示条数</div>
         </div>
 
         <div style={tableStyle} className="cockpit-table">
@@ -448,7 +457,7 @@ export function OverviewPage({ onOpenFundSafety }) {
           <div style={tableHeaderStyle}>状态</div>
           <div style={tableHeaderStyle}>日期</div>
 
-          {overview.recentAlerts.map((alert) => {
+          {recentAlertsPagination.items.map((alert) => {
             const tone = alertLevelTone[alert.level] ?? alertLevelTone.预警;
             return (
               <div key={alert.id} style={{ display: "contents" }}>
@@ -466,6 +475,18 @@ export function OverviewPage({ onOpenFundSafety }) {
             );
           })}
         </div>
+
+        <TablePagination
+          currentPage={recentAlertsPagination.currentPage}
+          pageSize={recentAlertsPagination.pageSize}
+          totalPages={recentAlertsPagination.totalPages}
+          totalItems={recentAlertsPagination.totalItems}
+          onPageChange={setRecentAlertsPage}
+          onPageSizeChange={(nextPageSize) => {
+            setRecentAlertsPageSize(nextPageSize);
+            setRecentAlertsPage(1);
+          }}
+        />
       </section>
     </div>
   );

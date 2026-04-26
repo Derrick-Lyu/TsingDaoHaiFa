@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
+import { TablePagination } from "../components/shared/TablePagination";
+import { paginateItems } from "../utils/pagination";
 import { formatAmountDisplay } from "../utils/amount";
 
 export function AlertDetailPage({
@@ -26,6 +28,8 @@ export function AlertDetailPage({
   const [recheckState, setRecheckState] = useState("idle");
   const [ackState, setAckState] = useState("idle");
   const [loadError, setLoadError] = useState("");
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsPageSize, setTransactionsPageSize] = useState(10);
 
   const fetchDetail = useCallback(async () => {
     return requestJson(`/terror-risk/alerts/${alertId}`);
@@ -44,6 +48,7 @@ export function AlertDetailPage({
         setFeedbackDraft(buildFeedbackDraft(data.feedback));
         setRecheckDraft(buildRecheckDraft(data.recheck));
         setAckDraft(buildAckDraft());
+        setTransactionsPage(1);
         setLoading(false);
       }
     } catch {
@@ -54,6 +59,7 @@ export function AlertDetailPage({
         setFeedbackDraft(buildFeedbackDraft(null));
         setRecheckDraft(buildRecheckDraft(null));
         setAckDraft(buildAckDraft());
+        setTransactionsPage(1);
         setLoadError("确认详情加载失败，当前未显示演示兜底数据。");
         setLoading(false);
       }
@@ -74,6 +80,7 @@ export function AlertDetailPage({
           setFeedbackDraft(buildFeedbackDraft(data.feedback));
           setRecheckDraft(buildRecheckDraft(data.recheck));
           setAckDraft(buildAckDraft());
+          setTransactionsPage(1);
           setLoadError("");
           setLoading(false);
         }
@@ -85,6 +92,7 @@ export function AlertDetailPage({
           setFeedbackDraft(buildFeedbackDraft(null));
           setRecheckDraft(buildRecheckDraft(null));
           setAckDraft(buildAckDraft());
+          setTransactionsPage(1);
           setLoadError("确认详情加载失败，当前未显示演示兜底数据。");
           setLoading(false);
         }
@@ -99,7 +107,11 @@ export function AlertDetailPage({
   }, [fetchDetail]);
 
   const evidenceSections = useMemo(() => detail?.evidences || [], [detail]);
-  const relatedTransactions = detail?.related_transactions || [];
+  const relatedTransactions = useMemo(() => detail?.related_transactions || [], [detail]);
+  const relatedTransactionsPagination = useMemo(
+    () => paginateItems(relatedTransactions, { currentPage: transactionsPage, pageSize: transactionsPageSize }),
+    [relatedTransactions, transactionsPage, transactionsPageSize],
+  );
   const ackRecords = detail?.ack_records || [];
   const flowLogs = detail?.flow_logs || [];
   const ticketTypeLabel = getTicketTypeLabel(detail?.ticket_type);
@@ -322,7 +334,7 @@ export function AlertDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {relatedTransactions.map((item) => (
+                  {relatedTransactionsPagination.items.map((item) => (
                     <tr key={item.transaction_no}>
                       <td style={tdStyle}>{item.transaction_no}</td>
                       <td style={tdStyle}>{item.transaction_date}</td>
@@ -335,8 +347,19 @@ export function AlertDetailPage({
                 </tbody>
               </table>
             </div>
+            <TablePagination
+              currentPage={relatedTransactionsPagination.currentPage}
+              pageSize={relatedTransactionsPagination.pageSize}
+              totalPages={relatedTransactionsPagination.totalPages}
+              totalItems={relatedTransactionsPagination.totalItems}
+              onPageChange={setTransactionsPage}
+              onPageSizeChange={(nextPageSize) => {
+                setTransactionsPageSize(nextPageSize);
+                setTransactionsPage(1);
+              }}
+            />
             <div className="alert-detail-cards" style={transactionCardsListStyle}>
-              {relatedTransactions.map((item) => (
+              {relatedTransactionsPagination.items.map((item) => (
                 <div key={item.transaction_no} style={transactionCardStyle}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
                     <div>

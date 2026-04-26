@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { TablePagination } from "../shared/TablePagination";
+import { paginateItems } from "../../utils/pagination";
 import { formatAmountDisplay } from "../../utils/amount";
 
 const RISK_LABELS = {
@@ -43,6 +45,8 @@ export function AlertTable({
   selectedAlertId,
 }) {
   const [compact, setCompact] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -56,7 +60,13 @@ export function AlertTable({
     return () => media.removeEventListener?.("change", update);
   }, []);
 
+  const pagination = useMemo(
+    () => paginateItems(alerts, { currentPage, pageSize }),
+    [alerts, currentPage, pageSize],
+  );
+
   const filterChange = (key) => (event) => {
+    setCurrentPage(1);
     onChangeFilters?.({ [key]: event.target.value });
   };
 
@@ -154,7 +164,7 @@ export function AlertTable({
 
       {compact ? (
         <div style={cardListStyle}>
-          {alerts.map((alert) => (
+          {pagination.items.map((alert) => (
             <button
               key={alert.id}
               type="button"
@@ -184,7 +194,7 @@ export function AlertTable({
             </button>
           ))}
 
-          {!alerts.length && <EmptyState />}
+          {!pagination.items.length && <EmptyState />}
         </div>
       ) : (
         <div style={{ overflowX: "auto" }}>
@@ -199,7 +209,7 @@ export function AlertTable({
               </tr>
             </thead>
             <tbody>
-              {alerts.map((alert) => {
+              {pagination.items.map((alert) => {
                 const riskTone = RISK_LABELS[alert.risk_level] || RISK_LABELS.low;
                 const reviewTone = REVIEW_LABELS[alert.review_status] || REVIEW_LABELS.pending;
                 const assignmentTone = ASSIGNMENT_LABELS[alert.assignment_status] || ASSIGNMENT_LABELS.unassigned;
@@ -254,7 +264,7 @@ export function AlertTable({
                 );
               })}
 
-              {!alerts.length && (
+              {!pagination.items.length && (
                 <tr>
                   <td colSpan={11} style={{ padding: 36, textAlign: "center", color: "#6b7280" }}>
                     暂无符合条件的风险单据
@@ -265,6 +275,18 @@ export function AlertTable({
           </table>
         </div>
       )}
+
+      <TablePagination
+        currentPage={pagination.currentPage}
+        pageSize={pagination.pageSize}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalItems}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={(nextPageSize) => {
+          setPageSize(nextPageSize);
+          setCurrentPage(1);
+        }}
+      />
     </div>
   );
 }
