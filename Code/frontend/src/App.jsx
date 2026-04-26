@@ -10,6 +10,12 @@ import {
 } from "./api/terrorRisk";
 import { NavigationCatalog } from "./components/shared/NavigationCatalog";
 import { APP_ROUTES, TAB_LABELS, TAB_ROUTES } from "./data/catalogNavigation";
+import {
+  DEFAULT_TOPIC_ROUTE,
+  TOPIC_NAV_ITEMS,
+  TOPIC_ROUTE_TO_VIEW,
+  TOPIC_VIEW_TO_ROUTE,
+} from "./data/fundSafetyTopicNavigation";
 import { getActivePortalTab, getFinanceReturnRoute } from "./utils/portalRouting";
 import haifaLogo from "./assets/Haifa_Logo.jpeg";
 
@@ -63,18 +69,6 @@ const TransactionDataPage = lazy(() =>
 const ProcurementSupplyChainPenetrationPage = lazy(() =>
   import("./pages/ProcurementSupplyChainPenetrationPage").then((module) => ({ default: module.ProcurementSupplyChainPenetrationPage })),
 );
-
-const TOPIC_NAV_ITEMS = [
-  { label: "专题概览", value: "overview", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW },
-  { label: "风险单据", value: "alerts", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS },
-  { label: "典型案例", value: "cases", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_CASES },
-  { label: "黑名单配置", value: "blacklist", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_BLACKLIST },
-  { label: "规则配置", value: "rules", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_RULES },
-  { label: "交易数据", value: "transactions", routeKey: APP_ROUTES.FUND_SAFETY_TOPIC_TRANSACTIONS },
-];
-
-const TOPIC_VIEW_TO_ROUTE = Object.fromEntries(TOPIC_NAV_ITEMS.map((item) => [item.value, item.routeKey]));
-const TOPIC_ROUTE_TO_VIEW = Object.fromEntries(TOPIC_NAV_ITEMS.map((item) => [item.routeKey, item.value]));
 
 function ShellHeader({ activeTab, onChangeTab, onOpenCatalog, onGoHome, showHomeNav, updateTime }) {
   const title = TAB_ROUTES.includes(activeTab) ? "穿透式监管管理平台" : "资金安全监管专题";
@@ -228,7 +222,7 @@ export default function App() {
   };
 
   const openTerrorTopic = () => {
-    setCurrentRoute(APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
+    setCurrentRoute(DEFAULT_TOPIC_ROUTE);
     setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
   };
 
@@ -247,7 +241,7 @@ export default function App() {
   };
 
   const handleTopicNavigate = (view) => {
-    setCurrentRoute(TOPIC_VIEW_TO_ROUTE[view] ?? APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
+    setCurrentRoute(TOPIC_VIEW_TO_ROUTE[view] ?? DEFAULT_TOPIC_ROUTE);
     if (view !== "alerts") {
       setTopicAlertFilters(DEFAULT_TOPIC_ALERT_FILTERS);
       return;
