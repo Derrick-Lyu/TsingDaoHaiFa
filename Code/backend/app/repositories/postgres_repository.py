@@ -461,9 +461,10 @@ class PostgresRepository:
     def save_alerts(self, alerts: list[dict[str, object]], latest_job: dict[str, object]) -> dict[str, object]:
         with self._connection() as conn:
             rule_rows = conn.execute(
-                "SELECT id, rule_code FROM terror_rules"
+                "SELECT id, rule_code, rule_name FROM terror_rules"
             ).fetchall()
             rule_id_by_code = {row["rule_code"]: str(row["id"]) for row in rule_rows}
+            rule_name_by_code = {row["rule_code"]: row["rule_name"] for row in rule_rows}
             preserved_ticket_rows = conn.execute(
                 """
                 SELECT a.id, a.alert_no, a.rule_code, a.rule_name, a.risk_level, a.member_unit_name,
@@ -602,16 +603,22 @@ class PostgresRepository:
                     ),
                 )
             for item in preserved_non_detection:
-                preserved_rule_code = item["rule_code"] or TRIGGER_SOURCE_RULE_CODES.get(
-                    str(item["extra_payload"].get("trigger_source")),
-                    "manual_ticket",
+                trigger_source = str(item["extra_payload"].get("trigger_source"))
+                preserved_rule_code = TRIGGER_SOURCE_RULE_CODES.get(
+                    trigger_source,
+                    item["rule_code"] or "manual_ticket",
                 )
                 if preserved_rule_code not in rule_id_by_code:
-                    preserved_rule_code = TRIGGER_SOURCE_RULE_CODES.get(
-                        str(item["extra_payload"].get("trigger_source")),
+                    preserved_rule_code = item["rule_code"] or TRIGGER_SOURCE_RULE_CODES.get(
+                        trigger_source,
                         preserved_rule_code,
                     )
-                preserved_rule_name = item["rule_name"] or item["extra_payload"].get("ticket_title") or "手工单据"
+                preserved_rule_name = (
+                    rule_name_by_code.get(preserved_rule_code)
+                    or item["rule_name"]
+                    or item["extra_payload"].get("ticket_title")
+                    or "手工单据"
+                )
                 alert_row = conn.execute(
                     """
                     INSERT INTO terror_alerts (

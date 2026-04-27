@@ -59,7 +59,7 @@ const paginationWrapStyle = {
   gap: 12,
   flexWrap: "wrap",
   padding: "14px 18px 18px",
-  borderTop: "1px solid #edf2f7",
+  borderTop: "1px solid #e1e9f2",
   background: "#ffffff",
 };
 
@@ -81,8 +81,8 @@ const pageSizeLabelStyle = {
 
 const pageSizeSelectStyle = {
   padding: "8px 10px",
-  borderRadius: 10,
-  border: "1px solid #d7e1f1",
+  borderRadius: 12,
+  border: "1px solid #d0dceb",
   background: "#ffffff",
   color: "#111827",
   fontSize: 12,
@@ -112,11 +112,11 @@ const pageSummaryStyle = {
 
 function pageButtonStyle(disabled) {
   return {
-    border: "1px solid #d7e1f1",
-    borderRadius: 10,
+    border: "1px solid #d0dceb",
+    borderRadius: 12,
     padding: "8px 12px",
-    background: disabled ? "#f8fafc" : "#eef4ff",
-    color: disabled ? "#94a3b8" : "#1a3a8f",
+    background: disabled ? "#f5f7fa" : "#ffffff",
+    color: disabled ? "#94a3b8" : "#24427c",
     fontSize: 12,
     fontWeight: 700,
     cursor: disabled ? "not-allowed" : "pointer",

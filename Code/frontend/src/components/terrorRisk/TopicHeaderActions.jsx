@@ -113,7 +113,7 @@ export function TopicHeaderActions({
               boxShadow: "0 10px 18px rgba(26,58,143,0.18)",
             }}
           >
-            {updating ? "重新识别中..." : "重新识别"}
+            {updating ? "应用中..." : "应用变更"}
           </button>
           <button
             type="button"

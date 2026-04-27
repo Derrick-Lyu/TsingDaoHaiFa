@@ -74,9 +74,9 @@ export function AlertTable({
     <div
       style={{
         background: "white",
-        borderRadius: 18,
-        border: "1px solid #e7edf7",
-        boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
+        borderRadius: 16,
+        border: "1px solid #d8e3ef",
+        boxShadow: "0 8px 18px rgba(33, 56, 82, 0.05)",
         overflow: "hidden",
       }}
     >
@@ -91,7 +91,7 @@ export function AlertTable({
         </div>
       </div>
 
-      <div style={filterGridStyle}>
+      <div style={{ ...filterGridStyle, gridTemplateColumns: compact ? "1fr" : filterGridStyle.gridTemplateColumns }}>
         <label style={filterFieldStyle}>
           <span style={filterLabelStyle}>单据类型</span>
           <select value={filters.ticketType} onChange={filterChange("ticketType")} style={selectStyle}>
@@ -305,7 +305,7 @@ function EmptyState() {
 }
 
 const headerStyle = {
-  padding: 18,
+  padding: 14,
   borderBottom: "1px solid #edf2f7",
   display: "flex",
   justifyContent: "space-between",
@@ -315,14 +315,14 @@ const headerStyle = {
 };
 
 const titleStyle = {
-  fontSize: 15,
+  fontSize: 14,
   fontWeight: 800,
   color: "#111827",
 };
 
 const subtitleStyle = {
   marginTop: 6,
-  fontSize: 12,
+  fontSize: 11,
   color: "#6b7280",
   lineHeight: 1.7,
 };
@@ -333,11 +333,11 @@ const metaStyle = {
   flexWrap: "wrap",
   alignItems: "center",
   color: "#526071",
-  fontSize: 12,
+  fontSize: 11,
 };
 
 const loadingPillStyle = {
-  padding: "4px 8px",
+  padding: "3px 7px",
   borderRadius: 999,
   background: "#eef4ff",
   color: "#1a3a8f",
@@ -346,9 +346,9 @@ const loadingPillStyle = {
 
 const filterGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: 12,
-  padding: 18,
+  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+  gap: 10,
+  padding: 14,
   borderBottom: "1px solid #edf2f7",
   background: "#fbfdff",
 };
@@ -361,18 +361,18 @@ const filterFieldStyle = {
 };
 
 const filterLabelStyle = {
-  fontSize: 12,
+  fontSize: 11,
   color: "#667085",
   fontWeight: 700,
 };
 
 const selectStyle = {
-  padding: "10px 12px",
-  borderRadius: 12,
+  padding: "8px 10px",
+  borderRadius: 10,
   border: "1px solid #d7e1f1",
   background: "white",
   color: "#111827",
-  fontSize: 13,
+  fontSize: 12,
   outline: "none",
 };
 
@@ -383,9 +383,9 @@ const inputStyle = {
 };
 
 const cardListStyle = {
-  padding: 18,
+  padding: 14,
   display: "grid",
-  gap: 12,
+  gap: 10,
 };
 
 function alertCardStyle(selected) {
@@ -394,8 +394,8 @@ function alertCardStyle(selected) {
     textAlign: "left",
     appearance: "none",
     border: `1px solid ${selected ? "#c8d7ff" : "#e7edf7"}`,
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     background: selected ? "#eef4ff" : "white",
     boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
     cursor: "pointer",
@@ -408,18 +408,18 @@ const cardTopRowStyle = {
   justifyContent: "space-between",
   gap: 12,
   alignItems: "flex-start",
-  marginBottom: 12,
+  marginBottom: 10,
 };
 
 const alertNoStyle = {
-  fontSize: 12,
+  fontSize: 11,
   color: "#607087",
   fontWeight: 800,
   wordBreak: "break-word",
 };
 
 const ruleNameStyle = {
-  fontSize: 15,
+  fontSize: 13,
   fontWeight: 800,
   color: "#111827",
   marginTop: 4,
@@ -435,27 +435,27 @@ const secondaryStyle = {
 
 const cardMetaGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-  gap: 10,
-  marginBottom: 12,
+  gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+  gap: 8,
+  marginBottom: 10,
 };
 
 const metaItemStyle = {
-  padding: 12,
+  padding: 10,
   background: "#f8fafc",
   borderRadius: 12,
   minWidth: 0,
 };
 
 const metaLabelStyle = {
-  fontSize: 11,
+  fontSize: 10,
   color: "#64748b",
   fontWeight: 700,
   marginBottom: 6,
 };
 
 const metaValueStyle = {
-  fontSize: 13,
+  fontSize: 12,
   fontWeight: 700,
   color: "#111827",
   lineHeight: 1.5,
@@ -463,7 +463,7 @@ const metaValueStyle = {
 };
 
 const summaryStyle = {
-  fontSize: 13,
+  fontSize: 12,
   lineHeight: 1.7,
   color: "#334155",
 };
@@ -472,11 +472,11 @@ function badgeStyle(background, color) {
   return {
     display: "inline-flex",
     alignItems: "center",
-    padding: "5px 10px",
+    padding: "4px 8px",
     borderRadius: 999,
     background,
     color,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
     whiteSpace: "nowrap",
   };
@@ -490,17 +490,17 @@ const tableStyle = {
 
 const thStyle = {
   textAlign: "left",
-  padding: "12px 14px",
-  fontSize: 12,
+  padding: "10px 12px",
+  fontSize: 11,
   color: "#607087",
   borderBottom: "1px solid #e5ecf5",
   fontWeight: 800,
 };
 
 const cellStyle = {
-  padding: "14px",
+  padding: "12px",
   borderBottom: "1px solid #eef2f7",
-  fontSize: 13,
+  fontSize: 12,
   color: "#334155",
   verticalAlign: "top",
 };
@@ -508,7 +508,7 @@ const cellStyle = {
 const actionTextStyle = {
   color: "#1a3a8f",
   fontWeight: 700,
-  fontSize: 13,
+  fontSize: 12,
 };
 
 const emptyStateStyle = {

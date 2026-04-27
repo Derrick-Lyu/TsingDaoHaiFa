@@ -49,7 +49,17 @@ export async function requestJson(
   const response = await fetch(url, requestInit);
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    let errorPayload = null;
+    try {
+      errorPayload = await response.json();
+    } catch {
+      errorPayload = null;
+    }
+    const error = new Error(`Request failed with status ${response.status}`);
+    error.status = response.status;
+    error.payload = errorPayload;
+    error.detail = errorPayload?.detail ?? null;
+    throw error;
   }
 
   if (response.status === 204) {

@@ -1,8 +1,8 @@
 :root {
   --text: #465467;
   --text-h: #102033;
-  --bg: #f3f6fa;
-  --border: #dce5ee;
+  --bg: #eef3f8;
+  --border: #d6e0ec;
   --code-bg: #eef3f8;
   --accent: #163d65;
   --accent-bg: rgba(22, 61, 101, 0.08);
@@ -10,8 +10,8 @@
   --shadow:
     rgba(15, 23, 42, 0.08) 0 16px 24px -12px,
     rgba(15, 23, 42, 0.05) 0 6px 12px -8px;
-  --sans: "PingFang SC", "Noto Serif SC", "Microsoft YaHei", sans-serif;
-  --heading: "STSong", "Songti SC", "Noto Serif SC", serif;
+  --sans: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --heading: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font: 17px/150% var(--sans);
@@ -58,6 +58,7 @@ h1,
 h2 {
   font-family: var(--heading);
   color: var(--text-h);
+  font-weight: 700;
 }
 
 h1 {

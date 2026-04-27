@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
+import { applyTerrorRiskChanges } from "../api/terrorRisk";
 import { TablePagination } from "../components/shared/TablePagination";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { buildRuleListView } from "../utils/ruleList";
@@ -113,22 +114,23 @@ function useCompactLayout(maxWidth = 960) {
 
 function tone(riskLevel) {
   if (riskLevel === "high") {
-    return { background: "#fdecec", color: "#c03838" };
+    return { background: "#fff1f0", color: "#c53b32" };
   }
   if (riskLevel === "medium") {
-    return { background: "#fff4e5", color: "#b45309" };
+    return { background: "#fff7e7", color: "#bf7b17" };
   }
-  return { background: "#e8f1ff", color: "#1a3a8f" };
+  return { background: "#eef5ff", color: "#2e5aa6" };
 }
 
 function inputStyle() {
   return {
-    border: "1px solid #d7e0ea",
+    border: "1px solid #cfdcec",
     borderRadius: 12,
-    padding: "11px 14px",
+    padding: "7px 10px",
     font: "inherit",
+    fontSize: 13,
     color: "#111827",
-    background: "#fbfcfe",
+    background: "#ffffff",
     width: "100%",
     boxSizing: "border-box",
   };
@@ -136,10 +138,10 @@ function inputStyle() {
 
 function surfaceStyle() {
   return {
-    background: "white",
-    borderRadius: 18,
-    border: "1px solid #edf1f7",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.07)",
+    background: "#ffffff",
+    borderRadius: 16,
+    border: "1px solid #d8e3ef",
+    boxShadow: "0 8px 18px rgba(33, 56, 82, 0.05)",
   };
 }
 
@@ -147,11 +149,11 @@ function chipStyle(color) {
   return {
     display: "inline-flex",
     alignItems: "center",
-    padding: "4px 10px",
+    padding: "3px 8px",
     borderRadius: 999,
     background: color.background,
     color: color.color,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
     whiteSpace: "nowrap",
   };
@@ -159,7 +161,7 @@ function chipStyle(color) {
 
 function smallLabelStyle() {
   return {
-    fontSize: 12,
+    fontSize: 11,
     color: "#5b6472",
     fontWeight: 700,
     marginBottom: 6,
@@ -169,26 +171,26 @@ function smallLabelStyle() {
 function buttonStyle(variant = "ghost") {
   const style = {
     borderRadius: 12,
-    padding: "10px 14px",
+    padding: "9px 12px",
     font: "inherit",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 700,
     cursor: "pointer",
     border: "1px solid transparent",
   };
 
   if (variant === "primary") {
-    style.background = "#1a3a8f";
+    style.background = "#24427c";
     style.color = "white";
-    style.boxShadow = "0 8px 18px rgba(26,58,143,0.18)";
+    style.borderColor = "#24427c";
   } else if (variant === "secondary") {
-    style.background = "#eef4ff";
-    style.color = "#1a3a8f";
-    style.borderColor = "#d8e6ff";
+    style.background = "#edf3ff";
+    style.color = "#24427c";
+    style.borderColor = "#cddaf1";
   } else {
     style.background = "white";
     style.color = "#334155";
-    style.borderColor = "#d8e1ee";
+    style.borderColor = "#d0dceb";
   }
 
   return style;
@@ -200,10 +202,21 @@ export function RuleConfigPage() {
   const [selectedRuleId, setSelectedRuleId] = useState("");
   const [form, setForm] = useState(buildRuleForm(null));
   const [saving, setSaving] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const compact = useCompactLayout();
+
+  async function loadRulesSnapshot() {
+    const data = await requestJson(API_PATH);
+    const nextRules = filterVisibleRuleConfigRules(Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
+    setRules(nextRules);
+    const next = nextRules[0] || null;
+    setSelectedRuleId(next?.id || "");
+    setForm(buildRuleForm(next));
+    setCurrentPage(1);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -214,7 +227,6 @@ export function RuleConfigPage() {
       try {
         const data = await requestJson(API_PATH);
         const nextRules = filterVisibleRuleConfigRules(Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
-
         if (!cancelled) {
           setRules(nextRules);
           const next = nextRules[0] || null;
@@ -279,24 +291,20 @@ export function RuleConfigPage() {
   }
 
   async function refreshRules() {
-    setLoading(true);
+    setApplying(true);
     setErrorMessage("");
     try {
-      const data = await requestJson(API_PATH);
-      const nextRules = filterVisibleRuleConfigRules(Array.isArray(data) ? data : []).map(normalizeRule).filter(Boolean);
-      setRules(nextRules);
-      const next = nextRules[0] || null;
-      setSelectedRuleId(next?.id || "");
-      setForm(buildRuleForm(next));
-      setCurrentPage(1);
-    } catch {
-      setRules([]);
-      setSelectedRuleId("");
-      setForm(buildRuleForm(null));
-      setCurrentPage(1);
-      setErrorMessage("规则数据刷新失败，当前未显示演示兜底数据。");
+      await applyTerrorRiskChanges();
+      await loadRulesSnapshot();
+    } catch (error) {
+      const detail = error?.detail;
+      if (detail?.message) {
+        setErrorMessage(detail.message);
+      } else {
+        setErrorMessage("应用变更失败，规则未同步到风险单据。");
+      }
     } finally {
-      setLoading(false);
+      setApplying(false);
     }
   }
 
@@ -353,83 +361,92 @@ export function RuleConfigPage() {
   }
 
   return (
-    <div style={{ padding: "0 24px 24px", background: "linear-gradient(180deg, #f8fafc 0%, #f5f7fa 100%)" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
-        <button type="button" onClick={refreshRules} style={buttonStyle("ghost")}>刷新数据</button>
+    <div style={{ padding: "0 0 8px" }}>
+      <div style={pageActionRowStyle}>
+        <div style={pageTitleInlineStyle}>
+          <div style={pageNameStyle}>规则配置</div>
+        </div>
+        <button type="button" onClick={refreshRules} disabled={applying} style={buttonStyle("ghost")}>
+          {applying ? "应用中..." : "应用变更"}
+        </button>
       </div>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 16 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 14 }}>
         {[
-          { label: "规则总数", value: summary.total, tone: { background: "#eef4ff", color: "#1a3a8f" } },
-          { label: "启用规则", value: summary.enabled, tone: { background: "#e8f5ef", color: "#0f7a3e" } },
-          { label: "可编辑参数", value: summary.editableParams, tone: { background: "#fff4e5", color: "#b45309" } },
-          { label: "高风险规则", value: summary.highRisk, tone: { background: "#fdecec", color: "#c03838" } },
+          { label: "规则总数", value: summary.total, tone: { accent: "#2e5aa6", color: "#1f4380" }, note: "当前专题可配置识别规则" },
+          { label: "启用规则", value: summary.enabled, tone: { accent: "#2f7d47", color: "#2f7d47" }, note: `停用 ${Math.max(summary.total - summary.enabled, 0)} 条` },
+          { label: "可编辑参数", value: summary.editableParams, tone: { accent: "#bf7b17", color: "#bf7b17" }, note: "支持按专题口径动态调整" },
+          { label: "高风险规则", value: summary.highRisk, tone: { accent: "#c53b32", color: "#c53b32" }, note: "优先影响风险识别结果" },
         ].map((metric) => (
-          <div key={metric.label} style={{ ...surfaceStyle(), padding: 16 }}>
-            <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{metric.label}</div>
-            <div style={summaryMetricValueStyle(metric.tone)}>
-              <SummaryMetricValue value={metric.value} color={metric.tone.color} primaryFontSize={30} unitFontSize={13} />
-            </div>
+          <div key={metric.label} style={summaryCardStyle(metric.tone.accent)}>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>{metric.label}</div>
+            <SummaryMetricValue value={metric.value} color={metric.tone.color} primaryFontSize={28} unitFontSize={12} />
+            <div style={summaryMetricNoteStyle}>{metric.note}</div>
           </div>
         ))}
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(0, 1fr)", gap: 16, alignItems: "start" }}>
-        <div style={{ ...surfaceStyle(), overflow: "hidden" }}>
-          <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #eef2f7" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>规则列表</div>
-            <div style={{ fontSize: 12, color: "#667085", marginTop: 4 }}>
+      <section style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(0, 1fr)", gap: 16, alignItems: compact ? "start" : "stretch" }}>
+        <div style={{ ...surfaceStyle(), overflow: "hidden", display: "flex", flexDirection: "column", minHeight: compact ? "auto" : "100%" }}>
+          <div style={{ padding: "14px 16px 12px", borderBottom: "1px solid #eef2f7" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>规则列表</div>
+            <div style={{ fontSize: 11, color: "#667085", marginTop: 3 }}>
               {loading ? "正在加载..." : "点击规则进入编辑"}
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 12, padding: 16, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-            {listView.visibleItems.map((rule) => {
-              const selected = rule.id === selectedRuleId;
-              return (
-                <div
-                  key={rule.id}
-                  onClick={() => selectRule(rule)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      selectRule(rule);
-                    }
-                  }}
+          <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+            <div style={{ display: "grid", gap: 10, padding: 14, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", minWidth: compact ? "auto" : 520 }}>
+              {listView.visibleItems.map((rule) => {
+                const selected = rule.id === selectedRuleId;
+                return (
+                  <div
+                    key={rule.id}
+                    onClick={() => selectRule(rule)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        selectRule(rule);
+                      }
+                    }}
                   style={{
                     textAlign: "left",
-                    border: `1px solid ${selected ? "#b6cbff" : "#e7edf5"}`,
-                    borderRadius: 18,
-                    padding: 16,
-                    background: selected ? "#f8fbff" : "#fbfdff",
-                    boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+                    display: "flex",
+                    flexDirection: "column",
+                    border: `1px solid ${selected ? "#adc0e6" : "#dce5f0"}`,
+                    borderRadius: 14,
+                    padding: 14,
+                    background: selected ? "#f7faff" : "#ffffff",
+                    boxShadow: selected ? "inset 0 0 0 1px rgba(36,66,124,0.08)" : "none",
                     cursor: "pointer",
+                    minHeight: 176,
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: "#111827", lineHeight: 1.35 }}>{rule.ruleName}</div>
-                    <div style={{ fontSize: 12, color: "#667085", marginTop: 6 }}>用于当前专题识别</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#111827", lineHeight: 1.35 }}>{rule.ruleName}</div>
+                      <div style={{ fontSize: 11, color: "#667085", marginTop: 4 }}>用于当前专题识别</div>
+                      </div>
+                      <span style={chipStyle(tone(rule.riskLevel))}>{rule.riskLevel === "high" ? "高" : rule.riskLevel === "medium" ? "中" : "低"}</span>
                     </div>
-                    <span style={chipStyle(tone(rule.riskLevel))}>{rule.riskLevel === "high" ? "高" : rule.riskLevel === "medium" ? "中" : "低"}</span>
-                  </div>
 
-                  <div style={{ fontSize: 13, color: "#4b5563", lineHeight: 1.7, marginTop: 12 }}>
-                    {rule.ruleDescription}
-                  </div>
+                    <div style={{ fontSize: 12, color: "#4b5563", lineHeight: 1.65, marginTop: 10 }}>
+                      {rule.ruleDescription}
+                    </div>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: "auto", paddingTop: 12 }}>
                     <span style={chipStyle(rule.enabled ? { background: "#e8f5ef", color: "#0f7a3e" } : { background: "#f3f4f6", color: "#4b5563" })}>
                       {rule.enabled ? "启用中" : "已停用"}
                     </span>
-                    <span style={chipStyle({ background: "#f3f4f6", color: "#374151" })}>{rule.params.length} 个参数</span>
-                    <span style={chipStyle({ background: "#eef4ff", color: "#1a3a8f" })}>排序 {rule.sortOrder}</span>
+                      <span style={chipStyle({ background: "#f3f4f6", color: "#374151" })}>{rule.params.length} 个参数</span>
+                      <span style={chipStyle({ background: "#eef4ff", color: "#1a3a8f" })}>排序 {rule.sortOrder}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           <TablePagination
@@ -446,12 +463,12 @@ export function RuleConfigPage() {
           />
         </div>
 
-        <form onSubmit={saveRule} style={{ ...surfaceStyle(), padding: 20, position: "sticky", top: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap" }}>
+        <form onSubmit={saveRule} style={{ ...surfaceStyle(), padding: 16, position: "sticky", top: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start", marginBottom: 16, flexWrap: "wrap" }}>
             <div>
-              <div style={{ fontSize: 13, color: "#1a3a8f", fontWeight: 700 }}>当前规则</div>
-              <h3 style={{ margin: "6px 0 0", fontSize: 24, color: "#111827" }}>{form.ruleName || "请选择规则"}</h3>
-              <div style={{ marginTop: 8, fontSize: 12, color: "#667085" }}>当前调整会在重新识别后反映到专题结果</div>
+              <div style={{ fontSize: 12, color: "#1a3a8f", fontWeight: 700 }}>当前规则</div>
+              <h3 style={{ margin: "4px 0 0", fontSize: 20, color: "#111827" }}>{form.ruleName || "请选择规则"}</h3>
+              <div style={{ marginTop: 6, fontSize: 11, color: "#667085" }}>当前调整会在重新识别后反映到专题结果</div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="button" onClick={() => toggleRuleEnabled(form)} style={buttonStyle(form.enabled ? "secondary" : "primary")}>
@@ -489,7 +506,7 @@ export function RuleConfigPage() {
             </div>
           </div>
 
-          <div style={{ background: "#f8fafc", borderRadius: 16, border: "1px solid #e9eef5", padding: 18 }}>
+          <div style={{ background: "#f7f9fc", borderRadius: 16, border: "1px solid #dde6f0", padding: 18 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#1f2937", marginBottom: 14 }}>规则参数</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
               {form.params.map((param) => (
@@ -517,28 +534,57 @@ function Field({ label, children, hint }) {
     <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <span style={smallLabelStyle()}>{label}</span>
       {children}
-      {hint ? <span style={{ fontSize: 11, color: "#8a93a3", lineHeight: 1.5 }}>{hint}</span> : null}
+      {hint ? <span style={{ fontSize: 10, color: "#8a93a3", lineHeight: 1.5 }}>{hint}</span> : null}
     </label>
   );
 }
 
-function summaryMetricValueStyle(tone) {
+function summaryCardStyle(accent) {
   return {
-    display: "flex",
-    alignItems: "stretch",
-    minHeight: 74,
-    padding: "10px 12px",
-    borderRadius: 16,
-    background: tone.background,
+    ...surfaceStyle(),
+    minHeight: 112,
+    padding: "14px 14px 12px",
+    borderRadius: 14,
+    borderLeft: `4px solid ${accent}`,
   };
 }
+
+const summaryMetricNoteStyle = {
+  marginTop: 12,
+  fontSize: 11,
+  lineHeight: 1.6,
+  color: "#7a8798",
+};
+
+const pageActionRowStyle = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 16,
+  marginBottom: 16,
+  flexWrap: "wrap",
+};
+
+const pageNameStyle = {
+  fontSize: 16,
+  color: "#173d75",
+  fontWeight: 700,
+  lineHeight: 1.2,
+};
+
+const pageTitleInlineStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+};
 
 const errorBannerStyle = {
   marginBottom: 16,
   padding: "12px 14px",
   borderRadius: 14,
-  border: "1px solid #ffd5d5",
-  background: "#fff5f5",
+  border: "1px solid #f1d3d0",
+  background: "#fff7f6",
   color: "#b42318",
   fontSize: 13,
   fontWeight: 700,

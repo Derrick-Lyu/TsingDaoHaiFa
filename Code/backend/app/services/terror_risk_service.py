@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import HTTPException
 
 from app.engine.terror_risk import detect_terror_risk_alerts
@@ -115,6 +117,144 @@ def delete_transaction_data(item_id: str) -> None:
     deleted = get_repository().delete_transaction(item_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Transaction not found")
+
+
+def _parse_iso_date(value: object) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _validate_transactions(transactions: list[dict[str, object]]) -> list[dict[str, str]]:
+    issues: list[dict[str, str]] = []
+    payee_type_values = {"organization", "person", "account"}
+    transaction_no_counts: dict[str, int] = {}
+
+    for item in transactions:
+        transaction_no = str(item.get("transactionNo") or "").strip()
+        if transaction_no:
+            transaction_no_counts[transaction_no] = transaction_no_counts.get(transaction_no, 0) + 1
+
+    for item in transactions:
+        transaction_no = str(item.get("transactionNo") or "").strip() or "未编号交易"
+        row_prefix = f"{transaction_no}"
+
+        required_fields = {
+            "transactionDate": "交易日期",
+            "memberUnitName": "成员单位",
+            "payerName": "付款方",
+            "payerAccount": "付款账号",
+            "payeeName": "收款方",
+            "payeeAccount": "收款账号",
+        }
+        for field_name, label in required_fields.items():
+            if not str(item.get(field_name) or "").strip():
+                issues.append({
+                    "transaction_no": transaction_no,
+                    "field": field_name,
+                    "message": f"{row_prefix} 缺少{label}。",
+                })
+
+        amount = float(item.get("amount") or 0)
+        if amount <= 0:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "amount",
+                "message": f"{row_prefix} 金额必须大于 0。",
+            })
+
+        transaction_count = int(item.get("transactionCount") or 0)
+        if transaction_count <= 0:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "transactionCount",
+                "message": f"{row_prefix} 交易次数必须大于 0。",
+            })
+
+        payee_type = str(item.get("payeeType") or "")
+        if payee_type not in payee_type_values:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "payeeType",
+                "message": f"{row_prefix} 对手类型不合法。",
+            })
+
+        transaction_date = _parse_iso_date(item.get("transactionDate"))
+        if transaction_date is None:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "transactionDate",
+                "message": f"{row_prefix} 交易日期格式不合法。",
+            })
+
+        account_last_active_date = _parse_iso_date(item.get("accountLastActiveDate"))
+        is_dormant_account = bool(item.get("isDormantAccount"))
+        if is_dormant_account and account_last_active_date is None:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "accountLastActiveDate",
+                "message": f"{row_prefix} 闲置账户必须填写最近活跃日期。",
+            })
+        if transaction_date and account_last_active_date and account_last_active_date > transaction_date:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "accountLastActiveDate",
+                "message": f"{row_prefix} 最近活跃日期不能晚于交易日期。",
+            })
+
+        if transaction_no_counts.get(transaction_no, 0) > 1:
+            issues.append({
+                "transaction_no": transaction_no,
+                "field": "transactionNo",
+                "message": f"{row_prefix} 交易编号重复。",
+            })
+
+    deduped: list[dict[str, str]] = []
+    seen_messages: set[tuple[str, str, str]] = set()
+    for issue in issues:
+        issue_key = (issue["transaction_no"], issue["field"], issue["message"])
+        if issue_key in seen_messages:
+            continue
+        seen_messages.add(issue_key)
+        deduped.append(issue)
+    return deduped
+
+
+def apply_changes_data() -> dict[str, object]:
+    repository = get_repository()
+    transactions = repository.list_transactions()
+    issues = _validate_transactions(transactions)
+    if issues:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "交易数据校验失败，未刷新风险单据。",
+                "transaction_count": len(transactions),
+                "issue_count": len(issues),
+                "issues": issues,
+            },
+        )
+
+    alerts, latest_job = detect_terror_risk_alerts(
+        transactions=transactions,
+        rules=_detection_rules(repository.list_rules()),
+        blacklist=repository.list_blacklist(),
+        snapshot_date="2026-03-31",
+    )
+    saved_job = repository.save_alerts(alerts, latest_job)
+    return {
+        "message": "变更已应用，交易数据校验通过，风险单据已刷新。",
+        "validation": {
+            "transaction_count": len(transactions),
+            "issue_count": 0,
+            "issues": [],
+        },
+        "latest_job": saved_job,
+        "alert_count": len(alerts),
+    }
 
 
 def save_alert_review_data(alert_id: str, payload: dict[str, object]) -> dict[str, object]:

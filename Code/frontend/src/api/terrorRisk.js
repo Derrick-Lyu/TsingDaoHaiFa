@@ -64,6 +64,12 @@ export async function createManualAlert(payload) {
   });
 }
 
+export async function applyTerrorRiskChanges() {
+  return requestJson("/terror-risk/apply-changes", {
+    method: "POST",
+  });
+}
+
 function normalizeOverview(data) {
   if (data?.heroMetrics && data?.topicCards && data?.recentAlerts) {
     return {

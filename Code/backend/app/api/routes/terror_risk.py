@@ -6,6 +6,7 @@ from app.schemas.terror_risk import (
     TerrorRiskTopicResponse,
 )
 from app.services.terror_risk_service import (
+    apply_changes_data,
     assign_alert_reviewer_data,
     create_manual_alert_data,
     create_blacklist_data,
@@ -176,3 +177,8 @@ def save_alert_ack(alert_id: str, payload: dict[str, object]) -> dict[str, objec
 @router.post("/detection-jobs")
 def create_detection_job() -> dict[str, object]:
     return run_detection_job()
+
+
+@router.post("/apply-changes")
+def apply_changes() -> dict[str, object]:
+    return apply_changes_data()

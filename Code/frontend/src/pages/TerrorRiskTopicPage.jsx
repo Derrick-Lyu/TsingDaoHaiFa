@@ -13,6 +13,7 @@ import { requestJson } from "../api/client";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { formatAmountDisplay } from "../utils/amount";
 import { buildRuleFilterOptions } from "../utils/terrorRiskRules";
+import { filterVisibleRuleConfigRules } from "../utils/ruleConfigRules";
 import {
   buildTerrorRiskDashboardModel,
   getOverviewRankingItems,
@@ -172,7 +173,10 @@ export function TerrorRiskTopicPage({
     };
   }, [filters]);
 
-  const ruleOptions = useMemo(() => buildRuleFilterOptions(rules, alerts), [rules, alerts]);
+  const visibleRuleOptions = useMemo(
+    () => buildRuleFilterOptions(filterVisibleRuleConfigRules(rules), []),
+    [rules],
+  );
   const dashboard = useMemo(
     () => buildTerrorRiskDashboardModel(topic, alerts, rules),
     [topic, alerts, rules],
@@ -196,8 +200,13 @@ export function TerrorRiskTopicPage({
       setTopic(topicData);
       setAlerts(alertData.items);
       setRules(Array.isArray(rulesData) ? rulesData : []);
-    } catch {
-      setUpdateError("重新识别失败，数据库未更新，请稍后重试。");
+    } catch (error) {
+      const detail = error?.detail;
+      if (detail?.message) {
+        setUpdateError(detail.message);
+      } else {
+        setUpdateError("应用变更失败，风险单据未刷新。");
+      }
     } finally {
       setUpdating(false);
     }
@@ -231,15 +240,35 @@ export function TerrorRiskTopicPage({
   if (mode === "alerts") {
     return (
       <div style={pageShellStyle}>
-        <div style={toolbarStyle}>
+      <div style={toolbarStyle}>
+        <div style={pageTitleInlineStyle}>
+          <div style={pageNameStyle}>风险单据</div>
+        </div>
+        <div style={sectionMetaStyle}>
           <span style={metaPillStyle("#eef4ff", "#1a3a8f")}>数据日期 {dashboard.snapshotDate || topic.snapshot_date}</span>
-          <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
+            <span style={metaPillStyle("#f4f7fb", "#516173")}>最新状态 {latestState}</span>
+          </div>
+        </div>
+
+        <div style={metricGridStyle}>
+          {[
+            { label: "风险单据", value: alerts.length, tone: { accent: "#2e5aa6", color: "#1f4380" }, note: "当前筛选条件下单据数量" },
+            { label: "高风险", value: alerts.filter((item) => item.risk_level === "high").length, tone: { accent: "#c53b32", color: "#c53b32" }, note: "需优先处理的高风险单据" },
+            { label: "待审核", value: alerts.filter((item) => item.review_status === "pending").length, tone: { accent: "#bf7b17", color: "#bf7b17" }, note: "等待人工复核确认" },
+            { label: "已派发", value: alerts.filter((item) => item.assignment_status === "assigned").length, tone: { accent: "#2f7d47", color: "#2f7d47" }, note: "已进入责任处理流程" },
+          ].map((metric) => (
+            <div key={metric.label} style={topicHeaderMetricCardStyle(metric.tone.accent)}>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>{metric.label}</div>
+              <SummaryMetricValue value={metric.value} color={metric.tone.color} primaryFontSize={34} unitFontSize={13} />
+              <div style={topicHeaderMetricNoteStyle}>{metric.note}</div>
+            </div>
+          ))}
         </div>
 
         <Suspense fallback={<div style={lazyPanelFallbackStyle}>正在加载预警明细...</div>}>
           <AlertTable
             alerts={alerts}
-            ruleOptions={ruleOptions}
+            ruleOptions={visibleRuleOptions}
             filters={filters}
             onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
             onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
@@ -473,7 +502,7 @@ export function TerrorRiskTopicPage({
         <Suspense fallback={<div style={lazyPanelFallbackStyle}>正在加载预警明细...</div>}>
           <AlertTable
             alerts={alerts}
-            ruleOptions={ruleOptions}
+            ruleOptions={visibleRuleOptions}
             filters={filters}
             onChangeFilters={(next) => setFilters((current) => ({ ...current, ...next }))}
             onSelectAlert={(alert) => onOpenAlertDetail?.(alert.id)}
@@ -486,12 +515,12 @@ export function TerrorRiskTopicPage({
 }
 
 const lazyPanelFallbackStyle = {
-  padding: "18px 20px",
-  borderRadius: 16,
+  padding: "14px 16px",
+  borderRadius: 14,
   border: "1px solid #d9e2ee",
   background: "rgba(255,255,255,0.88)",
   color: "#516173",
-  fontSize: 14,
+  fontSize: 12,
   fontWeight: 600,
 };
 
@@ -545,12 +574,12 @@ function MetricCard({ label, value, tone, sublabel }) {
   const displayValue = label === "涉及金额" ? formatAmountDisplay(value) : value;
 
   return (
-    <div style={{ ...metricCardStyle, background: palette.background, borderColor: palette.border }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: palette.label }}>{label}</div>
-      <div style={{ marginTop: 14 }}>
-        <SummaryMetricValue value={displayValue} color={palette.value} primaryFontSize={42} unitFontSize={18} />
+    <div style={{ ...metricCardStyle, background: palette.background, borderColor: palette.border, borderLeft: `4px solid ${palette.value}` }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: palette.label }}>{label}</div>
+      <div style={{ marginTop: 12 }}>
+        <SummaryMetricValue value={displayValue} color={palette.value} primaryFontSize={30} unitFontSize={13} />
       </div>
-      {sublabel ? <div style={metricSubLabelStyle}>{sublabel}</div> : null}
+      <div style={metricSubLabelStyle}>{sublabel || "按当前专题识别结果实时汇总"}</div>
     </div>
   );
 }
@@ -610,11 +639,11 @@ function mapJobStatus(status) {
 }
 
 const METRIC_TONES = {
-  blue: { background: "#eef4ff", border: "#d7e3fb", label: "#5f7088", value: "#173d75" },
-  red: { background: "#fff4f2", border: "#f7d6d0", label: "#835050", value: "#b42318" },
-  teal: { background: "#effbf7", border: "#d7efe5", label: "#55756b", value: "#0f766e" },
-  amber: { background: "#fff8eb", border: "#f2dfb1", label: "#836943", value: "#b45309" },
-  slate: { background: "#f4f7fb", border: "#dde4ee", label: "#5e6c7d", value: "#334155" },
+  blue: { background: "#ffffff", border: "#d8e3ef", label: "#5f7088", value: "#1e4a8a" },
+  red: { background: "#ffffff", border: "#ead7d3", label: "#835050", value: "#c53b32" },
+  teal: { background: "#ffffff", border: "#d7e7df", label: "#55756b", value: "#2f7d47" },
+  amber: { background: "#ffffff", border: "#eadfbf", label: "#836943", value: "#bf7b17" },
+  slate: { background: "#ffffff", border: "#dce4ed", label: "#5e6c7d", value: "#334155" },
 };
 
 function riskPillStyle(level) {
@@ -625,11 +654,11 @@ function riskPillStyle(level) {
 
 function badgeTone(background, color) {
   return {
-    padding: "6px 10px",
+    padding: "4px 8px",
     borderRadius: 999,
     background,
     color,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
     whiteSpace: "nowrap",
   };
@@ -637,18 +666,18 @@ function badgeTone(background, color) {
 
 function metaPillStyle(background, color) {
   return {
-    padding: "8px 12px",
+    padding: "6px 10px",
     borderRadius: 999,
     background,
     color,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
   };
 }
 
 const pageShellStyle = {
   display: "grid",
-  gap: 18,
+  gap: 16,
 };
 
 const toolbarStyle = {
@@ -666,78 +695,110 @@ const sectionMetaStyle = {
   flexWrap: "wrap",
 };
 
+function topicHeaderMetricCardStyle(accent) {
+  return {
+    borderRadius: 14,
+    border: "1px solid #d8e3ef",
+    borderLeft: `4px solid ${accent}`,
+    background: "#ffffff",
+    padding: "14px 14px 12px",
+    minHeight: 112,
+  };
+}
+
+const topicHeaderMetricNoteStyle = {
+  marginTop: 12,
+  fontSize: 11,
+  lineHeight: 1.6,
+  color: "#7a8798",
+};
+
+const pageNameStyle = {
+  fontSize: 16,
+  color: "#173d75",
+  fontWeight: 700,
+  lineHeight: 1.2,
+};
+
+const pageTitleInlineStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+};
+
 const primaryActionStyle = {
-  border: "none",
-  borderRadius: 999,
-  padding: "12px 20px",
-  background: "#102c57",
+  border: "1px solid #24427c",
+  borderRadius: 12,
+  padding: "7px 10px",
+  background: "#24427c",
   color: "white",
-  fontSize: 14,
+  fontSize: 11,
   fontWeight: 700,
   cursor: "pointer",
-  boxShadow: "0 14px 24px rgba(16,44,87,0.24)",
 };
 
 const ghostActionStyle = {
-  border: "1px solid #d1dbe8",
-  borderRadius: 999,
-  padding: "10px 16px",
+  border: "1px solid #d0dceb",
+  borderRadius: 12,
+  padding: "6px 9px",
   background: "white",
-  color: "#173d75",
-  fontSize: 13,
+  color: "#24427c",
+  fontSize: 11,
   fontWeight: 700,
   cursor: "pointer",
 };
 
 const metricGridStyle = {
-  marginTop: 22,
+  marginTop: 16,
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
   gap: 12,
 };
 
 const metricCardStyle = {
   border: "1px solid transparent",
-  borderRadius: 18,
-  padding: 18,
-  minHeight: 118,
+  borderRadius: 14,
+  padding: 14,
+  minHeight: 112,
+  boxShadow: "0 8px 18px rgba(33, 56, 82, 0.05)",
 };
 
 const metricSubLabelStyle = {
-  marginTop: 10,
+  marginTop: 8,
   color: "#5f7088",
-  fontSize: 12,
+  fontSize: 11,
   lineHeight: 1.6,
 };
 
 const insightGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-  gap: 16,
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: 14,
   alignItems: "stretch",
 };
 
 const panelStyle = {
-  padding: 22,
-  borderRadius: 22,
-  border: "1px solid #dde4ee",
+  padding: 16,
+  borderRadius: 14,
+  border: "1px solid #d8e3ef",
   background: "white",
-  boxShadow: "0 16px 28px rgba(15,23,42,0.05)",
+  boxShadow: "0 8px 18px rgba(33, 56, 82, 0.05)",
 };
 
 const sectionMetaPillStyle = {
-  padding: "6px 10px",
+  padding: "5px 8px",
   borderRadius: 999,
   background: "#f4f7fb",
   color: "#5b697b",
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 700,
   whiteSpace: "nowrap",
 };
 
 const insightPanelStyle = {
   ...panelStyle,
-  minHeight: 392,
+  minHeight: 340,
   display: "flex",
   flexDirection: "column",
 };
@@ -753,7 +814,7 @@ const trendPanelBodyStyle = {
 };
 
 const panelTitleStyle = {
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 800,
   color: "#102033",
 };
@@ -762,16 +823,16 @@ const panelHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: 16,
-  marginBottom: 16,
+  gap: 12,
+  marginBottom: 12,
   flexWrap: "wrap",
 };
 
 const overviewTabsStyle = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
-  padding: 4,
+  gap: 4,
+  padding: 3,
   borderRadius: 999,
   background: "#f4f7fb",
   border: "1px solid #e0e7f0",
@@ -781,10 +842,10 @@ function overviewTabButtonStyle(active) {
   return {
     border: "none",
     borderRadius: 999,
-    padding: "8px 14px",
+    padding: "7px 12px",
     background: active ? "#102c57" : "transparent",
     color: active ? "#ffffff" : "#516173",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 800,
     cursor: "pointer",
     transition: "background 0.15s ease, color 0.15s ease",
@@ -795,25 +856,25 @@ function overviewTabButtonStyle(active) {
 const executivePanelStyle = {
   ...panelStyle,
   display: "grid",
-  gap: 16,
-  background: "linear-gradient(135deg, rgba(16,44,87,0.05), rgba(255,255,255,0.96) 40%, rgba(255,247,237,0.36))",
-  borderTop: "4px solid #102c57",
+  gap: 12,
+  background: "#ffffff",
+  borderTop: "3px solid #24427c",
 };
 
 const executivePanelTopStyle = {
   display: "grid",
   gridTemplateColumns: "minmax(0, 1.8fr) minmax(260px, 0.9fr)",
-  gap: 16,
+  gap: 12,
   alignItems: "stretch",
 };
 
 const executiveCopyStyle = {
   display: "grid",
-  gap: 10,
+  gap: 8,
 };
 
 const executiveKickerStyle = {
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 800,
   letterSpacing: "0.08em",
   color: "#1d4ed8",
@@ -821,37 +882,37 @@ const executiveKickerStyle = {
 };
 
 const executiveHeadlineStyle = {
-  fontSize: 24,
+  fontSize: 20,
   lineHeight: 1.45,
   fontWeight: 800,
   color: "#0f172a",
 };
 
 const executiveSubheadlineStyle = {
-  fontSize: 14,
+  fontSize: 12,
   lineHeight: 1.8,
   color: "#4b5b6e",
 };
 
 const executiveStatusCardStyle = {
-  borderRadius: 18,
+  borderRadius: 14,
   border: "1px solid #e3e9f2",
   background: "#ffffff",
-  padding: 16,
+  padding: 14,
   display: "grid",
   gap: 6,
   alignContent: "start",
 };
 
 const executiveStatusLabelStyle = {
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 700,
   color: "#6b7280",
   marginTop: 2,
 };
 
 const executiveStatusValueStyle = {
-  fontSize: 13,
+  fontSize: 12,
   lineHeight: 1.6,
   color: "#111827",
   fontWeight: 700,
@@ -859,19 +920,19 @@ const executiveStatusValueStyle = {
 
 const executiveMetaGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
   gap: 10,
 };
 
 const executiveMetaItemStyle = {
-  borderRadius: 16,
+  borderRadius: 14,
   background: "#f8fbff",
   border: "1px solid #e2ebf6",
-  padding: "12px 14px",
+  padding: "10px 12px",
 };
 
 const executiveMetaLabelStyle = {
-  fontSize: 12,
+  fontSize: 11,
   color: "#6b7280",
   fontWeight: 700,
 };
@@ -879,49 +940,49 @@ const executiveMetaLabelStyle = {
 const executiveMetaValueStyle = {
   marginTop: 6,
   color: "#102c57",
-  fontSize: 18,
+  fontSize: 15,
   fontWeight: 800,
 };
 
 const executiveTagRowStyle = {
   display: "flex",
   flexWrap: "wrap",
-  gap: 8,
+  gap: 6,
 };
 
 const executiveTagStyle = {
-  padding: "6px 10px",
+  padding: "5px 8px",
   borderRadius: 999,
   background: "#eef4ff",
   color: "#1d4ed8",
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 700,
 };
 
 const executiveFocusTagStyle = {
-  padding: "6px 10px",
+  padding: "5px 8px",
   borderRadius: 999,
   background: "#fff7ed",
   color: "#b45309",
-  fontSize: 12,
+  fontSize: 11,
   fontWeight: 700,
 };
 
 const breakdownListStyle = {
   display: "grid",
-  gap: 12,
+  gap: 10,
   maxHeight: TOP_INSIGHT_BODY_HEIGHT,
   overflowY: "auto",
   paddingRight: 4,
 };
 
 const breakdownItemStyle = {
-  borderRadius: 16,
-  padding: 16,
+  borderRadius: 14,
+  padding: 14,
   border: "1px solid #e6edf6",
   background: "linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%)",
   display: "grid",
-  gap: 12,
+  gap: 10,
 };
 
 const breakdownItemButtonStyle = {

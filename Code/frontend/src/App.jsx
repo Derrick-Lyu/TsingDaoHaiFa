@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from "react";
 
-import { requestJson } from "./api/client";
 import {
+  applyTerrorRiskChanges,
   assignAlertReviewer,
   saveAlertAck,
   saveAlertFeedback,
@@ -55,40 +55,18 @@ function TopicWorkspace({
   alertFilters,
 }) {
   return (
-    <div style={workspaceGridStyle} className="topic-workspace">
-      <aside style={sidePaneStyle} className="topic-side-pane">
-        <nav style={sideNavStyle} aria-label="专题二级导航">
-          {TOPIC_NAV_ITEMS.map((item) => {
-            const active = activeView === item.value;
-
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => onNavigate(item.value)}
-                style={sideNavButtonStyle(active)}
-              >
-                <span>{item.label}</span>
-                {active ? <span style={sideNavDotStyle} aria-hidden="true" /> : null}
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div style={{ minWidth: 0 }}>
-        {activeView === "rules" && <RuleConfigPage />}
-        {activeView === "blacklist" && <BlacklistConfigPage />}
-        {activeView === "alerts" && (
-          <TerrorRiskTopicPage
-            mode="alerts"
-            onOpenAlertDetail={onOpenDetail}
-            presetFilters={alertFilters}
-            onUpdate={onRunDetection}
-          />
-        )}
-        {activeView === "transactions" && <TransactionDataPage />}
-      </div>
+    <div style={{ minWidth: 0 }}>
+      {activeView === "rules" && <RuleConfigPage />}
+      {activeView === "blacklist" && <BlacklistConfigPage />}
+      {activeView === "alerts" && (
+        <TerrorRiskTopicPage
+          mode="alerts"
+          onOpenAlertDetail={onOpenDetail}
+          presetFilters={alertFilters}
+          onUpdate={onRunDetection}
+        />
+      )}
+      {activeView === "transactions" && <TransactionDataPage />}
     </div>
   );
 }
@@ -119,9 +97,7 @@ export default function App() {
   };
 
   const runDetectionJob = async () => {
-    await requestJson("/terror-risk/detection-jobs", {
-      method: "POST",
-    });
+    return applyTerrorRiskChanges();
   };
 
   const saveAlertReview = async (alertId, payload) => {
@@ -158,7 +134,39 @@ export default function App() {
 
   return (
     <div style={appShellStyle}>
-      <main style={mainStyle} className="app-main">{pageContent}</main>
+      <header style={globalHeaderStyle}>
+        <div style={brandWrapStyle}>
+          <div style={brandBadgeStyle}>监管</div>
+          <div style={brandTextStyle}>穿透式监管平台</div>
+        </div>
+        <div style={headerCenterStyle}>资金支付安全穿透监管模型</div>
+        <div style={headerRightStyle}>
+          <div style={userBadgeStyle}>总经理</div>
+        </div>
+      </header>
+      <div style={pageFrameStyle}>
+        <aside style={sidebarStyle}>
+          <div style={sidebarGroupTitleStyle}>专题页面</div>
+          <nav style={sideNavStyle} aria-label="专题二级导航">
+            {TOPIC_NAV_ITEMS.map((item) => {
+              const active = topicView === item.value;
+
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => handleTopicNavigate(item.value)}
+                  style={sideNavButtonStyle(active)}
+                >
+                  <span>{item.label}</span>
+                  {active ? <span style={sideNavDotStyle} aria-hidden="true" /> : null}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+        <main style={mainStyle} className="app-main">{pageContent}</main>
+      </div>
     </div>
   );
 }
@@ -173,50 +181,107 @@ function PageLoadingState({ label }) {
 
 const appShellStyle = {
   minHeight: "100vh",
-  background:
-    "radial-gradient(circle at top left, rgba(10,95,171,0.08), transparent 24%), linear-gradient(180deg, #f3f6fb 0%, #eef2f7 100%)",
+  background: "#eef3f8",
+};
+
+const globalHeaderStyle = {
+  height: 68,
+  display: "grid",
+  gridTemplateColumns: "minmax(220px, 1fr) minmax(320px, auto) minmax(320px, 1fr)",
+  alignItems: "center",
+  gap: 16,
+  padding: "0 18px",
+  borderBottom: "1px solid #d7e2ee",
+  background: "#ffffff",
+};
+
+const pageFrameStyle = {
+  display: "grid",
+  gridTemplateColumns: "180px minmax(0, 1fr)",
+  minHeight: "calc(100vh - 68px)",
+};
+
+const brandWrapStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+};
+
+const brandBadgeStyle = {
+  width: 28,
+  height: 28,
+  borderRadius: 7,
+  display: "grid",
+  placeItems: "center",
+  background: "#173d75",
+  color: "#ffffff",
+  fontSize: 11,
+  fontWeight: 700,
+};
+
+const brandTextStyle = {
+  fontSize: 13,
+  fontWeight: 700,
+  color: "#173d75",
+};
+
+const headerCenterStyle = {
+  textAlign: "center",
+  fontSize: 16,
+  fontWeight: 700,
+  color: "#1b2f52",
+  whiteSpace: "nowrap",
+};
+
+const headerRightStyle = {
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  gap: 8,
+  flexWrap: "wrap",
+};
+
+const userBadgeStyle = {
+  padding: "8px 14px",
+  borderRadius: 999,
+  background: "#f3f6fb",
+  color: "#173d75",
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const sidebarStyle = {
+  padding: "12px 6px 16px",
+  borderRight: "1px solid #d7e2ee",
+  background: "#ffffff",
+};
+
+const sidebarGroupTitleStyle = {
+  padding: "6px 10px",
+  color: "#9aa8bb",
+  fontSize: 10,
+  fontWeight: 700,
 };
 
 const mainStyle = {
-  maxWidth: 1440,
-  margin: "0 auto",
-  padding: "24px 24px 40px",
+  padding: "14px 14px 24px",
 };
 
 const loadingCardStyle = {
   padding: "18px 20px",
-  borderRadius: 18,
-  border: "1px solid #d9e2ee",
-  background: "rgba(255,255,255,0.88)",
+  borderRadius: 16,
+  border: "1px solid #d7e2ee",
+  background: "#ffffff",
   color: "#516173",
   fontSize: 14,
   fontWeight: 600,
 };
 
-const workspaceGridStyle = {
-  display: "grid",
-  gridTemplateColumns: "280px minmax(0, 1fr)",
-  gap: 20,
-  alignItems: "start",
-};
-
-const sidePaneStyle = {
-  position: "sticky",
-  top: 24,
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-};
-
 const sideNavStyle = {
   display: "flex",
   flexDirection: "column",
-  gap: 8,
-  padding: 10,
-  borderRadius: 22,
-  border: "1px solid #d8e1ee",
-  background: "rgba(255,255,255,0.92)",
-  boxShadow: "0 18px 30px rgba(15,23,42,0.06)",
+  gap: 2,
+  padding: 0,
 };
 
 function sideNavButtonStyle(active) {
@@ -226,12 +291,13 @@ function sideNavButtonStyle(active) {
     alignItems: "center",
     width: "100%",
     border: "none",
-    borderRadius: 16,
-    padding: "13px 14px",
-    background: active ? "#102c57" : "transparent",
-    color: active ? "white" : "#31465a",
+    borderLeft: active ? "3px solid #21427b" : "3px solid transparent",
+    borderRadius: 0,
+    padding: "13px 12px 13px 14px",
+    background: active ? "#edf4fd" : "transparent",
+    color: active ? "#193566" : "#55697f",
     font: "inherit",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 700,
     cursor: "pointer",
     textAlign: "left",
@@ -239,9 +305,9 @@ function sideNavButtonStyle(active) {
 }
 
 const sideNavDotStyle = {
-  width: 8,
-  height: 8,
+  width: 6,
+  height: 6,
   borderRadius: "50%",
-  background: "#8ac7ff",
+  background: "#2d5ca8",
   flexShrink: 0,
 };
