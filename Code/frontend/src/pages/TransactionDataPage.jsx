@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
+import { TablePagination } from "../components/shared/TablePagination";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
 import { formatAmountDisplay } from "../utils/amount";
+import { buildTransactionListView } from "../utils/transactionList";
 
 const API_PATH = "/terror-risk/transactions";
 
@@ -246,6 +248,8 @@ export function TransactionDataPage() {
   const [draft, setDraft] = useState(buildForm(items[0]));
   const [creating, setCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const compact = useCompactLayout();
 
   useEffect(() => {
@@ -265,6 +269,7 @@ export function TransactionDataPage() {
           setSelectedId(nextItems[0]?.id || "");
           setDraft(buildForm(nextItems[0] || null));
           setCreating(false);
+          setCurrentPage(1);
           setLoading(false);
         }
       } catch {
@@ -273,6 +278,7 @@ export function TransactionDataPage() {
           setSelectedId("");
           setDraft(buildForm(null));
           setCreating(false);
+          setCurrentPage(1);
           setErrorMessage("交易数据加载失败，当前未显示演示兜底数据。");
           setLoading(false);
         }
@@ -286,20 +292,18 @@ export function TransactionDataPage() {
     };
   }, []);
 
-  const filteredItems = items.filter((item) => {
-    const keyword = search.trim().toLowerCase();
-    const matchesSearch =
-      !keyword ||
-      [item.transactionNo, item.memberUnitName, item.payeeName, item.businessScenario, item.batchNo]
-        .filter(Boolean)
-        .some((field) => field.toLowerCase().includes(keyword));
-    const matchesPayeeType = payeeTypeFilter === "all" || item.payeeType === payeeTypeFilter;
-    const matchesDormant =
-      dormantFilter === "all" ||
-      (dormantFilter === "yes" ? item.isDormantAccount : !item.isDormantAccount);
-
-    return matchesSearch && matchesPayeeType && matchesDormant;
-  });
+  const listView = useMemo(
+    () =>
+      buildTransactionListView(items, {
+        search,
+        payeeTypeFilter,
+        dormantFilter,
+        currentPage,
+        pageSize,
+      }),
+    [items, search, payeeTypeFilter, dormantFilter, currentPage, pageSize],
+  );
+  const filteredItems = listView.filteredItems;
 
   const summary = {
     total: items.length,
@@ -359,11 +363,13 @@ export function TransactionDataPage() {
       setSelectedId(nextItems[0]?.id || "");
       setDraft(buildForm(nextItems[0] || null));
       setCreating(false);
+      setCurrentPage(1);
     } catch {
       setItems([]);
       setSelectedId("");
       setDraft(buildForm(null));
       setCreating(false);
+      setCurrentPage(1);
       setErrorMessage("交易数据刷新失败，当前未显示演示兜底数据。");
     } finally {
       setLoading(false);
@@ -396,6 +402,7 @@ export function TransactionDataPage() {
       setSelectedId(normalized.id);
       setDraft(buildForm(normalized));
       setCreating(false);
+      setCurrentPage(1);
     } catch {
       setErrorMessage("交易保存失败，数据库未更新，请稍后重试。");
     } finally {
@@ -417,6 +424,7 @@ export function TransactionDataPage() {
       });
 
       setItems((current) => current.filter((row) => row.id !== item.id));
+      setCurrentPage(1);
       setSelectedId((current) => {
         if (current !== item.id) {
           return current;
@@ -461,14 +469,20 @@ export function TransactionDataPage() {
             <span style={smallLabelStyle()}>搜索</span>
             <input
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="按交易编号、成员单位、对手方或场景搜索"
               style={inputStyle()}
             />
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={smallLabelStyle()}>对手类型</span>
-            <select value={payeeTypeFilter} onChange={(event) => setPayeeTypeFilter(event.target.value)} style={inputStyle()}>
+            <select value={payeeTypeFilter} onChange={(event) => {
+              setPayeeTypeFilter(event.target.value);
+              setCurrentPage(1);
+            }} style={inputStyle()}>
               <option value="all">全部</option>
               <option value="organization">对公</option>
               <option value="person">对私</option>
@@ -477,7 +491,10 @@ export function TransactionDataPage() {
           </label>
           <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={smallLabelStyle()}>闲置账户</span>
-            <select value={dormantFilter} onChange={(event) => setDormantFilter(event.target.value)} style={inputStyle()}>
+            <select value={dormantFilter} onChange={(event) => {
+              setDormantFilter(event.target.value);
+              setCurrentPage(1);
+            }} style={inputStyle()}>
               <option value="all">全部</option>
               <option value="yes">是</option>
               <option value="no">否</option>
@@ -486,7 +503,7 @@ export function TransactionDataPage() {
         </div>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(0, 1.08fr) minmax(360px, 0.92fr)", gap: 16, alignItems: "start" }}>
+      <section style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(0, 0.82fr) minmax(420px, 1.18fr)", gap: 16, alignItems: "start" }}>
         <div style={{ ...surfaceStyle(), overflow: "hidden" }}>
           <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #eef2f7" }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>交易列表</div>
@@ -495,8 +512,8 @@ export function TransactionDataPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gap: 12, padding: 16, gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>
-            {filteredItems.map((item) => {
+          <div style={{ display: "grid", gap: 10, padding: 16, gridTemplateColumns: "minmax(0, 1fr)" }}>
+            {listView.visibleItems.map((item) => {
               const selected = item.id === selectedId;
               return (
                 <div
@@ -513,42 +530,48 @@ export function TransactionDataPage() {
                   style={{
                     textAlign: "left",
                     border: `1px solid ${selected ? "#b6cbff" : "#e7edf5"}`,
-                    borderRadius: 18,
-                    padding: 16,
+                    borderRadius: 16,
+                    padding: 12,
                     background: selected ? "#f8fbff" : "#fbfdff",
                     boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
                     cursor: "pointer",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: "#111827", lineHeight: 1.35 }}>{item.transactionNo}</div>
-                      <div style={{ marginTop: 6, fontSize: 12, color: "#667085" }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", lineHeight: 1.3, wordBreak: "break-word" }}>{item.transactionNo}</div>
+                      <div style={{
+                        marginTop: 4,
+                        fontSize: 11,
+                        color: "#667085",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}>
                         {item.transactionDate} · {item.memberUnitName}
                       </div>
                     </div>
                     <span style={chipStyle(toneForType(item.payeeType))}>{item.payeeType === "person" ? "对私" : item.payeeType === "account" ? "账户" : "对公"}</span>
                   </div>
 
-                  <div style={{ marginTop: 12, fontSize: 18, fontWeight: 900, color: "#b42318" }}>
+                  <div style={{ marginTop: 10, fontSize: 16, fontWeight: 900, color: "#b42318", lineHeight: 1.2 }}>
                     {formatAmountDisplay(item.amount)}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
                     <span style={chipStyle(toneForDormant(item.isDormantAccount))}>{item.isDormantAccount ? "闲置" : "正常"}</span>
                     <span style={chipStyle({ background: "#f3f4f6", color: "#374151" })}>批次 {item.batchNo || "-"}</span>
                     <span style={chipStyle({ background: "#eef4ff", color: "#1a3a8f" })}>次数 {item.transactionCount}</span>
                   </div>
 
-                  <div style={{ marginTop: 12, fontSize: 13, color: "#475569", lineHeight: 1.7 }}>
-                    <div>对手方：{item.payeeName}</div>
-                    <div style={{ marginTop: 6 }}>场景：{item.businessScenario}</div>
-                    <div style={{ marginTop: 6 }}>备注：{item.remarks || "-"}</div>
+                  <div style={{ marginTop: 10, fontSize: 12, color: "#475569", lineHeight: 1.55, display: "grid", gap: 4 }}>
+                    <div style={compactLineStyle}>对手方：{item.payeeName || "-"}</div>
+                    <div style={compactLineStyle}>场景：{item.businessScenario || "-"}</div>
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); selectItem(item); }} style={buttonStyle("ghost")}>编辑</button>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); removeTransaction(item); }} style={buttonStyle("danger")}>删除</button>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); selectItem(item); }} style={compactActionButtonStyle("ghost")}>编辑</button>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); removeTransaction(item); }} style={compactActionButtonStyle("danger")}>删除</button>
                   </div>
                 </div>
               );
@@ -560,6 +583,19 @@ export function TransactionDataPage() {
               </div>
             ) : null}
           </div>
+
+          <TablePagination
+            currentPage={listView.pagination.currentPage}
+            pageSize={listView.pagination.pageSize}
+            totalPages={listView.pagination.totalPages}
+            totalItems={listView.pagination.totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[5, 10, 20, 50]}
+          />
         </div>
 
         <form onSubmit={saveTransaction} style={{ ...surfaceStyle(), padding: 20, position: "sticky", top: 16 }}>
@@ -682,6 +718,22 @@ function summaryMetricValueStyle(tone) {
     padding: "10px 12px",
     borderRadius: 16,
     background: tone.background,
+  };
+}
+
+const compactLineStyle = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+function compactActionButtonStyle(variant) {
+  const style = buttonStyle(variant);
+  return {
+    ...style,
+    padding: "7px 10px",
+    fontSize: 12,
+    borderRadius: 10,
   };
 }
 

@@ -7,6 +7,7 @@ export function TablePagination({
   totalItems = 0,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
 }) {
   return (
     <div style={paginationWrapStyle}>
@@ -18,7 +19,7 @@ export function TablePagination({
             onChange={(event) => onPageSizeChange?.(Number.parseInt(event.target.value, 10))}
             style={pageSizeSelectStyle}
           >
-            {PAGE_SIZE_OPTIONS.map((option) => (
+            {pageSizeOptions.map((option) => (
               <option key={option} value={option}>
                 {option} 条
               </option>
