@@ -16,11 +16,15 @@ test("fund safety topic side navigation keeps only the requested tabs in order",
   );
 });
 
-test("fund safety topic route mapping still supports hidden internal views", () => {
-  assert.equal(TOPIC_VIEW_TO_ROUTE.overview, APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW);
-  assert.equal(TOPIC_VIEW_TO_ROUTE.cases, APP_ROUTES.FUND_SAFETY_TOPIC_CASES);
-  assert.equal(TOPIC_ROUTE_TO_VIEW[APP_ROUTES.FUND_SAFETY_TOPIC_OVERVIEW], "overview");
-  assert.equal(TOPIC_ROUTE_TO_VIEW[APP_ROUTES.FUND_SAFETY_TOPIC_CASES], "cases");
+test("fund safety topic route mapping keeps only the four visible topic pages", () => {
+  assert.equal(TOPIC_VIEW_TO_ROUTE.rules, APP_ROUTES.FUND_SAFETY_TOPIC_RULES);
+  assert.equal(TOPIC_VIEW_TO_ROUTE.blacklist, APP_ROUTES.FUND_SAFETY_TOPIC_BLACKLIST);
+  assert.equal(TOPIC_VIEW_TO_ROUTE.alerts, APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS);
+  assert.equal(TOPIC_VIEW_TO_ROUTE.transactions, APP_ROUTES.FUND_SAFETY_TOPIC_TRANSACTIONS);
+  assert.equal(TOPIC_ROUTE_TO_VIEW[APP_ROUTES.FUND_SAFETY_TOPIC_RULES], "rules");
+  assert.equal(TOPIC_ROUTE_TO_VIEW[APP_ROUTES.FUND_SAFETY_TOPIC_BLACKLIST], "blacklist");
+  assert.equal(TOPIC_ROUTE_TO_VIEW[APP_ROUTES.FUND_SAFETY_TOPIC_ALERTS], "alerts");
+  assert.equal(TOPIC_ROUTE_TO_VIEW[APP_ROUTES.FUND_SAFETY_TOPIC_TRANSACTIONS], "transactions");
 });
 
 test("fund safety topic external entry defaults to rules page", () => {
