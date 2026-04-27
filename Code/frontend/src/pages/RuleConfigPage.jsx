@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { requestJson } from "../api/client";
+import { TablePagination } from "../components/shared/TablePagination";
 import { SummaryMetricValue } from "../components/shared/SummaryMetricValue";
+import { buildRuleListView } from "../utils/ruleList";
 import { filterVisibleRuleConfigRules } from "../utils/ruleConfigRules";
 
 const API_PATH = "/terror-risk/rules";
@@ -199,6 +201,8 @@ export function RuleConfigPage() {
   const [form, setForm] = useState(buildRuleForm(null));
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const compact = useCompactLayout();
 
   useEffect(() => {
@@ -216,6 +220,7 @@ export function RuleConfigPage() {
           const next = nextRules[0] || null;
           setSelectedRuleId(next?.id || "");
           setForm(buildRuleForm(next));
+          setCurrentPage(1);
           setLoading(false);
         }
       } catch {
@@ -223,6 +228,7 @@ export function RuleConfigPage() {
           setRules([]);
           setSelectedRuleId("");
           setForm(buildRuleForm(null));
+          setCurrentPage(1);
           setErrorMessage("规则数据加载失败，当前未显示演示兜底数据。");
           setLoading(false);
         }
@@ -235,6 +241,11 @@ export function RuleConfigPage() {
       cancelled = true;
     };
   }, []);
+
+  const listView = useMemo(
+    () => buildRuleListView(rules, { currentPage, pageSize }),
+    [rules, currentPage, pageSize],
+  );
 
   const summary = {
     total: rules.length,
@@ -277,10 +288,12 @@ export function RuleConfigPage() {
       const next = nextRules[0] || null;
       setSelectedRuleId(next?.id || "");
       setForm(buildRuleForm(next));
+      setCurrentPage(1);
     } catch {
       setRules([]);
       setSelectedRuleId("");
       setForm(buildRuleForm(null));
+      setCurrentPage(1);
       setErrorMessage("规则数据刷新失败，当前未显示演示兜底数据。");
     } finally {
       setLoading(false);
@@ -305,6 +318,7 @@ export function RuleConfigPage() {
       );
       setSelectedRuleId(normalized.id);
       setForm(buildRuleForm(normalized));
+      setCurrentPage(1);
     } catch {
       setErrorMessage("规则保存失败，数据库未更新，请稍后重试。");
     } finally {
@@ -332,6 +346,7 @@ export function RuleConfigPage() {
       if (selectedRuleId === rule.id) {
         setForm(buildRuleForm(normalized));
       }
+      setCurrentPage(1);
     } catch {
       setErrorMessage("规则状态更新失败，数据库未更新。");
     }
@@ -359,7 +374,7 @@ export function RuleConfigPage() {
         ))}
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(0, 1.05fr) minmax(360px, 0.95fr)", gap: 16, alignItems: "start" }}>
+      <section style={{ display: "grid", gridTemplateColumns: compact ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(0, 1fr)", gap: 16, alignItems: "start" }}>
         <div style={{ ...surfaceStyle(), overflow: "hidden" }}>
           <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid #eef2f7" }}>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>规则列表</div>
@@ -369,7 +384,7 @@ export function RuleConfigPage() {
           </div>
 
           <div style={{ display: "grid", gap: 12, padding: 16, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-            {rules.map((rule) => {
+            {listView.visibleItems.map((rule) => {
               const selected = rule.id === selectedRuleId;
               return (
                 <div
@@ -416,6 +431,19 @@ export function RuleConfigPage() {
               );
             })}
           </div>
+
+          <TablePagination
+            currentPage={listView.pagination.currentPage}
+            pageSize={listView.pagination.pageSize}
+            totalPages={listView.pagination.totalPages}
+            totalItems={listView.pagination.totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setCurrentPage(1);
+            }}
+            pageSizeOptions={[5, 10, 20, 50]}
+          />
         </div>
 
         <form onSubmit={saveRule} style={{ ...surfaceStyle(), padding: 20, position: "sticky", top: 16 }}>
